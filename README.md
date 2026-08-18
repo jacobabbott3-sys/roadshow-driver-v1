@@ -32,5 +32,12 @@ The browser only receives the public anonymous key. Never add the Supabase servi
 - Upcoming-show availability
 - Published resources, FAQs, and feedback
 - Driver profile editing
+- Admin dashboard and operational counts
+- Show creation and driver contract assignment
+- Checklist template builder and submission review
+- User role and activation management
+- Resource publishing, feedback review, and toolbag assignment
 
 If Phase 1 is already deployed, run only `202608170002_driver_experience.sql` before deploying the Phase 2 application code.
+
+For the admin workspace, run `202608170003_admin_workspace.sql` after the Phase 2 migration. Create a checklist template before creating contracts; the newest active template matching the contract type is attached automatically.

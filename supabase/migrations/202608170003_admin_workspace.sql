@@ -1,0 +1,16 @@
+-- Roadshow Driver: Phase 3 admin workspace
+create table public.toolbags (id uuid primary key default gen_random_uuid(),number text not null unique,assigned_to uuid references public.profiles(id) on delete set null,notes text,created_at timestamptz not null default now());
+create table public.toolbag_items (id uuid primary key default gen_random_uuid(),toolbag_id uuid not null references public.toolbags(id) on delete cascade,category text not null default 'General',name text not null,position integer not null default 0);
+create table public.toolbag_reports (id uuid primary key default gen_random_uuid(),toolbag_id uuid not null references public.toolbags(id) on delete cascade,reported_by uuid not null references public.profiles(id),message text not null,status text not null default 'open' check(status in ('open','resolved')),created_at timestamptz not null default now());
+alter table public.toolbags enable row level security;alter table public.toolbag_items enable row level security;alter table public.toolbag_reports enable row level security;
+create policy "assigned toolbag read" on public.toolbags for select using(assigned_to=auth.uid() or public.is_admin());
+create policy "admin toolbag manage" on public.toolbags for all using(public.is_admin()) with check(public.is_admin());
+create policy "assigned toolbag items read" on public.toolbag_items for select using(public.is_admin() or exists(select 1 from public.toolbags t where t.id=toolbag_id and t.assigned_to=auth.uid()));
+create policy "admin toolbag items manage" on public.toolbag_items for all using(public.is_admin()) with check(public.is_admin());
+create policy "toolbag reports own insert" on public.toolbag_reports for insert with check(reported_by=auth.uid() and exists(select 1 from public.toolbags t where t.id=toolbag_id and t.assigned_to=auth.uid()));
+create policy "toolbag reports own read" on public.toolbag_reports for select using(reported_by=auth.uid() or public.is_admin());
+create policy "admin toolbag reports manage" on public.toolbag_reports for all using(public.is_admin()) with check(public.is_admin());
+create or replace function public.admin_update_user(target_user uuid,new_role public.app_role,new_active boolean) returns void language plpgsql security definer set search_path=public as $$ begin if not public.is_admin() then raise exception 'Admin access required'; end if; if target_user=auth.uid() and new_active=false then raise exception 'You cannot deactivate your own account'; end if; update public.profiles set role=new_role,is_active=new_active,updated_at=now() where id=target_user; end $$;
+grant execute on function public.admin_update_user(uuid,public.app_role,boolean) to authenticated;
+create or replace function public.admin_assign_checklist(target_contract uuid,target_template uuid) returns uuid language plpgsql security definer set search_path=public as $$ declare result_id uuid; begin if not public.is_admin() then raise exception 'Admin access required'; end if; insert into public.contract_checklists(contract_id,template_id) values(target_contract,target_template) on conflict(contract_id) do update set template_id=excluded.template_id returning id into result_id; return result_id; end $$;
+grant execute on function public.admin_assign_checklist(uuid,uuid) to authenticated;
