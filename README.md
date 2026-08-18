@@ -41,3 +41,5 @@ The browser only receives the public anonymous key. Never add the Supabase servi
 If Phase 1 is already deployed, run only `202608170002_driver_experience.sql` before deploying the Phase 2 application code.
 
 For the admin workspace, run `202608170003_admin_workspace.sql` after the Phase 2 migration. Create a checklist template before creating contracts; the newest active template matching the contract type is attached automatically.
+
+Run `202608170004_admin_editing.sql` to enable editable checklist templates, explicit setup/teardown checklist assignments for each show, and published contract terms. Show checklist changes are also applied to existing matching contracts.
