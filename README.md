@@ -43,3 +43,5 @@ If Phase 1 is already deployed, run only `202608170002_driver_experience.sql` be
 For the admin workspace, run `202608170003_admin_workspace.sql` after the Phase 2 migration. Create a checklist template before creating contracts; the newest active template matching the contract type is attached automatically.
 
 Run `202608170004_admin_editing.sql` to enable editable checklist templates, explicit setup/teardown checklist assignments for each show, and published contract terms. Show checklist changes are also applied to existing matching contracts.
+
+Run `202608180001_contract_workflow_corrections.sql` to merge show and contract configuration, add a separate setup/teardown work date, and enable reliable assigned-driver checklist completion.
