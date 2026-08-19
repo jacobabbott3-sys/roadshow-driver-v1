@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Contract, Show } from "./driverData";
+import { getChecklist, type Contract, type Show } from "./driverData";
 import type { Profile } from "../types";
 export type DashboardStats = {
   shows: number;
@@ -223,20 +223,73 @@ export async function getReviews() {
     driver: { id: string; full_name: string };
   })[];
 }
-export async function reviewContract(
-  id: string,
-  approved: boolean,
+export type ReviewHistoryRow = Contract & {
+  submitted_at: string | null;
+  reviewed_at: string;
+  driver: { id: string; full_name: string } | null;
+  reviewer: { id: string; full_name: string } | null;
+};
+export async function getReviewHistory() {
+  const { data, error } = await supabase
+    .from("contracts")
+    .select(
+      "id,kind,status,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name)",
+    )
+    .not("reviewed_at", "is", null)
+    .order("reviewed_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).filter(
+    (review) => !["submitted", "under_review"].includes(review.status),
+  ) as unknown as ReviewHistoryRow[];
+}
+export async function getChecklistReview(contractId: string) {
+  const [{ data, error }, checklist] = await Promise.all([
+    supabase
+      .from("contracts")
+      .select(
+        "id,kind,status,service_date,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name),contract_drivers(driver_id,is_trainee,driver:profiles(id,full_name))",
+      )
+      .eq("id", contractId)
+      .single(),
+    getChecklist(contractId),
+  ]);
+  if (error) throw error;
+  return {
+    contract: data as unknown as Contract & {
+      submitted_at: string | null;
+      reviewed_at: string | null;
+      driver: { id: string; full_name: string } | null;
+      reviewer: { id: string; full_name: string } | null;
+      contract_drivers: {
+        driver_id: string;
+        is_trainee: boolean;
+        driver: { id: string; full_name: string } | null;
+      }[];
+    },
+    checklist,
+  };
+}
+export async function reviewChecklistItem(
+  contractId: string,
+  itemId: string,
+  status: "approved" | "denied",
   note: string,
 ) {
-  const { error } = await supabase
-    .from("contracts")
-    .update({
-      status: approved ? "approved" : "in_progress",
-      reviewed_at: new Date().toISOString(),
-      admin_note: note,
-    })
-    .eq("id", id);
+  const { error } = await supabase.rpc("admin_review_checklist_item", {
+    target_contract: contractId,
+    target_item: itemId,
+    target_status: status,
+    target_note: note || null,
+  });
   if (error) throw error;
+}
+export async function finalizeChecklistReview(contractId: string) {
+  const { data, error } = await supabase.rpc(
+    "admin_finalize_checklist_review",
+    { target_contract: contractId },
+  );
+  if (error) throw error;
+  return data as "approved" | "in_progress";
 }
 export async function getTemplates() {
   const { data, error } = await supabase

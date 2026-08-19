@@ -7,6 +7,7 @@ import {
   MapPin,
   Send,
   Upload,
+  XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -52,7 +53,10 @@ export function ContractDetailPage() {
       : contract.data?.status === "approved"
         ? "Approved"
         : activeSection?.title ||
-          (items.length ? "Ready to submit" : "Waiting for checklist");
+          (items.length ? "Ready to submit" : "Waiting for checklist"),
+    checklistLocked = ["submitted", "under_review", "approved"].includes(
+      contract.data?.status || "",
+    );
   async function toggle(itemId: string, value: boolean) {
     if (!checklist.data?.id) return;
     setBusy(itemId);
@@ -244,6 +248,7 @@ export function ContractDetailPage() {
                         key={section.id}
                         section={section}
                         busy={busy}
+                        locked={checklistLocked}
                         onToggle={toggle}
                       />
                     ))}
@@ -410,10 +415,12 @@ function Field({ label, value }: { label: string; value: string }) {
 function ChecklistSectionView({
   section,
   busy,
+  locked,
   onToggle,
 }: {
   section: ChecklistSection;
   busy: string;
+  locked: boolean;
   onToggle: (id: string, value: boolean) => Promise<void>;
 }) {
   const [open, setOpen] = useState(true),
@@ -436,7 +443,11 @@ function ChecklistSectionView({
               <input
                 type="checkbox"
                 checked={Boolean(item.response?.completed)}
-                disabled={busy === item.id}
+                disabled={
+                  busy === item.id ||
+                  locked ||
+                  item.response?.review_status === "approved"
+                }
                 onChange={(e) => void onToggle(item.id, e.target.checked)}
               />
               <span className="custom-check">
@@ -445,6 +456,19 @@ function ChecklistSectionView({
               <span>
                 <strong>{item.title}</strong>
                 {item.instructions && <small>{item.instructions}</small>}
+                {item.response?.review_status === "approved" && (
+                  <em className="driver-review approved">
+                    <Check /> Approved
+                  </em>
+                )}
+                {item.response?.review_status === "denied" && (
+                  <em className="driver-review denied">
+                    <XCircle /> Needs correction
+                    {item.response.review_note && (
+                      <small>{item.response.review_note}</small>
+                    )}
+                  </em>
+                )}
               </span>
             </label>
           ))}

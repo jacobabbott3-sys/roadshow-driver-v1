@@ -2,21 +2,25 @@ import {
   ArrowDown,
   ArrowUp,
   ClipboardCheck,
+  Eye,
+  History,
   Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
 import {
   createTemplate,
+  getReviewHistory,
   getReviews,
   getTemplates,
-  reviewContract,
   updateTemplate,
 } from "../lib/adminData";
+import { dateRange, statusLabel } from "../lib/driverData";
 type DraftSection = {
   title: string;
   items: { title: string; photo_required: boolean }[];
@@ -33,7 +37,8 @@ function move<T>(items: T[], from: number, to: number) {
 }
 export function AdminChecklistsPage() {
   const templates = useAsync(getTemplates, []),
-    reviews = useAsync(getReviews, []);
+    reviews = useAsync(getReviews, []),
+    history = useAsync(getReviewHistory, []);
   const [name, setName] = useState(""),
     [kind, setKind] = useState<"setup" | "teardown">("setup"),
     [sections, setSections] = useState<DraftSection[]>(initial),
@@ -74,12 +79,6 @@ export function AdminChecklistsPage() {
     setEditing(null);
     setCreating(false);
     await templates.refresh();
-    setBusy("");
-  }
-  async function review(id: string, approved: boolean) {
-    setBusy(id);
-    await reviewContract(id, approved, "");
-    await reviews.refresh();
     setBusy("");
   }
   return (
@@ -306,19 +305,58 @@ export function AdminChecklistsPage() {
                   <span>{r.driver?.full_name || "Unassigned"}</span>
                 </div>
                 <div>
-                  <button
-                    onClick={() => void review(r.id, false)}
-                    disabled={busy === r.id}
+                  <Link className="review-open-button" to={`/admin/checklists/${r.id}`}>
+                    <Eye /> Review full checklist
+                  </Link>
+                </div>
+              </article>
+            ))
+          )}
+        </PageState>
+      </section>
+      <section className="admin-section">
+        <div className="section-row">
+          <div>
+            <p className="eyebrow">HISTORY</p>
+            <h2>Reviewed checklists</h2>
+          </div>
+          <History />
+        </div>
+        <PageState loading={history.loading} error={history.error}>
+          {!history.data?.length ? (
+            <div className="inline-empty">
+              Completed reviews will remain available here.
+            </div>
+          ) : (
+            history.data.map((review) => (
+              <article className="review-row review-history-row" key={review.id}>
+                <div>
+                  <strong>
+                    {review.show.name} · {statusLabel(review.kind)}
+                  </strong>
+                  <span>
+                    {review.driver?.full_name || "Unassigned"} ·{" "}
+                    {dateRange(review.show)}
+                  </span>
+                  <small>
+                    Reviewed by {review.reviewer?.full_name || "Administrator"}{" "}
+                    · {new Date(review.reviewed_at).toLocaleString()}
+                  </small>
+                </div>
+                <div>
+                  <span className={`status status-${review.status}`}>
+                    {["approved", "bonus_earned", "bonus_not_earned"].includes(
+                      review.status,
+                    )
+                      ? "Approved"
+                      : "Returned"}
+                  </span>
+                  <Link
+                    className="review-open-button"
+                    to={`/admin/checklists/${review.id}`}
                   >
-                    Needs work
-                  </button>
-                  <button
-                    className="approve"
-                    onClick={() => void review(r.id, true)}
-                    disabled={busy === r.id}
-                  >
-                    Approve
-                  </button>
+                    <Eye /> View review
+                  </Link>
                 </div>
               </article>
             ))

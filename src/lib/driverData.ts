@@ -56,6 +56,8 @@ export type ChecklistItem = {
     note: string | null;
     review_status: string | null;
     review_note: string | null;
+    reviewed_at: string | null;
+    reviewer: { full_name: string } | null;
   } | null;
 };
 export type ChecklistSection = {
@@ -104,7 +106,9 @@ export async function getChecklist(contractId: string) {
   if (sectionError) throw sectionError;
   const { data: responses, error: responseError } = await supabase
     .from("checklist_responses")
-    .select("id,item_id,completed,note,review_status,review_note")
+    .select(
+      "id,item_id,completed,note,review_status,review_note,reviewed_at,reviewer:profiles!checklist_responses_reviewed_by_fkey(full_name)",
+    )
     .eq("contract_checklist_id", cc.id);
   if (responseError) throw responseError;
   const byItem = new Map((responses || []).map((r) => [r.item_id, r]));

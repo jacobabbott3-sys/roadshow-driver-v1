@@ -52,6 +52,8 @@ Run `202608180003_beta_collaboration.sql` for the beta features: multiple driver
 
 Run `202608180004_notification_review_fixes.sql` to add checklist submission alerts, live message/notification badges, notification preferences, and secure device push subscriptions.
 
+Run `202608180005_item_level_checklist_review.sql` to enable full item-by-item admin review, correction notes, driver resubmission of denied items, and persistent checklist review history.
+
 ## Device notification setup
 
 The app and database are ready for web push, but each Supabase/Vercel environment needs its own keys and webhook setup:
