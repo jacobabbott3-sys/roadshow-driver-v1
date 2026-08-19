@@ -13,7 +13,7 @@ export type AdminToolbag = {
   number: string;
   notes: string | null;
   assigned_to: string | null;
-  driver: { full_name: string } | null;
+  driver: { full_name: string; role: "driver" | "admin" } | null;
   items: { id: string; name: string; quantity: number; position: number }[];
 };
 export type ToolbagTemplate = {
@@ -73,7 +73,11 @@ export type AdminContract = {
   terms: string | null;
   admin_signed_at: string | null;
   admin_signature_name: string | null;
-  contract_drivers: { driver_id: string; is_trainee: boolean }[];
+  contract_drivers: {
+    driver_id: string;
+    is_trainee: boolean;
+    driver: { full_name: string; role: "driver" | "admin" } | null;
+  }[];
   contract_checklists: { template_id: string }[];
 };
 export type AdminShow = Show & {
@@ -87,7 +91,7 @@ export async function getShowsAdmin() {
   const { data, error } = await supabase
     .from("shows")
     .select(
-      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee),contract_checklists(template_id))",
+      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id))",
     )
     .order("starts_on", { ascending: false });
   if (error) throw error;
@@ -109,11 +113,11 @@ export async function createShow(
   if (error) throw error;
   return data.id as string;
 }
-export async function getDrivers() {
+export async function getTeamMembers() {
   const { data, error } = await supabase
     .from("profiles")
     .select("id,full_name,avatar_url,phone,role,is_active")
-    .eq("role", "driver")
+    .eq("is_active", true)
     .order("full_name");
   if (error) throw error;
   return data as Profile[];
@@ -163,19 +167,32 @@ export async function saveShowContract(input: {
     contractId = data.id;
   }
   if (!contractId) throw new Error("Unable to save contract.");
-  await supabase
+  const { data: currentAssignments, error: currentError } = await supabase
     .from("contract_drivers")
-    .delete()
+    .select("driver_id")
     .eq("contract_id", contractId);
+  if (currentError) throw currentError;
+  const removedIds = (currentAssignments || [])
+    .map((assignment) => assignment.driver_id)
+    .filter((driverId) => !input.driver_ids.includes(driverId));
+  if (removedIds.length) {
+    const { error } = await supabase
+      .from("contract_drivers")
+      .delete()
+      .eq("contract_id", contractId)
+      .in("driver_id", removedIds);
+    if (error) throw error;
+  }
   if (input.driver_ids.length) {
     const { error } = await supabase
       .from("contract_drivers")
-      .insert(
+      .upsert(
         input.driver_ids.map((driver_id, index) => ({
           contract_id: contractId,
           driver_id,
           is_trainee: index > 0,
         })),
+        { onConflict: "contract_id,driver_id" },
       );
     if (error) throw error;
   }
@@ -351,7 +368,7 @@ export async function getToolbags() {
   const { data, error } = await supabase
     .from("toolbags")
     .select(
-      "id,number,notes,assigned_to,driver:profiles(full_name),items:toolbag_items(id,name,quantity,position)",
+      "id,number,notes,assigned_to,driver:profiles(full_name,role),items:toolbag_items(id,name,quantity,position)",
     )
     .order("number");
   if (error) throw error;

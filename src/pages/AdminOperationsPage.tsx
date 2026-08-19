@@ -19,7 +19,7 @@ import {
   createToolbagTemplate,
   createToolbag,
   deleteToolbagItem,
-  getDrivers,
+  getTeamMembers,
   getFeedback,
   getToolbags,
   getToolbagTemplates,
@@ -33,7 +33,7 @@ export function AdminOperationsPage() {
     feedback = useAsync(getFeedback, []),
     toolbags = useAsync(getToolbags, []),
     toolbagTemplates = useAsync(getToolbagTemplates, []),
-    drivers = useAsync(getDrivers, []);
+    teamMembers = useAsync(getTeamMembers, []);
   const [resource, setResource] = useState({
       title: "",
       kind: "faq",
@@ -195,13 +195,12 @@ export function AdminOperationsPage() {
                 onChange={(e) => setBag({ ...bag, driver: e.target.value })}
               >
                 <option value="">Unassigned</option>
-                {drivers.data
-                  ?.filter((d) => d.is_active)
-                  .map((d) => (
-                    <option value={d.id} key={d.id}>
-                      {d.full_name}
-                    </option>
-                  ))}
+                {teamMembers.data?.map((member) => (
+                  <option value={member.id} key={member.id}>
+                    {member.full_name}
+                    {member.role === "admin" ? " (Admin)" : ""}
+                  </option>
+                ))}
               </select>
             </label>
             <button className="button primary">
@@ -305,7 +304,8 @@ export function AdminOperationsPage() {
                   <span>
                     <strong>Toolbag #{t.number}</strong>
                     <small>
-                      {t.driver?.full_name || "Unassigned"} ·{" "}
+                      {t.driver?.full_name || "Unassigned"}
+                      {t.driver?.role === "admin" ? " (Admin)" : ""} ·{" "}
                       {t.items?.length || 0} items
                     </small>
                   </span>
@@ -314,7 +314,7 @@ export function AdminOperationsPage() {
                 {openBag === t.id && (
                   <div className="toolbag-items">
                     <label>
-                      Assigned driver
+                      Assigned team member
                       <select
                         value={t.assigned_to || ""}
                         onChange={async (e) => {
@@ -323,13 +323,12 @@ export function AdminOperationsPage() {
                         }}
                       >
                         <option value="">Unassigned</option>
-                        {drivers.data
-                          ?.filter((d) => d.is_active)
-                          .map((d) => (
-                            <option value={d.id} key={d.id}>
-                              {d.full_name}
-                            </option>
-                          ))}
+                        {teamMembers.data?.map((member) => (
+                          <option value={member.id} key={member.id}>
+                            {member.full_name}
+                            {member.role === "admin" ? " (Admin)" : ""}
+                          </option>
+                        ))}
                       </select>
                     </label>
                     <label>

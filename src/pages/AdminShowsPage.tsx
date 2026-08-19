@@ -14,8 +14,8 @@ import {
   adminSignContract,
   createShow,
   deleteShow,
-  getDrivers,
   getShowsAdmin,
+  getTeamMembers,
   getTemplates,
   saveShowContract,
   updateShow,
@@ -77,7 +77,7 @@ function savedDraft() {
 
 export function AdminShowsPage() {
   const shows = useAsync(getShowsAdmin, []),
-    drivers = useAsync(getDrivers, []),
+    teamMembers = useAsync(getTeamMembers, []),
     templates = useAsync(getTemplates, []);
   const draft = savedDraft(),
     [form, setForm] = useState<FormState>(draft?.form || blank),
@@ -120,9 +120,15 @@ export function AdminShowsPage() {
       contract_id: contract?.id || "",
       kind: contract?.kind || "setup",
       service_date: contract?.service_date || "",
-      driver_ids:
-        contract?.contract_drivers?.map((d) => d.driver_id) ||
-        (contract?.driver_id ? [contract.driver_id] : []),
+      driver_ids: contract?.driver_id
+        ? [
+            contract.driver_id,
+            ...(contract.contract_drivers || [])
+              .map((assignment) => assignment.driver_id)
+              .filter((id) => id !== contract.driver_id),
+          ]
+        : contract?.contract_drivers?.map((assignment) => assignment.driver_id) ||
+          [],
       template_id:
         contract?.contract_checklists?.[0]?.template_id ||
         assignedTemplate ||
@@ -390,34 +396,44 @@ export function AdminShowsPage() {
             </label>
           </div>
           <fieldset className="driver-selector">
-            <legend>Assigned drivers</legend>
+            <legend>Assigned team members</legend>
             <p>
-              The first selected driver is the lead. Additional drivers are
-              marked as trainees.
+              Admins can work shows just like drivers. The first selected team
+              member is the lead; additional members are marked as trainees.
             </p>
             <div>
-              {drivers.data
-                ?.filter((d) => d.is_active)
-                .map((d) => (
-                  <label key={d.id}>
+              {teamMembers.data?.map((member) => {
+                const selectedIndex = form.driver_ids.indexOf(member.id);
+                const assignmentLabel =
+                  selectedIndex === 0
+                    ? "Lead"
+                    : selectedIndex > 0
+                      ? "Trainee"
+                      : "";
+                return (
+                  <label key={member.id}>
                     <input
                       type="checkbox"
-                      checked={form.driver_ids.includes(d.id)}
+                      checked={selectedIndex >= 0}
                       onChange={(e) =>
                         setForm({
                           ...form,
                           driver_ids: e.target.checked
-                            ? [...form.driver_ids, d.id]
-                            : form.driver_ids.filter((id) => id !== d.id),
+                            ? [...form.driver_ids, member.id]
+                            : form.driver_ids.filter(
+                                (id) => id !== member.id,
+                              ),
                         })
                       }
                     />
-                    <span>{d.full_name || "Unnamed user"}</span>
-                    {form.driver_ids.indexOf(d.id) > 0 && (
-                      <small>Trainee</small>
-                    )}
+                    <span>{member.full_name || "Unnamed user"}</span>
+                    <small>
+                      {member.role === "admin" ? "Admin" : "Driver"}
+                      {assignmentLabel ? ` · ${assignmentLabel}` : ""}
+                    </small>
                   </label>
-                ))}
+                );
+              })}
             </div>
           </fieldset>
           <label className="terms-editor">
@@ -449,8 +465,8 @@ export function AdminShowsPage() {
         </form>
       )}
       <PageState
-        loading={shows.loading || drivers.loading || templates.loading}
-        error={shows.error || drivers.error || templates.error}
+        loading={shows.loading || teamMembers.loading || templates.loading}
+        error={shows.error || teamMembers.error || templates.error}
         empty={!shows.data?.length}
       >
         <div className="admin-show-list">
@@ -490,6 +506,16 @@ export function AdminShowsPage() {
                       <small>
                         {formatWorkDate(contract.service_date)} ·{" "}
                         {statusLabel(contract.status)}
+                      </small>
+                      <small>
+                        {contract.contract_drivers.length
+                          ? `Assigned: ${contract.contract_drivers
+                              .map((assignment) => {
+                                const person = assignment.driver;
+                                return `${person?.full_name || "Unnamed user"}${person?.role === "admin" ? " (Admin)" : ""}`;
+                              })
+                              .join(", ")}`
+                          : "No team members assigned"}
                       </small>
                     </span>
                   </div>
