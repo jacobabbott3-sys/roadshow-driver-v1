@@ -54,7 +54,7 @@ Run `202608180003_beta_collaboration.sql` for the beta features: multiple driver
 
 In Supabase, open **Authentication → URL Configuration**:
 
-1. Set **Site URL** to the main Vercel app URL (not localhost).
+1. Set **Site URL** to the main Vercel app's password setup page: `https://YOUR-PRODUCTION-DOMAIN.vercel.app/update-password` (not localhost and not a Supabase URL).
 2. Add the exact main app URL followed by `/**` to **Redirect URLs**.
 3. Add `https://*-jacobabbott3-sys.vercel.app/**` for Vercel beta previews.
 4. Keep `http://localhost:5173/**` only for local testing.
