@@ -1,0 +1,79 @@
+import { supabase } from "./supabase";
+
+export type Message = {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  subject: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+  sender: { full_name: string } | null;
+  recipient: { full_name: string } | null;
+};
+export type Notification = {
+  id: string;
+  title: string;
+  body: string;
+  link: string | null;
+  kind: string;
+  read_at: string | null;
+  created_at: string;
+};
+
+export async function getMessages(userId: string) {
+  const { data, error } = await supabase
+    .from("messages")
+    .select(
+      "id,sender_id,recipient_id,subject,body,read_at,created_at,sender:profiles!messages_sender_id_fkey(full_name),recipient:profiles!messages_recipient_id_fkey(full_name)",
+    )
+    .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as unknown as Message[];
+}
+
+export async function sendMessage(
+  senderId: string,
+  recipientIds: string[],
+  subject: string,
+  body: string,
+) {
+  const { error } = await supabase.from("messages").insert(
+    recipientIds.map((recipient_id) => ({
+      sender_id: senderId,
+      recipient_id,
+      subject,
+      body,
+    })),
+  );
+  if (error) throw error;
+}
+
+export async function markMessageRead(id: string, userId: string) {
+  const { error } = await supabase
+    .from("messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("recipient_id", userId);
+  if (error) throw error;
+}
+
+export async function getNotifications(userId: string) {
+  await supabase.rpc("ensure_my_due_notifications");
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id,title,body,link,kind,read_at,created_at")
+    .eq("recipient_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as Notification[];
+}
+
+export async function markNotificationRead(id: string) {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
