@@ -71,10 +71,21 @@ Users can then turn device notifications on and choose assignment, work-day, and
 
 In Supabase, open **Authentication → URL Configuration**:
 
-1. Set **Site URL** to the main Vercel app's password setup page: `https://YOUR-PRODUCTION-DOMAIN.vercel.app/update-password` (not localhost and not a Supabase URL).
-2. Add the exact main app URL followed by `/**` to **Redirect URLs**.
-3. Add `https://*-jacobabbott3-sys.vercel.app/**` for Vercel beta previews.
-4. Keep `http://localhost:5173/**` only for local testing.
+1. Set **Site URL** to the production app's root URL: `https://YOUR-PRODUCTION-DOMAIN.vercel.app` (do not include `/update-password`).
+2. Add the exact password page, `https://YOUR-PRODUCTION-DOMAIN.vercel.app/update-password`, to **Redirect URLs**.
+3. Also add the main app URL followed by `/**` to **Redirect URLs**.
+4. Add `https://*-jacobabbott3-sys.vercel.app/**` for Vercel beta previews.
+5. Keep `http://localhost:5173/**` only for local testing.
+
+In **Authentication → Email Templates → Invite user**, make sure the
+invite button uses Supabase's complete confirmation URL:
+
+```html
+<a href="{{ .ConfirmationURL }}">Accept the invite</a>
+```
+
+Do not build the invitation link from `.SiteURL` or `.RedirectTo`; those values
+do not verify the invitation token by themselves.
 
 Invite users from **Authentication → Users → Add user → Send invitation**. Supabase handles their password securely; the app and its administrators never receive it.
 
