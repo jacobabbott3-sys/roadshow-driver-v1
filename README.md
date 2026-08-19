@@ -4,10 +4,10 @@ Mobile-first operations app for roadshow drivers and administrators, built with 
 
 ## Local setup
 
-1. Install dependencies with `pnpm install`.
+1. Install dependencies with `npm install`.
 2. Copy `.env.example` to `.env` and add the Supabase project URL and anonymous key.
 3. Apply the SQL files in `supabase/migrations` in filename order using the Supabase SQL editor or CLI.
-4. Run `pnpm dev`.
+4. Run `npm run dev`.
 
 New accounts receive the `driver` role. Promote the initial administrator from the Supabase SQL editor:
 
@@ -47,3 +47,20 @@ Run `202608170004_admin_editing.sql` to enable editable checklist templates, exp
 Run `202608180001_contract_workflow_corrections.sql` to merge show and contract configuration, add a separate setup/teardown work date, and enable reliable assigned-driver checklist completion.
 
 Run `202608180002_single_contract_per_show.sql` to consolidate any legacy duplicate contracts and enforce one contract per show. The migration keeps the most progressed or assigned contract for each show.
+
+Run `202608180003_beta_collaboration.sql` for the beta features: multiple drivers, messages and notifications, dual signatures, toolbag templates and quantities, and Red Folder image uploads.
+
+## Fix invitation and password-reset links
+
+In Supabase, open **Authentication → URL Configuration**:
+
+1. Set **Site URL** to the main Vercel app URL (not localhost).
+2. Add the exact main app URL followed by `/**` to **Redirect URLs**.
+3. Add `https://*-jacobabbott3-sys.vercel.app/**` for Vercel beta previews.
+4. Keep `http://localhost:5173/**` only for local testing.
+
+Invite users from **Authentication → Users → Add user → Send invitation**. Supabase handles their password securely; the app and its administrators never receive it.
+
+## Beta workflow
+
+The `beta` branch is the testing version. Push changes to `beta` and use its Vercel Preview deployment for testing. The main app remains on `main`. When the beta is approved, merge `beta` into `main` in GitHub and Vercel will deploy it to production.
