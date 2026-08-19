@@ -1,15 +1,21 @@
 import { Bell } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageState } from "../components/PageState";
+import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import { getNotifications, markNotificationRead } from "../lib/communications";
 
 export function NotificationsPage() {
-  const notifications = useAsync(getNotifications, []);
+  const { user } = useAuth();
+  const notifications = useAsync(
+    () => getNotifications(user!.id),
+    [user?.id],
+  );
 
   async function markRead(id: string) {
     await markNotificationRead(id);
     await notifications.refresh();
+    window.dispatchEvent(new Event("roadshow:notifications-changed"));
   }
 
   return (

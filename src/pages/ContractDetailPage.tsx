@@ -5,6 +5,7 @@ import {
   FileSignature,
   Info,
   MapPin,
+  Send,
   Upload,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -18,6 +19,7 @@ import {
   getContract,
   setChecklistItem,
   statusLabel,
+  submitChecklist,
   type ChecklistSection,
 } from "../lib/driverData";
 import { supabase } from "../lib/supabase";
@@ -36,7 +38,21 @@ export function ContractDetailPage() {
       [checklist.data],
     ),
     done = items.filter((i) => i.response?.completed).length,
-    progress = items.length ? Math.round((done / items.length) * 100) : 0;
+    progress = items.length ? Math.round((done / items.length) * 100) : 0,
+    requiredComplete = items
+      .filter((item) => item.required)
+      .every((item) => item.response?.completed),
+    activeSection = checklist.data?.sections.find((section) =>
+      section.items.some((item) => !item.response?.completed),
+    ),
+    currentStatus = ["submitted", "under_review"].includes(
+      contract.data?.status || "",
+    )
+      ? "Submitted for review"
+      : contract.data?.status === "approved"
+        ? "Approved"
+        : activeSection?.title ||
+          (items.length ? "Ready to submit" : "Waiting for checklist");
   async function toggle(itemId: string, value: boolean) {
     if (!checklist.data?.id) return;
     setBusy(itemId);
@@ -59,6 +75,21 @@ export function ContractDetailPage() {
     else {
       setMessage("Contract signed successfully.");
       await contract.refresh();
+    }
+  }
+  async function submitForReview() {
+    setBusy("submit");
+    setMessage("");
+    try {
+      await submitChecklist(id);
+      setMessage("Checklist submitted to the admin team for review.");
+      await contract.refresh();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Unable to submit checklist.",
+      );
+    } finally {
+      setBusy("");
     }
   }
   async function upload(file: File, slot: string) {
@@ -104,15 +135,20 @@ export function ContractDetailPage() {
                   · {dateRange(contract.data.show)}
                 </p>
               </div>
-              <div
-                className="progress-ring"
-                style={
-                  {
-                    "--progress": `${progress * 3.6}deg`,
-                  } as React.CSSProperties
-                }
-              >
-                <span>{progress}%</span>
+              <div className="progress-summary">
+                <div
+                  className="progress-ring"
+                  style={
+                    {
+                      "--progress": `${progress * 3.6}deg`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <span>{progress}%</span>
+                </div>
+                <small>
+                  Current status: <strong>{currentStatus}</strong>
+                </small>
               </div>
             </header>
             <div className="contract-tabs">
@@ -202,14 +238,53 @@ export function ContractDetailPage() {
                     Your admin hasn’t attached a checklist yet.
                   </p>
                 ) : (
-                  checklist.data.sections.map((section) => (
-                    <ChecklistSectionView
-                      key={section.id}
-                      section={section}
-                      busy={busy}
-                      onToggle={toggle}
-                    />
-                  ))
+                  <>
+                    {checklist.data.sections.map((section) => (
+                      <ChecklistSectionView
+                        key={section.id}
+                        section={section}
+                        busy={busy}
+                        onToggle={toggle}
+                      />
+                    ))}
+                    {["submitted", "under_review"].includes(
+                      contract.data.status,
+                    ) ? (
+                      <p className="success review-submitted">
+                        <Check /> Submitted for admin review
+                      </p>
+                    ) : contract.data.status === "approved" ? (
+                      <p className="success review-submitted">
+                        <Check /> Checklist approved
+                      </p>
+                    ) : (
+                      <div className="review-submit">
+                        <button
+                          className="button primary"
+                          disabled={
+                            !requiredComplete ||
+                            !contract.data.signed_at ||
+                            busy === "submit"
+                          }
+                          onClick={() => void submitForReview()}
+                        >
+                          <Send />
+                          {busy === "submit"
+                            ? "Submitting…"
+                            : "Submit checklist for review"}
+                        </button>
+                        {!requiredComplete && (
+                          <small>Complete every required item first.</small>
+                        )}
+                        {requiredComplete && !contract.data.signed_at && (
+                          <small>
+                            The lead driver must sign the contract before the
+                            checklist can be submitted.
+                          </small>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </section>
             )}

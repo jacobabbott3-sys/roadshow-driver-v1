@@ -130,6 +130,12 @@ export async function setChecklistItem(
   });
   if (error) throw error;
 }
+export async function submitChecklist(contractId: string) {
+  const { error } = await supabase.rpc("submit_my_checklist", {
+    target_contract_id: contractId,
+  });
+  if (error) throw error;
+}
 export async function getAvailability(userId: string) {
   const { data: shows, error } = await supabase
     .from("shows")

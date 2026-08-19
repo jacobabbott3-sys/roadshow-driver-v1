@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import { getMessages, getNotifications } from "../lib/communications";
+import { supabase } from "../lib/supabase";
 
 export function TopBar() {
   const { user } = useAuth();
@@ -12,7 +13,10 @@ export function TopBar() {
     () => getMessages(user!.id),
     [user?.id, location.pathname],
   );
-  const notifications = useAsync(getNotifications, [location.pathname]);
+  const notifications = useAsync(
+    () => getNotifications(user!.id),
+    [user?.id, location.pathname],
+  );
   const refreshMessages = messages.refresh;
   const refreshNotifications = notifications.refresh;
   const [dark, setDark] = useState(
@@ -32,8 +36,56 @@ export function TopBar() {
     return () => window.clearInterval(timer);
   }, [refreshMessages, refreshNotifications]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`top-bar-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `recipient_id=eq.${user.id}`,
+        },
+        () => void refreshMessages(),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `recipient_id=eq.${user.id}`,
+        },
+        () => void refreshNotifications(),
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, refreshMessages, refreshNotifications]);
+
+  useEffect(() => {
+    function refreshBadges() {
+      void refreshMessages();
+      void refreshNotifications();
+    }
+    window.addEventListener("roadshow:messages-changed", refreshBadges);
+    window.addEventListener("roadshow:notifications-changed", refreshBadges);
+    return () => {
+      window.removeEventListener("roadshow:messages-changed", refreshBadges);
+      window.removeEventListener(
+        "roadshow:notifications-changed",
+        refreshBadges,
+      );
+    };
+  }, [refreshMessages, refreshNotifications]);
+
   const unreadMessages =
-    messages.data?.filter((message) => !message.read_at).length || 0;
+    messages.data?.filter(
+      (message) => message.recipient_id === user!.id && !message.read_at,
+    ).length || 0;
   const unreadNotifications =
     notifications.data?.filter((notification) => !notification.read_at)
       .length || 0;

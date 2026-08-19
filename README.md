@@ -50,6 +50,21 @@ Run `202608180002_single_contract_per_show.sql` to consolidate any legacy duplic
 
 Run `202608180003_beta_collaboration.sql` for the beta features: multiple drivers, messages and notifications, dual signatures, toolbag templates and quantities, and Red Folder image uploads.
 
+Run `202608180004_notification_review_fixes.sql` to add checklist submission alerts, live message/notification badges, notification preferences, and secure device push subscriptions.
+
+## Device notification setup
+
+The app and database are ready for web push, but each Supabase/Vercel environment needs its own keys and webhook setup:
+
+1. Generate a VAPID public/private key pair with `npx web-push generate-vapid-keys`.
+2. Add the public key to Vercel as `VITE_VAPID_PUBLIC_KEY`. Keep the private key out of Vercel's browser variables.
+3. Set these Supabase Edge Function secrets: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (for example `mailto:admin@example.com`), and a long random `WEBHOOK_SECRET`.
+4. Deploy the included function with `supabase functions deploy web-push --no-verify-jwt`.
+5. In **Supabase → Database → Webhooks**, create an `INSERT` webhook for both `public.notifications` and `public.messages`. Send them to `https://YOUR_PROJECT_REF.supabase.co/functions/v1/web-push` with an `x-webhook-secret` header matching the function secret.
+6. In **Supabase → Integrations → Cron**, schedule `select public.create_due_work_notifications();` once each morning. Choose a UTC time that matches the desired local delivery time.
+
+Users can then turn device notifications on and choose assignment, work-day, and message alerts from **Profile**. Browser permission is requested only when they press the enable button.
+
 ## Fix invitation and password-reset links
 
 In Supabase, open **Authentication → URL Configuration**:

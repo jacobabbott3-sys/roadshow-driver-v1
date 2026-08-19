@@ -19,9 +19,9 @@ import {
   getTemplates,
   saveShowContract,
   updateShow,
-  type AdminContract,
+  type AdminShow,
 } from "../lib/adminData";
-import { dateRange, statusLabel, type Show } from "../lib/driverData";
+import { dateRange, statusLabel } from "../lib/driverData";
 
 type FormState = {
   name: string;
@@ -83,9 +83,7 @@ export function AdminShowsPage() {
     [form, setForm] = useState<FormState>(draft?.form || blank),
     [open, setOpen] = useState(Boolean(draft)),
     [editing, setEditing] = useState<string | null>(draft?.editing || null),
-    [deleting, setDeleting] = useState<
-      (Show & { contracts: AdminContract[] }) | null
-    >(null),
+    [deleting, setDeleting] = useState<AdminShow | null>(null),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   useEffect(() => {
@@ -102,8 +100,11 @@ export function AdminShowsPage() {
     setForm(blank);
     setOpen(true);
   }
-  function loadEdit(show: Show & { contracts: AdminContract[] }) {
+  function loadEdit(show: AdminShow) {
     const contract = show.contracts[0];
+    const assignedTemplate = show.show_checklist_templates?.find(
+      (assignment) => assignment.kind === contract?.kind,
+    )?.template_id;
     setEditing(show.id);
     setOpen(true);
     setForm({
@@ -122,7 +123,10 @@ export function AdminShowsPage() {
       driver_ids:
         contract?.contract_drivers?.map((d) => d.driver_id) ||
         (contract?.driver_id ? [contract.driver_id] : []),
-      template_id: contract?.contract_checklists?.[0]?.template_id || "",
+      template_id:
+        contract?.contract_checklists?.[0]?.template_id ||
+        assignedTemplate ||
+        "",
       contract_pay: contract?.contract_pay?.toString() || "",
       bonus_pay: contract?.bonus_pay?.toString() || "",
       terms: contract?.terms || "",
@@ -131,6 +135,7 @@ export function AdminShowsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function changeKind(kind: "setup" | "teardown") {
+    if (kind === form.kind) return;
     setForm({
       ...form,
       kind,

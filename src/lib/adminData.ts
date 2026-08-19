@@ -76,15 +76,22 @@ export type AdminContract = {
   contract_drivers: { driver_id: string; is_trainee: boolean }[];
   contract_checklists: { template_id: string }[];
 };
+export type AdminShow = Show & {
+  contracts: AdminContract[];
+  show_checklist_templates: {
+    kind: "setup" | "teardown";
+    template_id: string;
+  }[];
+};
 export async function getShowsAdmin() {
   const { data, error } = await supabase
     .from("shows")
     .select(
-      "*,contracts(id,kind,service_date,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee),contract_checklists(template_id))",
+      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee),contract_checklists(template_id))",
     )
     .order("starts_on", { ascending: false });
   if (error) throw error;
-  return data as (Show & { contracts: AdminContract[] })[];
+  return data as AdminShow[];
 }
 export async function createShow(
   input: Omit<Show, "id" | "details_unlock_at">,
@@ -103,6 +110,15 @@ export async function createShow(
   return data.id as string;
 }
 export async function getDrivers() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,full_name,avatar_url,phone,role,is_active")
+    .eq("role", "driver")
+    .order("full_name");
+  if (error) throw error;
+  return data as Profile[];
+}
+export async function getUsers() {
   const { data, error } = await supabase
     .from("profiles")
     .select("id,full_name,avatar_url,phone,role,is_active")
