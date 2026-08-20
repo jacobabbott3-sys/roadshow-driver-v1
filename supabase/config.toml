@@ -1,5 +1,2 @@
 [functions.web-push]
 verify_jwt = false
-
-[functions.contract-email]
-verify_jwt = false

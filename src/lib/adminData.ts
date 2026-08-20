@@ -566,24 +566,6 @@ export async function saveShowLinks(showId: string, linkedIds: string[]) {
   const { error } = await supabase.from("show_links").upsert(rows, { onConflict: "show_id,linked_show_id" });
   if (error) throw error;
 }
-export async function getAppSettings() {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("contract_email_recipient")
-    .eq("id", true)
-    .single();
-  if (error) throw error;
-  return data as { contract_email_recipient: string | null };
-}
-export async function saveContractEmailRecipient(email: string, userId: string) {
-  const { error } = await supabase.from("app_settings").upsert({
-    id: true,
-    contract_email_recipient: email.trim() || null,
-    updated_at: new Date().toISOString(),
-    updated_by: userId,
-  });
-  if (error) throw error;
-}
 export async function createToolbagTemplate(
   name: string,
   items: { name: string; quantity: number }[],

@@ -1,17 +1,14 @@
 import { ArrowDown, ArrowUp, BriefcaseBusiness, ClipboardCheck, PackageOpen, Pencil, Plus, Save, Trash2 } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
-import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import {
   createTemplate,
   createToolbagTemplate,
-  getAppSettings,
   getContractTemplates,
   getTemplates,
   getToolbagTemplates,
-  saveContractEmailRecipient,
   saveContractTemplate,
   updateTemplate,
   updateToolbagTemplate,
@@ -24,15 +21,11 @@ const initialSections: DraftSection[] = [{ title: "Load Truck", items: [{ title:
 function move<T>(items: T[], from: number, to: number) { if (to < 0 || to >= items.length) return items; const next = [...items]; const [item] = next.splice(from, 1); next.splice(to, 0, item); return next; }
 
 export function AdminTemplatesPage() {
-  const { user } = useAuth();
   const contractTemplates = useAsync(getContractTemplates, []);
   const checklistTemplates = useAsync(getTemplates, []);
   const toolbagTemplates = useAsync(getToolbagTemplates, []);
-  const settings = useAsync(getAppSettings, []);
   const [tab, setTab] = useState<Tab>("contract");
   const [message, setMessage] = useState("");
-  const [email, setEmail] = useState("");
-  useEffect(() => { setEmail(settings.data?.contract_email_recipient || ""); }, [settings.data]);
 
   return (
     <main className="page">
@@ -43,14 +36,14 @@ export function AdminTemplatesPage() {
         <button className={tab === "toolbag" ? "active" : ""} onClick={() => setTab("toolbag")}><PackageOpen /> Toolbags</button>
       </div>
       {message && <p className="notice">{message}</p>}
-      {tab === "contract" && <ContractTemplates query={contractTemplates} onMessage={setMessage} email={email} setEmail={setEmail} onSaveEmail={async () => { await saveContractEmailRecipient(email, user!.id); setMessage("Contract email recipient saved."); await settings.refresh(); }} />}
+      {tab === "contract" && <ContractTemplates query={contractTemplates} onMessage={setMessage} />}
       {tab === "checklist" && <ChecklistTemplates query={checklistTemplates} onMessage={setMessage} />}
       {tab === "toolbag" && <ToolbagTemplates query={toolbagTemplates} onMessage={setMessage} />}
     </main>
   );
 }
 
-function ContractTemplates({ query, onMessage, email, setEmail, onSaveEmail }: { query: AsyncQuery<Awaited<ReturnType<typeof getContractTemplates>>>; onMessage: (value: string) => void; email: string; setEmail: (value: string) => void; onSaveEmail: () => Promise<void> }) {
+function ContractTemplates({ query, onMessage }: { query: AsyncQuery<Awaited<ReturnType<typeof getContractTemplates>>>; onMessage: (value: string) => void }) {
   const blank = { id: "", name: "", kind: "setup" as "setup" | "teardown", contract_pay: "", bonus_pay: "", terms: "", active: true };
   const [form, setForm] = useState(blank);
   const [open, setOpen] = useState(false);
@@ -60,7 +53,6 @@ function ContractTemplates({ query, onMessage, email, setEmail, onSaveEmail }: {
     <div className="admin-actions"><button className="button primary" onClick={() => { setForm(blank); setOpen(!open); }}><Plus /> New contract template</button></div>
     {open && <form className="admin-form" onSubmit={save}><h2>{form.id ? "Edit" : "New"} contract template</h2><div className="form-grid"><label>Template name<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label>Type<select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value as "setup" | "teardown" })}><option value="setup">Setup</option><option value="teardown">Teardown</option></select></label><label>Contract pay<input type="number" min="0" value={form.contract_pay} onChange={(event) => setForm({ ...form, contract_pay: event.target.value })} /></label><label>Potential bonus<input type="number" min="0" value={form.bonus_pay} onChange={(event) => setForm({ ...form, bonus_pay: event.target.value })} /></label></div><label className="terms-editor">Published terms<textarea required value={form.terms} onChange={(event) => setForm({ ...form, terms: event.target.value })} /></label><label className="checkbox-field"><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /> Active template</label><button className="button primary" disabled={busy}><Save /> Save template</button></form>}
     <section className="admin-section"><h2>Reusable contracts</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{query.data?.map((template) => <article className="template-row" key={template.id}><BriefcaseBusiness /><div><strong>{template.name}</strong><span>{template.kind} · {template.contract_pay == null ? "No pay set" : `$${template.contract_pay.toLocaleString()}`}</span></div><button className="icon-text-button" onClick={() => { setForm({ id: template.id, name: template.name, kind: template.kind, contract_pay: template.contract_pay?.toString() || "", bonus_pay: template.bonus_pay?.toString() || "", terms: template.terms || "", active: template.active }); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
-    <section className="admin-section"><p className="eyebrow">EMAIL DELIVERY</p><h2>Signed contract email</h2><p className="muted">After both signatures are recorded, send the show, driver, pay, and current bonus status to this address.</p><form className="email-setting" onSubmit={(event) => { event.preventDefault(); void onSaveEmail(); }}><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="contracts@example.com" /><button className="button secondary"><Save /> Save email</button></form></section>
   </>;
 }
 

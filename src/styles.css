@@ -1928,8 +1928,7 @@ h2 {
   border-radius: 14px;
   background: color-mix(in srgb, var(--paper) 78%, var(--cream));
 }
-.appearance-settings select,
-.email-setting input {
+.appearance-settings select {
   border: 1px solid var(--line);
   background: var(--paper);
   color: var(--ink);
@@ -1954,9 +1953,6 @@ h2 {
 .template-tabs button { border: 1px solid var(--line); background: var(--paper); color: var(--muted); border-radius: 11px; padding: 11px 14px; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
 .template-tabs button.active { background: var(--green); color: white; border-color: var(--green); }
 .template-tabs svg { width: 17px; }
-.email-setting { display: flex; gap: 10px; margin-top: 15px; }
-.email-setting input { flex: 1; }
-.email-setting .button { width: auto; }
 .chat-layout { display: grid; grid-template-columns: minmax(270px, .75fr) minmax(0, 1.5fr); min-height: 560px; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
 .chat-thread-list { border-right: 1px solid var(--line); padding: 8px; }
 .chat-thread-row { width: 100%; border: 0; background: transparent; color: var(--ink); border-radius: 12px; padding: 12px; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; text-align: left; cursor: pointer; }
@@ -2033,8 +2029,6 @@ h2 {
   .chat-thread-list { border-right: 0; }
   .chat-back { display: grid; place-items: center; }
   .chat-bubble { max-width: 88%; }
-  .email-setting { flex-direction: column; }
-  .email-setting .button { width: 100%; }
 }
 .show-booth-icon {
   width: 52px;

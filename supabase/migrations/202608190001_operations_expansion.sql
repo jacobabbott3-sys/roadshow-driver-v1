@@ -232,57 +232,6 @@ language sql stable security definer set search_path=public as $$
 $$;
 grant execute on function public.get_public_show_assignments() to authenticated;
 
-create table public.app_settings (
-  id boolean primary key default true check(id),
-  contract_email_recipient text,
-  updated_at timestamptz not null default now(),
-  updated_by uuid references public.profiles(id)
-);
-insert into public.app_settings(id) values(true) on conflict do nothing;
-alter table public.app_settings enable row level security;
-create policy "app settings admin manage" on public.app_settings
-for all to authenticated using(public.is_admin()) with check(public.is_admin());
-
-create table public.contract_email_queue (
-  id uuid primary key default gen_random_uuid(),
-  contract_id uuid not null references public.contracts(id) on delete cascade,
-  recipient_email text not null,
-  event_type text not null default 'signed',
-  status text not null default 'pending' check(status in ('pending','sent','failed')),
-  error_message text,
-  created_at timestamptz not null default now(),
-  sent_at timestamptz,
-  unique(contract_id,event_type)
-);
-alter table public.contract_email_queue enable row level security;
-create policy "contract email queue admin read" on public.contract_email_queue
-for select to authenticated using(public.is_admin());
-
-create or replace function public.queue_signed_contract_email()
-returns trigger language plpgsql security definer set search_path=public as $$
-declare target_email text;
-begin
-  if new.signed_at is not null and new.admin_signed_at is not null
-    and (old.signed_at is null or old.admin_signed_at is null) then
-    select contract_email_recipient into target_email from public.app_settings where id=true;
-    if nullif(trim(coalesce(target_email,'')),'') is not null then
-      insert into public.contract_email_queue(contract_id,recipient_email)
-      values(new.id,target_email) on conflict do nothing;
-    end if;
-  end if;
-  if new.status='bonus_earned' and old.status is distinct from new.status then
-    select contract_email_recipient into target_email from public.app_settings where id=true;
-    if nullif(trim(coalesce(target_email,'')),'') is not null then
-      insert into public.contract_email_queue(contract_id,recipient_email,event_type)
-      values(new.id,target_email,'bonus_earned') on conflict do nothing;
-    end if;
-  end if;
-  return new;
-end $$;
-create trigger queue_signed_contract_email
-after update of signed_at,admin_signed_at,status on public.contracts
-for each row execute function public.queue_signed_contract_email();
-
 create or replace function public.admin_set_bonus_result(target_contract uuid,earned boolean)
 returns void language plpgsql security definer set search_path=public as $$
 begin
