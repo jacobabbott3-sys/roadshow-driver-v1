@@ -1,5 +1,5 @@
 import { LockKeyhole } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
@@ -11,6 +11,10 @@ export function UpdatePasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    sessionStorage.removeItem("roadshow-auth-flow");
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();

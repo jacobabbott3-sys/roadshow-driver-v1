@@ -82,23 +82,10 @@ In Supabase, open **Authentication → URL Configuration**:
 3. Add the beta's stable Vercel branch URL followed by `/**` if beta uses the same Supabase project.
 4. Keep `http://localhost:5173/**` only for local testing.
 
-In **Authentication → Email Templates → Invite user**, replace the invite
-button link with the app's token-verification route:
-
-```html
-<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite">Accept invitation</a>
-```
-
-The `/auth/confirm` page verifies the one-time token with Supabase and then opens
-the password setup page. A raw `.SiteURL` or `/update-password` link cannot
-verify an invitation by itself.
-
-In **Email Templates → Reset password**, the normal confirmation URL remains
-valid because the app supplies `/update-password` as its allowed redirect:
-
-```html
-<a href="{{ .ConfirmationURL }}">Reset password</a>
-```
+No email-template changes or custom domain are required. Leave Supabase's
+default invitation template in place. Its `ConfirmationURL` verifies the invite
+and returns an authenticated session to the Site URL. The app recognizes the
+returned invite session and opens `/update-password` automatically.
 
 Invite users from **Authentication → Users → Add user → Send invitation**. Supabase handles their password securely; the app and its administrators never receive it.
 
