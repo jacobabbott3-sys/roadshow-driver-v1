@@ -63,9 +63,7 @@ export function AdminChecklistReviewPage() {
       await review.refresh();
       setMessage(status === "approved" ? "Item approved." : "Item denied.");
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Unable to save the review.",
-      );
+      setMessage(errorMessage(error, "Unable to save the review."));
     } finally {
       setBusy("");
     }
@@ -83,11 +81,7 @@ export function AdminChecklistReviewPage() {
           : "Checklist returned to the driver. Denied items were reopened for correction.",
       );
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to finish the review.",
-      );
+      setMessage(errorMessage(error, "Unable to finish the review."));
     } finally {
       setBusy("");
     }
@@ -100,7 +94,7 @@ export function AdminChecklistReviewPage() {
       await review.refresh();
       setMessage(earned ? "Bonus marked as earned." : "Bonus marked as not earned.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to save bonus result.");
+      setMessage(errorMessage(error, "Unable to save bonus result."));
     } finally { setBusy(""); }
   }
 
@@ -361,4 +355,10 @@ export function AdminChecklistReviewPage() {
       </PageState>
     </main>
   );
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") return error.message;
+  return fallback;
 }

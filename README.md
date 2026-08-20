@@ -62,6 +62,8 @@ Run `202608190003_beta_v3b.sql` for beta v3b availability pay/work-date details 
 
 Run `202608190004_beta_test_show.sql` to add the admin-only, resettable Beta Test Show sandbox. Each admin can create one Test Show from the beta Admin overview; resetting it clears test workflow progress without touching real shows.
 
+Run `202608190005_checklist_review_fix.sql` to correct item-level checklist review saves and final approvals by removing ambiguous database variable names.
+
 ## Device notification setup
 
 The app and database are ready for web push, but each Supabase/Vercel environment needs its own keys and webhook setup:
