@@ -14,6 +14,7 @@ import {
   adminSignContract,
   createShow,
   deleteShow,
+  getContractTemplates,
   getShowsAdmin,
   getTeamMembers,
   getTemplates,
@@ -33,9 +34,19 @@ type FormState = {
   bin_count: string;
   meals_included: boolean;
   lodging_included: boolean;
+  per_diem: string;
+  lodging_name: string;
+  lodging_address: string;
+  lodging_phone: string;
+  lodging_confirmation: string;
+  lodging_check_in: string;
+  lodging_check_out: string;
+  lodging_notes: string;
   contract_id: string;
+  contract_template_id: string;
   kind: "setup" | "teardown";
   service_date: string;
+  service_time: string;
   driver_ids: string[];
   template_id: string;
   contract_pay: string;
@@ -53,9 +64,19 @@ const blank: FormState = {
   bin_count: "",
   meals_included: false,
   lodging_included: false,
+  per_diem: "",
+  lodging_name: "",
+  lodging_address: "",
+  lodging_phone: "",
+  lodging_confirmation: "",
+  lodging_check_in: "",
+  lodging_check_out: "",
+  lodging_notes: "",
   contract_id: "",
+  contract_template_id: "",
   kind: "setup",
   service_date: "",
+  service_time: "",
   driver_ids: [],
   template_id: "",
   contract_pay: "",
@@ -78,7 +99,8 @@ function savedDraft() {
 export function AdminShowsPage() {
   const shows = useAsync(getShowsAdmin, []),
     teamMembers = useAsync(getTeamMembers, []),
-    templates = useAsync(getTemplates, []);
+    templates = useAsync(getTemplates, []),
+    contractTemplates = useAsync(getContractTemplates, []);
   const draft = savedDraft(),
     [form, setForm] = useState<FormState>(draft?.form || blank),
     [open, setOpen] = useState(Boolean(draft)),
@@ -117,9 +139,19 @@ export function AdminShowsPage() {
       bin_count: show.bin_count?.toString() || "",
       meals_included: show.meals_included,
       lodging_included: show.lodging_included,
+      per_diem: show.per_diem?.toString() || "",
+      lodging_name: show.lodging_name || "",
+      lodging_address: show.lodging_address || "",
+      lodging_phone: show.lodging_phone || "",
+      lodging_confirmation: show.lodging_confirmation || "",
+      lodging_check_in: show.lodging_check_in || "",
+      lodging_check_out: show.lodging_check_out || "",
+      lodging_notes: show.lodging_notes || "",
       contract_id: contract?.id || "",
+      contract_template_id: "",
       kind: contract?.kind || "setup",
       service_date: contract?.service_date || "",
+      service_time: contract?.service_time?.slice(0, 5) || "",
       driver_ids: contract?.driver_id
         ? [
             contract.driver_id,
@@ -145,6 +177,7 @@ export function AdminShowsPage() {
     setForm({
       ...form,
       kind,
+      contract_template_id: "",
       template_id: "",
       service_date:
         kind === "setup" && form.starts_on
@@ -167,8 +200,17 @@ export function AdminShowsPage() {
         state: form.state || null,
         address: form.address || null,
         bin_count: form.bin_count ? Number(form.bin_count) : null,
-        meals_included: form.meals_included,
+        meals_included: false,
         lodging_included: form.lodging_included,
+        event_type: "show" as const,
+        per_diem: form.per_diem ? Number(form.per_diem) : null,
+        lodging_name: form.lodging_included ? form.lodging_name || null : null,
+        lodging_address: form.lodging_included ? form.lodging_address || null : null,
+        lodging_phone: form.lodging_included ? form.lodging_phone || null : null,
+        lodging_confirmation: form.lodging_included ? form.lodging_confirmation || null : null,
+        lodging_check_in: form.lodging_included ? form.lodging_check_in || null : null,
+        lodging_check_out: form.lodging_included ? form.lodging_check_out || null : null,
+        lodging_notes: form.lodging_included ? form.lodging_notes || null : null,
       };
       const showId = editing || (await createShow(showInput));
       if (editing) await updateShow(editing, showInput);
@@ -178,6 +220,7 @@ export function AdminShowsPage() {
         driver_ids: form.driver_ids,
         kind: form.kind,
         service_date: form.service_date,
+        service_time: form.service_time || null,
         contract_pay: form.contract_pay ? Number(form.contract_pay) : null,
         bonus_pay: form.bonus_pay ? Number(form.bonus_pay) : null,
         terms: form.terms || null,
@@ -215,6 +258,7 @@ export function AdminShowsPage() {
   }
   const matchingTemplates =
     templates.data?.filter((t) => t.kind === form.kind) || [];
+  const regularShows = shows.data?.filter((show) => show.event_type !== "signing") || [];
   return (
     <main className="page">
       <AdminHeader
@@ -306,15 +350,16 @@ export function AdminShowsPage() {
                 }
               />
             </label>
-            <label className="checkbox-field">
+            <label>
+              Per diem amount
               <input
-                type="checkbox"
-                checked={form.meals_included}
-                onChange={(e) =>
-                  setForm({ ...form, meals_included: e.target.checked })
-                }
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.per_diem}
+                onChange={(e) => setForm({ ...form, per_diem: e.target.value })}
+                placeholder="0.00"
               />
-              Meals included
             </label>
             <label className="checkbox-field">
               <input
@@ -327,11 +372,38 @@ export function AdminShowsPage() {
               Lodging included
             </label>
           </div>
+          {form.lodging_included && (
+            <div className="lodging-details">
+              <p className="eyebrow">LODGING DETAILS</p>
+              <div className="form-grid">
+                <label>Hotel / property<input value={form.lodging_name} onChange={(e) => setForm({ ...form, lodging_name: e.target.value })} /></label>
+                <label>Phone number<input type="tel" value={form.lodging_phone} onChange={(e) => setForm({ ...form, lodging_phone: e.target.value })} /></label>
+                <label className="wide-field">Address<input value={form.lodging_address} onChange={(e) => setForm({ ...form, lodging_address: e.target.value })} /></label>
+                <label>Confirmation number<input value={form.lodging_confirmation} onChange={(e) => setForm({ ...form, lodging_confirmation: e.target.value })} /></label>
+                <label>Check-in<input type="date" value={form.lodging_check_in} onChange={(e) => setForm({ ...form, lodging_check_in: e.target.value })} /></label>
+                <label>Check-out<input type="date" value={form.lodging_check_out} onChange={(e) => setForm({ ...form, lodging_check_out: e.target.value })} /></label>
+              </div>
+              <label className="terms-editor">Lodging notes<textarea value={form.lodging_notes} onChange={(e) => setForm({ ...form, lodging_notes: e.target.value })} placeholder="Rooming instructions, parking, check-in details…" /></label>
+            </div>
+          )}
           <div className="form-divider">
             <p className="eyebrow">CONTRACT</p>
             <h2>Contract details</h2>
           </div>
           <div className="form-grid">
+            <label>
+              Reusable contract template
+              <select
+                value={form.contract_template_id}
+                onChange={(e) => {
+                  const selected = contractTemplates.data?.find((template) => template.id === e.target.value);
+                  setForm(selected ? { ...form, contract_template_id: selected.id, kind: selected.kind, contract_pay: selected.contract_pay?.toString() || "", bonus_pay: selected.bonus_pay?.toString() || "", terms: selected.terms || "", template_id: selected.kind === form.kind ? form.template_id : "" } : { ...form, contract_template_id: "" });
+                }}
+              >
+                <option value="">Start without a template</option>
+                {contractTemplates.data?.filter((template) => template.active).map((template) => <option value={template.id} key={template.id}>{template.name}</option>)}
+              </select>
+            </label>
             <label>
               Contract type
               <select
@@ -354,6 +426,10 @@ export function AdminShowsPage() {
                   setForm({ ...form, service_date: e.target.value })
                 }
               />
+            </label>
+            <label>
+              {form.kind === "setup" ? "Setup time" : "Teardown time"}
+              <input type="time" value={form.service_time} onChange={(e) => setForm({ ...form, service_time: e.target.value })} />
             </label>
             <label>
               {statusLabel(form.kind)} checklist
@@ -465,12 +541,12 @@ export function AdminShowsPage() {
         </form>
       )}
       <PageState
-        loading={shows.loading || teamMembers.loading || templates.loading}
-        error={shows.error || teamMembers.error || templates.error}
-        empty={!shows.data?.length}
+        loading={shows.loading || teamMembers.loading || templates.loading || contractTemplates.loading}
+        error={shows.error || teamMembers.error || templates.error || contractTemplates.error}
+        empty={!regularShows.length}
       >
         <div className="admin-show-list">
-          {shows.data?.map((show) => {
+          {regularShows.map((show) => {
             const contract = show.contracts[0];
             return (
               <article className="admin-show-card" key={show.id}>
@@ -504,7 +580,7 @@ export function AdminShowsPage() {
                     <span>
                       <strong>{statusLabel(contract.kind)} contract</strong>
                       <small>
-                        {formatWorkDate(contract.service_date)} ·{" "}
+                        {formatWorkDate(contract.service_date)}{contract.service_time ? ` at ${formatTime(contract.service_time)}` : ""} ·{" "}
                         {statusLabel(contract.status)}
                       </small>
                       <small>
@@ -572,5 +648,11 @@ function formatWorkDate(value: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+}
+function formatTime(value: string) {
+  return new Date(`2000-01-01T${value}`).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
   });
 }

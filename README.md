@@ -54,6 +54,8 @@ Run `202608180004_notification_review_fixes.sql` to add checklist submission ale
 
 Run `202608180005_item_level_checklist_review.sql` to enable full item-by-item admin review, correction notes, driver resubmission of denied items, and persistent checklist review history.
 
+Run `202608190001_operations_expansion.sql` for account-synced appearance settings, color schemes, group chat, reusable contract templates, signings, the team directory, public assignment visibility, per diem and lodging details, setup times, and signed-contract email queueing.
+
 ## Device notification setup
 
 The app and database are ready for web push, but each Supabase/Vercel environment needs its own keys and webhook setup:
@@ -62,10 +64,22 @@ The app and database are ready for web push, but each Supabase/Vercel environmen
 2. Add the public key to Vercel as `VITE_VAPID_PUBLIC_KEY`. Keep the private key out of Vercel's browser variables.
 3. Set these Supabase Edge Function secrets: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (for example `mailto:admin@example.com`), and a long random `WEBHOOK_SECRET`.
 4. Deploy the included function with `supabase functions deploy web-push --no-verify-jwt`.
-5. In **Supabase → Database → Webhooks**, create an `INSERT` webhook for both `public.notifications` and `public.messages`. Send them to `https://YOUR_PROJECT_REF.supabase.co/functions/v1/web-push` with an `x-webhook-secret` header matching the function secret.
+5. In **Supabase → Database → Webhooks**, create an `INSERT` webhook for `public.notifications`. Send it to `https://YOUR_PROJECT_REF.supabase.co/functions/v1/web-push` with an `x-webhook-secret` header matching the function secret. The old `public.messages` webhook can be removed after the chat migration.
 6. In **Supabase → Integrations → Cron**, schedule `select public.create_due_work_notifications();` once each morning. Choose a UTC time that matches the desired local delivery time.
 
 Users can then turn device notifications on and choose assignment, work-day, and message alerts from **Profile**. Browser permission is requested only when they press the enable button.
+
+## Signed contract email setup
+
+Contract and earned-bonus emails use the included `contract-email` Edge Function and Resend:
+
+1. Verify a sending domain in Resend and create an API key.
+2. Set the Supabase Edge Function secrets `RESEND_API_KEY`, `CONTRACT_EMAIL_FROM` (for example `Roadshow Driver <contracts@yourdomain.com>`), and the same long `WEBHOOK_SECRET` used by the webhook header.
+3. Deploy with `supabase functions deploy contract-email --no-verify-jwt`.
+4. In **Supabase → Database → Webhooks**, create an `INSERT` webhook for `public.contract_email_queue`. Send it to `https://YOUR_PROJECT_REF.supabase.co/functions/v1/contract-email` with an `x-webhook-secret` header matching the function secret.
+5. In the app, open **Admin → Templates → Contracts** and save the recipient under **Signed contract email**.
+
+The first email is queued after both signatures are recorded. If an administrator later marks the bonus as earned, a second email includes the earned bonus amount.
 
 ## Fix invitation and password-reset links
 

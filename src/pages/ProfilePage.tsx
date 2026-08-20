@@ -3,6 +3,7 @@ import {
   BellRing,
   CalendarDays,
   LogOut,
+  Palette,
   Save,
   Smartphone,
   UserRound,
@@ -19,9 +20,10 @@ import {
   saveNotificationPreferences,
 } from "../lib/pushNotifications";
 import { supabase } from "../lib/supabase";
+import type { ColorScheme, ThemePreference } from "../types";
 
 export function ProfilePage() {
-  const { profile, user, signOut } = useAuth();
+  const { profile, user, signOut, refreshProfile, updateAppearance } = useAuth();
   const preferences = useAsync(
     () => getNotificationPreferences(user!.id),
     [user?.id],
@@ -32,6 +34,8 @@ export function ProfilePage() {
   const [deviceBusy, setDeviceBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
+  const [theme, setTheme] = useState<ThemePreference>(profile?.theme_preference || "light");
+  const [colorScheme, setColorScheme] = useState<ColorScheme>(profile?.color_scheme || "forest");
   const [alerts, setAlerts] = useState({
     assignment_alerts: true,
     work_day_alerts: true,
@@ -46,6 +50,12 @@ export function ProfilePage() {
       message_alerts: preferences.data.message_alerts,
     });
   }, [preferences.data]);
+
+  useEffect(() => {
+    if (!profile) return;
+    setTheme(profile.theme_preference || "light");
+    setColorScheme(profile.color_scheme || "forest");
+  }, [profile]);
 
   async function saveProfile() {
     setSaving(true);
@@ -63,6 +73,20 @@ export function ProfilePage() {
         ? error.message
         : "Profile saved. Refresh to see your updated greeting.",
     );
+    if (!error) await refreshProfile();
+  }
+
+  async function saveAppearance() {
+    setSaving(true);
+    setMessage("");
+    try {
+      await updateAppearance(theme, colorScheme);
+      setMessage("Appearance saved to your account.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to save appearance.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function toggleDeviceNotifications() {
@@ -157,6 +181,33 @@ export function ProfilePage() {
         </button>
         {message && <p className="notice">{message}</p>}
       </section>
+      <section className="detail-panel profile-form appearance-settings">
+        <div className="notification-heading">
+          <div className="notification-icon"><Palette /></div>
+          <div><h2>Appearance</h2><p>These settings follow your account on every device.</p></div>
+        </div>
+        <div className="form-grid">
+          <label>
+            Display mode
+            <select value={theme} onChange={(event) => setTheme(event.target.value as ThemePreference)}>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="system">Match device</option>
+            </select>
+          </label>
+          <label>
+            Color scheme
+            <select value={colorScheme} onChange={(event) => setColorScheme(event.target.value as ColorScheme)}>
+              <option value="forest">Forest</option>
+              <option value="blue">Road blue</option>
+              <option value="purple">Stage purple</option>
+              <option value="rust">Warm rust</option>
+            </select>
+          </label>
+        </div>
+        <div className="color-preview" aria-label={`${colorScheme} color preview`}><span /><span /><span /></div>
+        <button className="button secondary" onClick={() => void saveAppearance()} disabled={saving}><Save /> Save appearance</button>
+      </section>
       <section className="detail-panel notification-settings">
         <div className="notification-heading">
           <div className="notification-icon">
@@ -204,8 +255,8 @@ export function ProfilePage() {
             }
           />
           <Preference
-            title="New messages"
-            description="When an administrator sends you a message"
+            title="New chat messages"
+            description="When someone replies in one of your chats"
             checked={alerts.message_alerts}
             onChange={(checked) =>
               setAlerts({ ...alerts, message_alerts: checked })

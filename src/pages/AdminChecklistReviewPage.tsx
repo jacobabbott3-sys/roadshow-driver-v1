@@ -18,6 +18,7 @@ import {
   finalizeChecklistReview,
   getChecklistReview,
   reviewChecklistItem,
+  setContractBonusResult,
 } from "../lib/adminData";
 import { dateRange, statusLabel } from "../lib/driverData";
 
@@ -90,6 +91,17 @@ export function AdminChecklistReviewPage() {
     } finally {
       setBusy("");
     }
+  }
+  async function setBonus(earned: boolean) {
+    setBusy("bonus");
+    setMessage("");
+    try {
+      await setContractBonusResult(contractId, earned);
+      await review.refresh();
+      setMessage(earned ? "Bonus marked as earned." : "Bonus marked as not earned.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to save bonus result.");
+    } finally { setBusy(""); }
   }
 
   return (
@@ -311,6 +323,7 @@ export function AdminChecklistReviewPage() {
                 </button>
               </section>
             ) : (
+              <>
               <section
                 className={`review-complete-banner ${reviewApproved ? "approved" : "returned"}`}
               >
@@ -335,6 +348,13 @@ export function AdminChecklistReviewPage() {
                   )}
                 </div>
               </section>
+              {reviewApproved && contract.bonus_pay != null && (
+                <section className="finish-review-panel bonus-decision">
+                  <div><p className="eyebrow">BONUS RESULT</p><h2>Potential bonus: ${contract.bonus_pay.toLocaleString()}</h2><p>Recording an earned bonus also sends the configured bonus email.</p></div>
+                  <div><button className="button danger" disabled={busy === "bonus"} onClick={() => void setBonus(false)}><X /> Not earned</button><button className="button primary" disabled={busy === "bonus"} onClick={() => void setBonus(true)}><Check /> Bonus earned</button></div>
+                </section>
+              )}
+              </>
             )}
           </>
         )}

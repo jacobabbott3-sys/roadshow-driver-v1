@@ -16,7 +16,6 @@ import { useAsync } from "../hooks/useAsync";
 import {
   addToolbagItem,
   applyToolbagTemplate,
-  createToolbagTemplate,
   createToolbag,
   deleteToolbagItem,
   getTeamMembers,
@@ -44,10 +43,6 @@ export function AdminOperationsPage() {
     [openBag, setOpenBag] = useState<string | null>(null),
     [item, setItem] = useState({ name: "", quantity: 1 }),
     [editingItem, setEditingItem] = useState<string | null>(null),
-    [template, setTemplate] = useState({
-      name: "",
-      items: [{ name: "", quantity: 1 }],
-    }),
     [message, setMessage] = useState("");
   async function addResource(e: FormEvent) {
     e.preventDefault();
@@ -95,14 +90,6 @@ export function AdminOperationsPage() {
   async function removeItem(id: string) {
     await deleteToolbagItem(id);
     await toolbags.refresh();
-  }
-  async function saveTemplate(e: FormEvent) {
-    e.preventDefault();
-    const items = template.items.filter((i) => i.name.trim());
-    await createToolbagTemplate(template.name.trim(), items);
-    setTemplate({ name: "", items: [{ name: "", quantity: 1 }] });
-    setMessage("Toolbag template saved.");
-    await toolbagTemplates.refresh();
   }
   return (
     <main className="page">
@@ -207,88 +194,6 @@ export function AdminOperationsPage() {
               <Plus /> Add toolbag
             </button>
           </form>
-          <details className="template-editor">
-            <summary>Create toolbag template</summary>
-            <form className="stack-form" onSubmit={saveTemplate}>
-              <label>
-                Template name
-                <input
-                  required
-                  value={template.name}
-                  onChange={(e) =>
-                    setTemplate({ ...template, name: e.target.value })
-                  }
-                />
-              </label>
-              {template.items.map((templateItem, index) => (
-                <div className="inventory-form" key={index}>
-                  <input
-                    required
-                    placeholder="Item name"
-                    value={templateItem.name}
-                    onChange={(e) =>
-                      setTemplate({
-                        ...template,
-                        items: template.items.map((value, itemIndex) =>
-                          itemIndex === index
-                            ? { ...value, name: e.target.value }
-                            : value,
-                        ),
-                      })
-                    }
-                  />
-                  <input
-                    required
-                    type="number"
-                    min="1"
-                    aria-label="Quantity"
-                    value={templateItem.quantity}
-                    onChange={(e) =>
-                      setTemplate({
-                        ...template,
-                        items: template.items.map((value, itemIndex) =>
-                          itemIndex === index
-                            ? { ...value, quantity: Number(e.target.value) }
-                            : value,
-                        ),
-                      })
-                    }
-                  />
-                  {template.items.length > 1 && (
-                    <button
-                      type="button"
-                      aria-label="Remove template item"
-                      onClick={() =>
-                        setTemplate({
-                          ...template,
-                          items: template.items.filter(
-                            (_, itemIndex) => itemIndex !== index,
-                          ),
-                        })
-                      }
-                    >
-                      <Trash2 />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                className="text-button"
-                onClick={() =>
-                  setTemplate({
-                    ...template,
-                    items: [...template.items, { name: "", quantity: 1 }],
-                  })
-                }
-              >
-                + Add template item
-              </button>
-              <button className="button primary">
-                <Save /> Save template
-              </button>
-            </form>
-          </details>
           <PageState loading={toolbags.loading} error={toolbags.error}>
             {toolbags.data?.map((t) => (
               <div className="toolbag-editor" key={t.id}>

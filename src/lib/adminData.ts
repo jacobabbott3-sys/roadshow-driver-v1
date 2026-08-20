@@ -7,6 +7,7 @@ export type DashboardStats = {
   reviews: number;
   drivers: number;
   feedback: number;
+  signings: number;
 };
 export type AdminToolbag = {
   id: string;
@@ -21,6 +22,20 @@ export type ToolbagTemplate = {
   name: string;
   items: { id: string; name: string; quantity: number; position: number }[];
 };
+export type ContractTemplate = {
+  id: string;
+  name: string;
+  kind: "setup" | "teardown";
+  contract_pay: number | null;
+  bonus_pay: number | null;
+  terms: string | null;
+  active: boolean;
+};
+export type ShowInput = Pick<
+  Show,
+  "name" | "starts_on" | "ends_on" | "city"
+> &
+  Partial<Omit<Show, "id" | "name" | "starts_on" | "ends_on" | "city">>;
 export type AdminFeedback = {
   id: string;
   category: string;
@@ -31,14 +46,21 @@ export type AdminFeedback = {
 };
 export async function getDashboardStats() {
   const today = new Date().toISOString().slice(0, 10);
-  const [shows, unsigned, reviews, drivers, feedback] = await Promise.all([
+  const [shows, signings, unsigned, reviews, drivers, feedback] = await Promise.all([
     supabase
       .from("shows")
       .select("*", { count: "exact", head: true })
+      .eq("event_type", "show")
+      .gte("ends_on", today),
+    supabase
+      .from("shows")
+      .select("*", { count: "exact", head: true })
+      .eq("event_type", "signing")
       .gte("ends_on", today),
     supabase
       .from("contracts")
-      .select("*", { count: "exact", head: true })
+      .select("*,show:shows!inner(event_type)", { count: "exact", head: true })
+      .eq("show.event_type", "show")
       .is("signed_at", null),
     supabase
       .from("contracts")
@@ -60,12 +82,14 @@ export async function getDashboardStats() {
     reviews: reviews.count || 0,
     drivers: drivers.count || 0,
     feedback: feedback.count || 0,
+    signings: signings.count || 0,
   } as DashboardStats;
 }
 export type AdminContract = {
   id: string;
   kind: "setup" | "teardown";
   service_date: string;
+  service_time: string | null;
   status: string;
   driver_id: string | null;
   contract_pay: number | null;
@@ -91,14 +115,14 @@ export async function getShowsAdmin() {
   const { data, error } = await supabase
     .from("shows")
     .select(
-      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id))",
+      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id))",
     )
     .order("starts_on", { ascending: false });
   if (error) throw error;
   return data as AdminShow[];
 }
 export async function createShow(
-  input: Omit<Show, "id" | "details_unlock_at">,
+  input: ShowInput,
 ) {
   const { data, error } = await supabase
     .from("shows")
@@ -136,10 +160,11 @@ export async function saveShowContract(input: {
   driver_ids: string[];
   kind: "setup" | "teardown";
   service_date: string;
+  service_time?: string | null;
   contract_pay: number | null;
   bonus_pay: number | null;
   terms: string | null;
-  template_id: string;
+  template_id?: string;
 }) {
   let contractId = input.id;
   const values = {
@@ -147,6 +172,7 @@ export async function saveShowContract(input: {
     driver_id: input.driver_ids[0] || null,
     kind: input.kind,
     service_date: input.service_date,
+    service_time: input.service_time || null,
     contract_pay: input.contract_pay,
     bonus_pay: input.bonus_pay,
     terms: input.terms,
@@ -196,12 +222,25 @@ export async function saveShowContract(input: {
       );
     if (error) throw error;
   }
-  await assignShowChecklist(input.show_id, input.kind, input.template_id);
-  const { error: assignError } = await supabase.rpc("admin_assign_checklist", {
-    target_contract: contractId,
-    target_template: input.template_id,
-  });
-  if (assignError) throw assignError;
+  if (input.template_id) {
+    await assignShowChecklist(input.show_id, input.kind, input.template_id);
+    const { error: assignError } = await supabase.rpc("admin_assign_checklist", {
+      target_contract: contractId,
+      target_template: input.template_id,
+    });
+    if (assignError) throw assignError;
+  } else {
+    const [{ error: showChecklistError }, { error: contractChecklistError }] = await Promise.all([
+      supabase
+        .from("show_checklist_templates")
+        .delete()
+        .eq("show_id", input.show_id)
+        .eq("kind", input.kind),
+      supabase.from("contract_checklists").delete().eq("contract_id", contractId),
+    ]);
+    if (showChecklistError) throw showChecklistError;
+    if (contractChecklistError) throw contractChecklistError;
+  }
   return contractId;
 }
 export async function adminSignContract(id: string, name: string) {
@@ -264,7 +303,7 @@ export async function getChecklistReview(contractId: string) {
     supabase
       .from("contracts")
       .select(
-        "id,kind,status,service_date,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name),contract_drivers(driver_id,is_trainee,driver:profiles(id,full_name))",
+        "id,kind,status,service_date,contract_pay,bonus_pay,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name),contract_drivers(driver_id,is_trainee,driver:profiles(id,full_name))",
       )
       .eq("id", contractId)
       .single(),
@@ -307,6 +346,13 @@ export async function finalizeChecklistReview(contractId: string) {
   );
   if (error) throw error;
   return data as "approved" | "in_progress";
+}
+export async function setContractBonusResult(contractId: string, earned: boolean) {
+  const { error } = await supabase.rpc("admin_set_bonus_result", {
+    target_contract: contractId,
+    earned,
+  });
+  if (error) throw error;
 }
 export async function getTemplates() {
   const { data, error } = await supabase
@@ -478,6 +524,66 @@ export async function getToolbagTemplates() {
   if (error) throw error;
   return (data || []) as unknown as ToolbagTemplate[];
 }
+export async function getContractTemplates() {
+  const { data, error } = await supabase
+    .from("contract_templates")
+    .select("id,name,kind,contract_pay,bonus_pay,terms,active")
+    .order("name");
+  if (error) throw error;
+  return (data || []) as ContractTemplate[];
+}
+export async function saveContractTemplate(template: Omit<ContractTemplate, "id"> & { id?: string }) {
+  const values = {
+    name: template.name.trim(),
+    kind: template.kind,
+    contract_pay: template.contract_pay,
+    bonus_pay: template.bonus_pay,
+    terms: template.terms,
+    active: template.active,
+    updated_at: new Date().toISOString(),
+  };
+  const query = template.id
+    ? supabase.from("contract_templates").update(values).eq("id", template.id)
+    : supabase.from("contract_templates").insert(values);
+  const { error } = await query;
+  if (error) throw error;
+}
+export async function getShowLinks() {
+  const { data, error } = await supabase.from("show_links").select("show_id,linked_show_id");
+  if (error) throw error;
+  return data || [];
+}
+export async function saveShowLinks(showId: string, linkedIds: string[]) {
+  const { error: deleteError } = await supabase
+    .from("show_links")
+    .delete()
+    .or(`show_id.eq.${showId},linked_show_id.eq.${showId}`);
+  if (deleteError) throw deleteError;
+  if (!linkedIds.length) return;
+  const rows = linkedIds
+    .filter((id) => id !== showId)
+    .map((id) => ({ show_id: [showId, id].sort()[0], linked_show_id: [showId, id].sort()[1] }));
+  const { error } = await supabase.from("show_links").upsert(rows, { onConflict: "show_id,linked_show_id" });
+  if (error) throw error;
+}
+export async function getAppSettings() {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("contract_email_recipient")
+    .eq("id", true)
+    .single();
+  if (error) throw error;
+  return data as { contract_email_recipient: string | null };
+}
+export async function saveContractEmailRecipient(email: string, userId: string) {
+  const { error } = await supabase.from("app_settings").upsert({
+    id: true,
+    contract_email_recipient: email.trim() || null,
+    updated_at: new Date().toISOString(),
+    updated_by: userId,
+  });
+  if (error) throw error;
+}
 export async function createToolbagTemplate(
   name: string,
   items: { name: string; quantity: number }[],
@@ -500,6 +606,18 @@ export async function createToolbagTemplate(
       );
     if (itemError) throw itemError;
   }
+}
+export async function updateToolbagTemplate(
+  id: string,
+  name: string,
+  items: { name: string; quantity: number }[],
+) {
+  const { error } = await supabase.rpc("admin_replace_toolbag_template", {
+    target_template: id,
+    target_name: name,
+    target_items: items,
+  });
+  if (error) throw error;
 }
 export async function applyToolbagTemplate(
   toolbagId: string,

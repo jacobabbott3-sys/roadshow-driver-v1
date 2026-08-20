@@ -3,6 +3,7 @@ import {
   Eye,
   FileClock,
   MessageSquareText,
+  Mic2,
   Store as TentTree,
   UsersRound,
 } from "lucide-react";
@@ -35,6 +36,11 @@ export function AdminPage() {
             <strong>{stats.data?.unsigned}</strong>
             <span>Awaiting signature</span>
           </article>
+          <Link to="/admin/signings">
+            <Mic2 />
+            <strong>{stats.data?.signings}</strong>
+            <span>Upcoming signings</span>
+          </Link>
           <article>
             <ClipboardCheck />
             <strong>{stats.data?.reviews}</strong>

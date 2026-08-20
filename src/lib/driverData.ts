@@ -12,11 +12,25 @@ export type Show = {
   meals_included: boolean;
   lodging_included: boolean;
   details_unlock_at: string | null;
+  event_type: "show" | "signing";
+  artist: string | null;
+  venue_name: string | null;
+  signing_at: string | null;
+  setup_at: string | null;
+  per_diem: number | null;
+  lodging_name: string | null;
+  lodging_address: string | null;
+  lodging_phone: string | null;
+  lodging_confirmation: string | null;
+  lodging_check_in: string | null;
+  lodging_check_out: string | null;
+  lodging_notes: string | null;
 };
 export type Contract = {
   id: string;
   kind: "setup" | "teardown";
   service_date: string;
+  service_time: string | null;
   status: string;
   contract_pay: number | null;
   bonus_pay: number | null;
@@ -35,6 +49,7 @@ export type AvailabilityRow = {
   driver_id: string;
   status: "available" | "unavailable" | "pending" | "assigned";
   show: Show;
+  assignees: { id: string; full_name: string; role: "driver" | "admin" }[];
 };
 export type Resource = {
   id: string;
@@ -71,7 +86,7 @@ export async function getContracts() {
   const { data, error } = await supabase
     .from("contracts")
     .select(
-      "id,kind,service_date,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(id,name,starts_on,ends_on,city,state,address,bin_count,meals_included,lodging_included,details_unlock_at)",
+      "id,kind,service_date,service_time,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(*)",
     )
     .order("service_date");
   if (error) throw error;
@@ -81,7 +96,7 @@ export async function getContract(id: string) {
   const { data, error } = await supabase
     .from("contracts")
     .select(
-      "id,kind,service_date,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(id,name,starts_on,ends_on,city,state,address,bin_count,meals_included,lodging_included,details_unlock_at)",
+      "id,kind,service_date,service_time,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(*)",
     )
     .eq("id", id)
     .single();
@@ -141,24 +156,42 @@ export async function submitChecklist(contractId: string) {
   if (error) throw error;
 }
 export async function getAvailability(userId: string) {
-  const { data: shows, error } = await supabase
+  const [{ data: shows, error }, { data: assignmentRows, error: assignmentError }] = await Promise.all([
+    supabase
     .from("shows")
     .select("*")
+    .eq("event_type", "show")
     .gte("ends_on", new Date().toISOString().slice(0, 10))
-    .order("starts_on");
+    .order("starts_on"),
+    supabase.rpc("get_public_show_assignments"),
+  ]);
   if (error) throw error;
+  if (assignmentError) throw assignmentError;
   const { data: rows, error: rowError } = await supabase
     .from("availability")
     .select("id,show_id,driver_id,status")
     .eq("driver_id", userId);
   if (rowError) throw rowError;
   const byShow = new Map((rows || []).map((r) => [r.show_id, r]));
+  const typedAssignments = (assignmentRows || []) as {
+    show_id: string;
+    assignees: AvailabilityRow["assignees"];
+  }[];
+  const assignments = new Map<string, AvailabilityRow["assignees"]>(
+    typedAssignments.map((row) => [
+      row.show_id,
+      (row.assignees || []) as AvailabilityRow["assignees"],
+    ]),
+  );
   return (shows || []).map((show) => ({
     ...byShow.get(show.id),
     show_id: show.id,
     driver_id: userId,
-    status: byShow.get(show.id)?.status || "pending",
+    status: assignments.get(show.id)?.length
+      ? "assigned"
+      : byShow.get(show.id)?.status || "pending",
     show,
+    assignees: assignments.get(show.id) || [],
   })) as AvailabilityRow[];
 }
 export async function setAvailability(
@@ -201,6 +234,41 @@ export async function getMyToolbag(userId: string) {
     notes: string | null;
     items: { id: string; name: string; quantity: number; position: number }[];
   } | null;
+}
+export async function getDirectory() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,full_name,avatar_url,phone,role,is_active")
+    .eq("is_active", true)
+    .order("full_name");
+  if (error) throw error;
+  return data as {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+    phone: string | null;
+    role: "driver" | "admin";
+    is_active: boolean;
+  }[];
+}
+
+export async function getLinkedSignings(showId: string) {
+  const { data: links, error } = await supabase
+    .from("show_links")
+    .select("show_id,linked_show_id")
+    .or(`show_id.eq.${showId},linked_show_id.eq.${showId}`);
+  if (error) throw error;
+  const ids = (links || []).map((link) =>
+    link.show_id === showId ? link.linked_show_id : link.show_id,
+  );
+  if (!ids.length) return [] as Show[];
+  const { data, error: showError } = await supabase
+    .from("shows")
+    .select("*")
+    .in("id", ids)
+    .order("signing_at");
+  if (showError) throw showError;
+  return data as Show[];
 }
 export function dateRange(show: Show) {
   const start = new Date(`${show.starts_on}T12:00:00`),
