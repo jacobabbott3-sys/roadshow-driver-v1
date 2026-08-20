@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { release } from "./release";
 
 export type Show = {
   id: string;
@@ -12,11 +13,27 @@ export type Show = {
   meals_included: boolean;
   lodging_included: boolean;
   details_unlock_at: string | null;
+  event_type: "show" | "signing";
+  artist: string | null;
+  venue_name: string | null;
+  signing_at: string | null;
+  setup_at: string | null;
+  per_diem: number | null;
+  lodging_name: string | null;
+  lodging_address: string | null;
+  lodging_phone: string | null;
+  lodging_confirmation: string | null;
+  lodging_check_in: string | null;
+  lodging_check_out: string | null;
+  lodging_notes: string | null;
+  is_test: boolean;
+  test_owner: string | null;
 };
 export type Contract = {
   id: string;
   kind: "setup" | "teardown";
   service_date: string;
+  service_time: string | null;
   status: string;
   contract_pay: number | null;
   bonus_pay: number | null;
@@ -35,6 +52,12 @@ export type AvailabilityRow = {
   driver_id: string;
   status: "available" | "unavailable" | "pending" | "assigned";
   show: Show;
+  assignees: { id: string; full_name: string; role: "driver" | "admin" }[];
+  contract_pay: number | null;
+  bonus_pay: number | null;
+  contract_kind: "setup" | "teardown" | null;
+  service_date: string | null;
+  service_time: string | null;
 };
 export type Resource = {
   id: string;
@@ -66,27 +89,37 @@ export type ChecklistSection = {
   position: number;
   items: ChecklistItem[];
 };
+export type ContractPhoto = {
+  id: string;
+  slot_name: string | null;
+  storage_path: string;
+  created_at: string;
+  signed_url: string;
+};
 
 export async function getContracts() {
   const { data, error } = await supabase
     .from("contracts")
     .select(
-      "id,kind,service_date,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(id,name,starts_on,ends_on,city,state,address,bin_count,meals_included,lodging_included,details_unlock_at)",
+      "id,kind,service_date,service_time,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(*)",
     )
     .order("service_date");
   if (error) throw error;
-  return (data || []) as unknown as Contract[];
+  const contracts = (data || []) as unknown as Contract[];
+  return release.channel === "beta" ? contracts : contracts.filter((contract) => !contract.show.is_test);
 }
 export async function getContract(id: string) {
   const { data, error } = await supabase
     .from("contracts")
     .select(
-      "id,kind,service_date,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(id,name,starts_on,ends_on,city,state,address,bin_count,meals_included,lodging_included,details_unlock_at)",
+      "id,kind,service_date,service_time,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(*)",
     )
     .eq("id", id)
     .single();
   if (error) throw error;
-  return data as unknown as Contract;
+  const contract = data as unknown as Contract;
+  if (release.channel !== "beta" && contract.show.is_test) throw new Error("This test contract is only available in beta.");
+  return contract;
 }
 export async function getChecklist(contractId: string) {
   const { data: cc, error } = await supabase
@@ -122,6 +155,22 @@ export async function getChecklist(contractId: string) {
     })) as ChecklistSection[],
   };
 }
+export async function getContractPhotos(contractId: string) {
+  const { data, error } = await supabase
+    .from("photos")
+    .select("id,slot_name,storage_path,created_at")
+    .eq("contract_id", contractId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const photos = await Promise.all((data || []).map(async (photo) => {
+    const { data: signed, error: signedError } = await supabase.storage
+      .from("roadshow-photos")
+      .createSignedUrl(photo.storage_path, 3600);
+    if (signedError) throw signedError;
+    return { ...photo, signed_url: signed.signedUrl };
+  }));
+  return photos as ContractPhoto[];
+}
 export async function setChecklistItem(
   checklistId: string,
   itemId: string,
@@ -141,24 +190,48 @@ export async function submitChecklist(contractId: string) {
   if (error) throw error;
 }
 export async function getAvailability(userId: string) {
-  const { data: shows, error } = await supabase
+  const [{ data: shows, error }, { data: assignmentRows, error: assignmentError }] = await Promise.all([
+    supabase
     .from("shows")
     .select("*")
+    .eq("event_type", "show")
     .gte("ends_on", new Date().toISOString().slice(0, 10))
-    .order("starts_on");
+    .order("starts_on"),
+    supabase.rpc("get_public_show_availability"),
+  ]);
   if (error) throw error;
+  if (assignmentError) throw assignmentError;
   const { data: rows, error: rowError } = await supabase
     .from("availability")
     .select("id,show_id,driver_id,status")
     .eq("driver_id", userId);
   if (rowError) throw rowError;
   const byShow = new Map((rows || []).map((r) => [r.show_id, r]));
-  return (shows || []).map((show) => ({
+  const typedAssignments = (assignmentRows || []) as {
+    show_id: string;
+    assignees: AvailabilityRow["assignees"];
+    contract_pay: number | null;
+    bonus_pay: number | null;
+    contract_kind: "setup" | "teardown" | null;
+    service_date: string | null;
+    service_time: string | null;
+  }[];
+  const assignmentDetails = new Map(typedAssignments.map((row) => [row.show_id, row]));
+  const visibleShows = release.channel === "beta" ? (shows || []) : (shows || []).filter((show) => !show.is_test);
+  return visibleShows.map((show) => ({
     ...byShow.get(show.id),
     show_id: show.id,
     driver_id: userId,
-    status: byShow.get(show.id)?.status || "pending",
+    status: assignmentDetails.get(show.id)?.assignees?.length
+      ? "assigned"
+      : byShow.get(show.id)?.status || "pending",
     show,
+    assignees: assignmentDetails.get(show.id)?.assignees || [],
+    contract_pay: assignmentDetails.get(show.id)?.contract_pay ?? null,
+    bonus_pay: assignmentDetails.get(show.id)?.bonus_pay ?? null,
+    contract_kind: assignmentDetails.get(show.id)?.contract_kind ?? null,
+    service_date: assignmentDetails.get(show.id)?.service_date ?? null,
+    service_time: assignmentDetails.get(show.id)?.service_time ?? null,
   })) as AvailabilityRow[];
 }
 export async function setAvailability(
@@ -201,6 +274,42 @@ export async function getMyToolbag(userId: string) {
     notes: string | null;
     items: { id: string; name: string; quantity: number; position: number }[];
   } | null;
+}
+export async function getDirectory() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,full_name,avatar_url,phone,role,is_active")
+    .eq("is_active", true)
+    .order("full_name");
+  if (error) throw error;
+  return data as {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+    phone: string | null;
+    role: "driver" | "admin";
+    is_active: boolean;
+  }[];
+}
+
+export async function getLinkedSignings(showId: string) {
+  const { data: links, error } = await supabase
+    .from("show_links")
+    .select("show_id,linked_show_id")
+    .or(`show_id.eq.${showId},linked_show_id.eq.${showId}`);
+  if (error) throw error;
+  const ids = (links || []).map((link) =>
+    link.show_id === showId ? link.linked_show_id : link.show_id,
+  );
+  if (!ids.length) return [] as Show[];
+  const { data, error: showError } = await supabase
+    .from("shows")
+    .select("*")
+    .in("id", ids)
+    .order("signing_at");
+  if (showError) throw showError;
+  const linked = data as Show[];
+  return release.channel === "beta" ? linked : linked.filter((show) => !show.is_test);
 }
 export function dateRange(show: Show) {
   const start = new Date(`${show.starts_on}T12:00:00`),

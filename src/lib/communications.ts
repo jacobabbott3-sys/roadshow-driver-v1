@@ -1,16 +1,30 @@
 import { supabase } from "./supabase";
+import { release } from "./release";
 
-export type Message = {
+export type ChatMember = {
+  user_id: string;
+  read_at: string | null;
+  profile: { full_name: string; role: "driver" | "admin" } | null;
+};
+
+export type ChatMessage = {
   id: string;
   sender_id: string;
-  recipient_id: string;
-  subject: string;
   body: string;
-  read_at: string | null;
   created_at: string;
   sender: { full_name: string } | null;
-  recipient: { full_name: string } | null;
 };
+
+export type ChatThread = {
+  id: string;
+  subject: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  members: ChatMember[];
+  messages: ChatMessage[];
+};
+
 export type Notification = {
   id: string;
   title: string;
@@ -21,41 +35,62 @@ export type Notification = {
   created_at: string;
 };
 
-export async function getMessages(userId: string) {
+type NotificationWithContract = Notification & {
+  contract: null | { show: null | { is_test: boolean } | { is_test: boolean }[] } | { show: null | { is_test: boolean } | { is_test: boolean }[] }[];
+};
+
+export async function getChatThreads() {
   const { data, error } = await supabase
-    .from("messages")
+    .from("chat_threads")
     .select(
-      "id,sender_id,recipient_id,subject,body,read_at,created_at,sender:profiles!messages_sender_id_fkey(full_name),recipient:profiles!messages_recipient_id_fkey(full_name)",
+      "id,subject,created_by,created_at,updated_at,members:chat_thread_members(user_id,read_at,profile:profiles(full_name,role)),messages:chat_messages(id,sender_id,body,created_at,sender:profiles(full_name))",
     )
-    .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
-    .order("created_at", { ascending: false });
+    .order("updated_at", { ascending: false });
   if (error) throw error;
-  return (data || []) as unknown as Message[];
+  return (data || []).map((thread) => ({
+    ...thread,
+    messages: [...(thread.messages || [])].sort((a, b) =>
+      a.created_at.localeCompare(b.created_at),
+    ),
+  })) as unknown as ChatThread[];
 }
 
-export async function sendMessage(
-  senderId: string,
+export function isThreadUnread(thread: ChatThread, userId: string) {
+  const membership = thread.members.find((member) => member.user_id === userId);
+  const latest = thread.messages.at(-1);
+  return Boolean(
+    latest &&
+      latest.sender_id !== userId &&
+      (!membership?.read_at || latest.created_at > membership.read_at),
+  );
+}
+
+export async function createChat(
   recipientIds: string[],
   subject: string,
   body: string,
 ) {
-  const { error } = await supabase.from("messages").insert(
-    recipientIds.map((recipient_id) => ({
-      sender_id: senderId,
-      recipient_id,
-      subject,
-      body,
-    })),
-  );
+  const { data, error } = await supabase.rpc("create_chat_thread", {
+    target_recipients: recipientIds,
+    target_subject: subject,
+    target_body: body,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function sendChatMessage(threadId: string, body: string) {
+  const { error } = await supabase.rpc("send_chat_message", {
+    target_thread: threadId,
+    target_body: body,
+  });
   if (error) throw error;
 }
 
-export async function markMessageRead(id: string, userId: string) {
-  const { error } = await supabase
-    .from("messages")
-    .update({ read_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("recipient_id", userId);
+export async function markChatRead(threadId: string) {
+  const { error } = await supabase.rpc("mark_chat_thread_read", {
+    target_thread: threadId,
+  });
   if (error) throw error;
 }
 
@@ -63,11 +98,27 @@ export async function getNotifications(userId: string) {
   await supabase.rpc("ensure_my_due_notifications");
   const { data, error } = await supabase
     .from("notifications")
-    .select("id,title,body,link,kind,read_at,created_at")
+    .select("id,title,body,link,kind,read_at,created_at,contract:contracts(show:shows(is_test))")
     .eq("recipient_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data || []) as Notification[];
+  const rows = (data || []) as unknown as NotificationWithContract[];
+  return rows
+    .filter((notification) => {
+      if (release.channel === "beta") return true;
+      const contract = Array.isArray(notification.contract) ? notification.contract[0] : notification.contract;
+      const show = Array.isArray(contract?.show) ? contract.show[0] : contract?.show;
+      return !show?.is_test;
+    })
+    .map((notification) => ({
+      id: notification.id,
+      title: notification.title,
+      body: notification.body,
+      link: notification.link,
+      kind: notification.kind,
+      read_at: notification.read_at,
+      created_at: notification.created_at,
+    })) as Notification[];
 }
 
 export async function markNotificationRead(id: string) {

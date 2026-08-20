@@ -3,11 +3,12 @@ import { AppShell } from "./components/AppShell";
 import { AdminRoute, ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminChecklistReviewPage } from "./pages/AdminChecklistReviewPage";
 import { AdminChecklistsPage } from "./pages/AdminChecklistsPage";
-import { AdminMessagesPage } from "./pages/AdminMessagesPage";
 import { AdminOperationsPage } from "./pages/AdminOperationsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { AdminShowsPage } from "./pages/AdminShowsPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
+import { AdminSigningsPage } from "./pages/AdminSigningsPage";
+import { AdminTemplatesPage } from "./pages/AdminTemplatesPage";
 import { AvailabilityPage } from "./pages/AvailabilityPage";
 import { ContractDetailPage } from "./pages/ContractDetailPage";
 import { ContractsPage } from "./pages/ContractsPage";
@@ -16,13 +17,15 @@ import { FeedbackPage } from "./pages/FeedbackPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
-import { MessagesPage } from "./pages/MessagesPage";
+import { ChatPage } from "./pages/ChatPage";
+import { DirectoryPage } from "./pages/DirectoryPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RedFolderPage } from "./pages/RedFolderPage";
 import { ResourcesPage } from "./pages/ResourcesPage";
 import { ToolbagPage } from "./pages/ToolbagPage";
 import { UpdatePasswordPage } from "./pages/UpdatePasswordPage";
+import { AuthConfirmPage } from "./pages/AuthConfirmPage";
 
 export default function App() {
   return (
@@ -30,6 +33,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/auth/confirm" element={<AuthConfirmPage />} />
         <Route path="/update-password" element={<UpdatePasswordPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
@@ -42,12 +46,16 @@ export default function App() {
             <Route path="resources/red-folder" element={<RedFolderPage />} />
             <Route path="resources/faq" element={<FaqPage />} />
             <Route path="resources/feedback" element={<FeedbackPage />} />
-            <Route path="messages" element={<MessagesPage />} />
+            <Route path="resources/directory" element={<DirectoryPage />} />
+            <Route path="chat" element={<ChatPage />} />
+            <Route path="messages" element={<Navigate to="/chat" replace />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route element={<AdminRoute />}>
               <Route path="admin" element={<AdminPage />} />
               <Route path="admin/shows" element={<AdminShowsPage />} />
+              <Route path="admin/signings" element={<AdminSigningsPage />} />
+              <Route path="admin/templates" element={<AdminTemplatesPage />} />
               <Route
                 path="admin/checklists"
                 element={<AdminChecklistsPage />}
@@ -57,7 +65,7 @@ export default function App() {
                 element={<AdminChecklistReviewPage />}
               />
               <Route path="admin/users" element={<AdminUsersPage />} />
-              <Route path="admin/messages" element={<AdminMessagesPage />} />
+              <Route path="admin/messages" element={<Navigate to="/chat" replace />} />
               <Route
                 path="admin/operations"
                 element={<AdminOperationsPage />}

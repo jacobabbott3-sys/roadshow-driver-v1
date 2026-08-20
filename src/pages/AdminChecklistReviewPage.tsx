@@ -18,6 +18,7 @@ import {
   finalizeChecklistReview,
   getChecklistReview,
   reviewChecklistItem,
+  setContractBonusResult,
 } from "../lib/adminData";
 import { dateRange, statusLabel } from "../lib/driverData";
 
@@ -62,9 +63,7 @@ export function AdminChecklistReviewPage() {
       await review.refresh();
       setMessage(status === "approved" ? "Item approved." : "Item denied.");
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Unable to save the review.",
-      );
+      setMessage(errorMessage(error, "Unable to save the review."));
     } finally {
       setBusy("");
     }
@@ -82,14 +81,21 @@ export function AdminChecklistReviewPage() {
           : "Checklist returned to the driver. Denied items were reopened for correction.",
       );
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to finish the review.",
-      );
+      setMessage(errorMessage(error, "Unable to finish the review."));
     } finally {
       setBusy("");
     }
+  }
+  async function setBonus(earned: boolean) {
+    setBusy("bonus");
+    setMessage("");
+    try {
+      await setContractBonusResult(contractId, earned);
+      await review.refresh();
+      setMessage(earned ? "Bonus marked as earned." : "Bonus marked as not earned.");
+    } catch (error) {
+      setMessage(errorMessage(error, "Unable to save bonus result."));
+    } finally { setBusy(""); }
   }
 
   return (
@@ -311,6 +317,7 @@ export function AdminChecklistReviewPage() {
                 </button>
               </section>
             ) : (
+              <>
               <section
                 className={`review-complete-banner ${reviewApproved ? "approved" : "returned"}`}
               >
@@ -335,10 +342,23 @@ export function AdminChecklistReviewPage() {
                   )}
                 </div>
               </section>
+              {reviewApproved && contract.bonus_pay != null && (
+                <section className="finish-review-panel bonus-decision">
+                  <div><p className="eyebrow">BONUS RESULT</p><h2>Potential bonus: ${contract.bonus_pay.toLocaleString()}</h2><p>Record whether the approved contract earned its potential bonus.</p></div>
+                  <div><button className="button danger" disabled={busy === "bonus"} onClick={() => void setBonus(false)}><X /> Not earned</button><button className="button primary" disabled={busy === "bonus"} onClick={() => void setBonus(true)}><Check /> Bonus earned</button></div>
+                </section>
+              )}
+              </>
             )}
           </>
         )}
       </PageState>
     </main>
   );
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") return error.message;
+  return fallback;
 }

@@ -1,12 +1,14 @@
 import { supabase } from "./supabase";
 import { getChecklist, type Contract, type Show } from "./driverData";
 import type { Profile } from "../types";
+import { release } from "./release";
 export type DashboardStats = {
   shows: number;
   unsigned: number;
   reviews: number;
   drivers: number;
   feedback: number;
+  signings: number;
 };
 export type AdminToolbag = {
   id: string;
@@ -21,6 +23,29 @@ export type ToolbagTemplate = {
   name: string;
   items: { id: string; name: string; quantity: number; position: number }[];
 };
+export type ContractTemplate = {
+  id: string;
+  name: string;
+  kind: "setup" | "teardown";
+  contract_pay: number | null;
+  bonus_pay: number | null;
+  terms: string | null;
+  active: boolean;
+};
+export type AdminResource = {
+  id: string;
+  kind: "handbook" | "faq" | "link";
+  title: string;
+  content: string | null;
+  file_path: string | null;
+  position: number;
+  published: boolean;
+};
+export type ShowInput = Pick<
+  Show,
+  "name" | "starts_on" | "ends_on" | "city"
+> &
+  Partial<Omit<Show, "id" | "name" | "starts_on" | "ends_on" | "city">>;
 export type AdminFeedback = {
   id: string;
   category: string;
@@ -31,19 +56,36 @@ export type AdminFeedback = {
 };
 export async function getDashboardStats() {
   const today = new Date().toISOString().slice(0, 10);
-  const [shows, unsigned, reviews, drivers, feedback] = await Promise.all([
-    supabase
+  let showsQuery = supabase
       .from("shows")
       .select("*", { count: "exact", head: true })
-      .gte("ends_on", today),
-    supabase
-      .from("contracts")
+      .eq("event_type", "show")
+      .gte("ends_on", today);
+  let signingsQuery = supabase
+      .from("shows")
       .select("*", { count: "exact", head: true })
-      .is("signed_at", null),
-    supabase
+      .eq("event_type", "signing")
+      .gte("ends_on", today);
+  let unsignedQuery = supabase
       .from("contracts")
-      .select("*", { count: "exact", head: true })
-      .in("status", ["submitted", "under_review"]),
+      .select("*,show:shows!inner(event_type,is_test)", { count: "exact", head: true })
+      .eq("show.event_type", "show")
+      .is("signed_at", null);
+  let reviewsQuery = supabase
+      .from("contracts")
+      .select("*,show:shows!inner(is_test)", { count: "exact", head: true })
+      .in("status", ["submitted", "under_review"]);
+  if (release.channel !== "beta") {
+    showsQuery = showsQuery.eq("is_test", false);
+    signingsQuery = signingsQuery.eq("is_test", false);
+    unsignedQuery = unsignedQuery.eq("show.is_test", false);
+    reviewsQuery = reviewsQuery.eq("show.is_test", false);
+  }
+  const [shows, signings, unsigned, reviews, drivers, feedback] = await Promise.all([
+    showsQuery,
+    signingsQuery,
+    unsignedQuery,
+    reviewsQuery,
     supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
@@ -60,12 +102,14 @@ export async function getDashboardStats() {
     reviews: reviews.count || 0,
     drivers: drivers.count || 0,
     feedback: feedback.count || 0,
+    signings: signings.count || 0,
   } as DashboardStats;
 }
 export type AdminContract = {
   id: string;
   kind: "setup" | "teardown";
   service_date: string;
+  service_time: string | null;
   status: string;
   driver_id: string | null;
   contract_pay: number | null;
@@ -91,14 +135,15 @@ export async function getShowsAdmin() {
   const { data, error } = await supabase
     .from("shows")
     .select(
-      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id))",
+      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id))",
     )
     .order("starts_on", { ascending: false });
   if (error) throw error;
-  return data as AdminShow[];
+  const shows = data as AdminShow[];
+  return release.channel === "beta" ? shows : shows.filter((show) => !show.is_test);
 }
 export async function createShow(
-  input: Omit<Show, "id" | "details_unlock_at">,
+  input: ShowInput,
 ) {
   const { data, error } = await supabase
     .from("shows")
@@ -136,10 +181,11 @@ export async function saveShowContract(input: {
   driver_ids: string[];
   kind: "setup" | "teardown";
   service_date: string;
+  service_time?: string | null;
   contract_pay: number | null;
   bonus_pay: number | null;
   terms: string | null;
-  template_id: string;
+  template_id?: string;
 }) {
   let contractId = input.id;
   const values = {
@@ -147,6 +193,7 @@ export async function saveShowContract(input: {
     driver_id: input.driver_ids[0] || null,
     kind: input.kind,
     service_date: input.service_date,
+    service_time: input.service_time || null,
     contract_pay: input.contract_pay,
     bonus_pay: input.bonus_pay,
     terms: input.terms,
@@ -196,12 +243,25 @@ export async function saveShowContract(input: {
       );
     if (error) throw error;
   }
-  await assignShowChecklist(input.show_id, input.kind, input.template_id);
-  const { error: assignError } = await supabase.rpc("admin_assign_checklist", {
-    target_contract: contractId,
-    target_template: input.template_id,
-  });
-  if (assignError) throw assignError;
+  if (input.template_id) {
+    await assignShowChecklist(input.show_id, input.kind, input.template_id);
+    const { error: assignError } = await supabase.rpc("admin_assign_checklist", {
+      target_contract: contractId,
+      target_template: input.template_id,
+    });
+    if (assignError) throw assignError;
+  } else {
+    const [{ error: showChecklistError }, { error: contractChecklistError }] = await Promise.all([
+      supabase
+        .from("show_checklist_templates")
+        .delete()
+        .eq("show_id", input.show_id)
+        .eq("kind", input.kind),
+      supabase.from("contract_checklists").delete().eq("contract_id", contractId),
+    ]);
+    if (showChecklistError) throw showChecklistError;
+    if (contractChecklistError) throw contractChecklistError;
+  }
   return contractId;
 }
 export async function adminSignContract(id: string, name: string) {
@@ -235,10 +295,11 @@ export async function getReviews() {
     .in("status", ["submitted", "under_review"])
     .order("submitted_at");
   if (error) throw error;
-  return data as unknown as (Contract & {
+  const reviews = data as unknown as (Contract & {
     submitted_at: string | null;
     driver: { id: string; full_name: string };
   })[];
+  return release.channel === "beta" ? reviews : reviews.filter((review) => !review.show.is_test);
 }
 export type ReviewHistoryRow = Contract & {
   submitted_at: string | null;
@@ -257,20 +318,21 @@ export async function getReviewHistory() {
   if (error) throw error;
   return (data || []).filter(
     (review) => !["submitted", "under_review"].includes(review.status),
-  ) as unknown as ReviewHistoryRow[];
+  ).filter((review) => release.channel === "beta" || !(review.show as unknown as Show).is_test) as unknown as ReviewHistoryRow[];
 }
 export async function getChecklistReview(contractId: string) {
   const [{ data, error }, checklist] = await Promise.all([
     supabase
       .from("contracts")
       .select(
-        "id,kind,status,service_date,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name),contract_drivers(driver_id,is_trainee,driver:profiles(id,full_name))",
+        "id,kind,status,service_date,contract_pay,bonus_pay,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name),contract_drivers(driver_id,is_trainee,driver:profiles(id,full_name))",
       )
       .eq("id", contractId)
       .single(),
     getChecklist(contractId),
   ]);
   if (error) throw error;
+  if (release.channel !== "beta" && (data as unknown as { show: Show }).show.is_test) throw new Error("This test checklist is only available in beta.");
   return {
     contract: data as unknown as Contract & {
       submitted_at: string | null;
@@ -308,12 +370,20 @@ export async function finalizeChecklistReview(contractId: string) {
   if (error) throw error;
   return data as "approved" | "in_progress";
 }
+export async function setContractBonusResult(contractId: string, earned: boolean) {
+  const { error } = await supabase.rpc("admin_set_bonus_result", {
+    target_contract: contractId,
+    earned,
+  });
+  if (error) throw error;
+}
 export async function getTemplates() {
   const { data, error } = await supabase
     .from("checklist_templates")
     .select(
       "id,name,kind,version,active,sections:checklist_sections(id,title,position,items:checklist_items(id,title,photo_required,required,position))",
     )
+    .eq("active", true)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data || [];
@@ -364,6 +434,34 @@ export async function getFeedback() {
   if (error) throw error;
   return (data || []) as unknown as AdminFeedback[];
 }
+export async function getAdminResources() {
+  const { data, error } = await supabase
+    .from("resources")
+    .select("id,kind,title,content,file_path,position,published")
+    .order("position")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as AdminResource[];
+}
+export async function saveResource(resource: Omit<AdminResource, "id"> & { id?: string }) {
+  const values = {
+    kind: resource.kind,
+    title: resource.title.trim(),
+    content: resource.content?.trim() || null,
+    file_path: resource.file_path,
+    position: resource.position,
+    published: resource.published,
+  };
+  const query = resource.id
+    ? supabase.from("resources").update(values).eq("id", resource.id)
+    : supabase.from("resources").insert(values);
+  const { error } = await query;
+  if (error) throw error;
+}
+export async function deleteResource(id: string) {
+  const { error } = await supabase.from("resources").delete().eq("id", id);
+  if (error) throw error;
+}
 export async function getToolbags() {
   const { data, error } = await supabase
     .from("toolbags")
@@ -380,10 +478,10 @@ export async function createToolbag(number: string, driver: string | null) {
     .insert({ number, assigned_to: driver || null });
   if (error) throw error;
 }
-export async function updateToolbag(id: string, driver: string | null) {
+export async function updateToolbag(id: string, number: string, driver: string | null) {
   const { error } = await supabase
     .from("toolbags")
-    .update({ assigned_to: driver || null })
+    .update({ number: number.trim(), assigned_to: driver || null })
     .eq("id", id);
   if (error) throw error;
 }
@@ -478,6 +576,48 @@ export async function getToolbagTemplates() {
   if (error) throw error;
   return (data || []) as unknown as ToolbagTemplate[];
 }
+export async function getContractTemplates() {
+  const { data, error } = await supabase
+    .from("contract_templates")
+    .select("id,name,kind,contract_pay,bonus_pay,terms,active")
+    .order("name");
+  if (error) throw error;
+  return (data || []) as ContractTemplate[];
+}
+export async function saveContractTemplate(template: Omit<ContractTemplate, "id"> & { id?: string }) {
+  const values = {
+    name: template.name.trim(),
+    kind: template.kind,
+    contract_pay: template.contract_pay,
+    bonus_pay: template.bonus_pay,
+    terms: template.terms,
+    active: template.active,
+    updated_at: new Date().toISOString(),
+  };
+  const query = template.id
+    ? supabase.from("contract_templates").update(values).eq("id", template.id)
+    : supabase.from("contract_templates").insert(values);
+  const { error } = await query;
+  if (error) throw error;
+}
+export async function getShowLinks() {
+  const { data, error } = await supabase.from("show_links").select("show_id,linked_show_id");
+  if (error) throw error;
+  return data || [];
+}
+export async function saveShowLinks(showId: string, linkedIds: string[]) {
+  const { error: deleteError } = await supabase
+    .from("show_links")
+    .delete()
+    .or(`show_id.eq.${showId},linked_show_id.eq.${showId}`);
+  if (deleteError) throw deleteError;
+  if (!linkedIds.length) return;
+  const rows = linkedIds
+    .filter((id) => id !== showId)
+    .map((id) => ({ show_id: [showId, id].sort()[0], linked_show_id: [showId, id].sort()[1] }));
+  const { error } = await supabase.from("show_links").upsert(rows, { onConflict: "show_id,linked_show_id" });
+  if (error) throw error;
+}
 export async function createToolbagTemplate(
   name: string,
   items: { name: string; quantity: number }[],
@@ -501,6 +641,18 @@ export async function createToolbagTemplate(
     if (itemError) throw itemError;
   }
 }
+export async function updateToolbagTemplate(
+  id: string,
+  name: string,
+  items: { name: string; quantity: number }[],
+) {
+  const { error } = await supabase.rpc("admin_replace_toolbag_template", {
+    target_template: id,
+    target_name: name,
+    target_items: items,
+  });
+  if (error) throw error;
+}
 export async function applyToolbagTemplate(
   toolbagId: string,
   templateId: string,
@@ -517,4 +669,36 @@ export async function updateContractTerms(id: string, terms: string) {
     .update({ terms })
     .eq("id", id);
   if (error) throw error;
+}
+
+export type BetaTestShow = {
+  id: string;
+  name: string;
+  contract_id: string;
+};
+
+export async function getBetaTestShow(userId: string) {
+  if (release.channel !== "beta") return null;
+  const { data, error } = await supabase
+    .from("shows")
+    .select("id,name,contracts(id)")
+    .eq("is_test", true)
+    .eq("test_owner", userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const contracts = (data.contracts || []) as { id: string }[];
+  return { id: data.id, name: data.name, contract_id: contracts[0]?.id || "" } as BetaTestShow;
+}
+
+export async function resetBetaTestShow() {
+  if (release.channel !== "beta") throw new Error("The Test Show is only available in beta.");
+  const { data, error } = await supabase.rpc("reset_my_beta_test_show");
+  if (error) throw error;
+  const result = data as { show_id: string; contract_id: string; photo_paths: string[] };
+  if (result.photo_paths?.length) {
+    const { error: storageError } = await supabase.storage.from("roadshow-photos").remove(result.photo_paths);
+    if (storageError) console.warn("Test photo cleanup was incomplete:", storageError.message);
+  }
+  return result;
 }

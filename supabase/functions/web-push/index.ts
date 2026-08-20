@@ -41,7 +41,7 @@ Deno.serve(async (request) => {
     .maybeSingle();
 
   const categoryEnabled =
-    payload.table === "messages"
+    payload.table === "messages" || record.kind === "message"
       ? preferences?.message_alerts
       : record.kind === "assignment"
         ? preferences?.assignment_alerts
@@ -70,11 +70,11 @@ Deno.serve(async (request) => {
           },
           JSON.stringify({
             title:
-              payload.table === "messages"
+              payload.table === "messages" || record.kind === "message"
                 ? record.subject || "New message"
                 : record.title || "Roadshow Driver",
             body: record.body,
-            link: payload.table === "messages" ? "/messages" : record.link,
+            link: payload.table === "messages" ? "/chat" : record.link,
             tag: `${payload.table}-${record.id}`,
           }),
         );

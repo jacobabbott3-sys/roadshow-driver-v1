@@ -12,15 +12,19 @@ import {
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { PageState } from "../components/PageState";
+import { ImageViewer } from "../components/ImageViewer";
 import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import {
   dateRange,
   getChecklist,
   getContract,
+  getContractPhotos,
+  getLinkedSignings,
   setChecklistItem,
   statusLabel,
   submitChecklist,
+  type ContractPhoto,
   type ChecklistSection,
 } from "../lib/driverData";
 import { supabase } from "../lib/supabase";
@@ -29,7 +33,12 @@ export function ContractDetailPage() {
   const { id = "" } = useParams(),
     { user } = useAuth(),
     contract = useAsync(() => getContract(id), [id]),
-    checklist = useAsync(() => getChecklist(id), [id]);
+    checklist = useAsync(() => getChecklist(id), [id]),
+    photos = useAsync(() => getContractPhotos(id), [id]),
+    linkedSignings = useAsync(
+      () => contract.data?.show.id ? getLinkedSignings(contract.data.show.id) : Promise.resolve([]),
+      [contract.data?.show.id],
+    );
   const [tab, setTab] = useState<Tab>("info"),
     [busy, setBusy] = useState(""),
     [signature, setSignature] = useState(""),
@@ -46,7 +55,10 @@ export function ContractDetailPage() {
     activeSection = checklist.data?.sections.find((section) =>
       section.items.some((item) => !item.response?.completed),
     ),
-    currentStatus = ["submitted", "under_review"].includes(
+    isSigning = contract.data?.show.event_type === "signing",
+    currentStatus = isSigning
+      ? progress === 100 && items.length ? "Complete" : activeSection?.title || "Ready"
+      : ["submitted", "under_review"].includes(
       contract.data?.status || "",
     )
       ? "Submitted for review"
@@ -54,9 +66,12 @@ export function ContractDetailPage() {
         ? "Approved"
         : activeSection?.title ||
           (items.length ? "Ready to submit" : "Waiting for checklist"),
-    checklistLocked = ["submitted", "under_review", "approved"].includes(
-      contract.data?.status || "",
-    );
+    checklistLocked = !isSigning && ["submitted", "under_review", "approved"].includes(contract.data?.status || "");
+  const latestPhotos = useMemo(() => {
+    const bySlot = new Map<string, ContractPhoto>();
+    for (const photo of photos.data || []) if (photo.slot_name && !bySlot.has(photo.slot_name)) bySlot.set(photo.slot_name, photo);
+    return bySlot;
+  }, [photos.data]);
   async function toggle(itemId: string, value: boolean) {
     if (!checklist.data?.id) return;
     setBusy(itemId);
@@ -102,13 +117,20 @@ export function ContractDetailPage() {
     const { error } = await supabase.storage
       .from("roadshow-photos")
       .upload(path, file);
-    if (!error)
-      await supabase.from("photos").insert({
+    if (!error) {
+      const { error: recordError } = await supabase.from("photos").insert({
         contract_id: id,
         slot_name: slot,
         storage_path: path,
         uploaded_by: user!.id,
       });
+      if (recordError) {
+        setMessage(recordError.message);
+        setBusy("");
+        return;
+      }
+      await photos.refresh();
+    }
     setMessage(error ? error.message : `${slot} photo uploaded.`);
     setBusy("");
   }
@@ -127,16 +149,16 @@ export function ContractDetailPage() {
             <header className="contract-detail-head">
               <div>
                 <span className={`status status-${contract.data.status}`}>
-                  {statusLabel(contract.data.status)}
+                  {isSigning ? "Signing" : statusLabel(contract.data.status)}
                 </span>
                 <h1>{contract.data.show.name}</h1>
                 <p>
                   <MapPin />
-                  {contract.data.show.city}
+                  {contract.data.show.venue_name || contract.data.show.city}
                   {contract.data.show.state
                     ? `, ${contract.data.show.state}`
                     : ""}{" "}
-                  · {dateRange(contract.data.show)}
+                  · {isSigning ? formatDateTime(contract.data.show.signing_at) : dateRange(contract.data.show)}
                 </p>
               </div>
               <div className="progress-summary">
@@ -157,12 +179,12 @@ export function ContractDetailPage() {
             </header>
             <div className="contract-tabs">
               {(
-                [
+                ([
                   ["info", Info, "Info"],
                   ["checklist", Check, "Checklist"],
                   ["photos", Camera, "Photos"],
                   ["sign", FileSignature, "Contract"],
-                ] as const
+                ] as const).filter(([key]) => !isSigning || key === "info" || key === "checklist")
               ).map(([key, Icon, label]) => (
                 <button
                   className={tab === key ? "active" : ""}
@@ -177,50 +199,59 @@ export function ContractDetailPage() {
             {message && <div className="notice">{message}</div>}
             {tab === "info" && (
               <section className="detail-panel">
-                <h2>Show information</h2>
+                <h2>{isSigning ? "Signing information" : "Show information"}</h2>
                 <div className="info-grid">
-                  <Field
-                    label="Assignment"
-                    value={statusLabel(contract.data.kind)}
-                  />
-                  <Field label="Dates" value={dateRange(contract.data.show)} />
-                  <Field
-                    label="Location"
-                    value={`${contract.data.show.city}${contract.data.show.state ? `, ${contract.data.show.state}` : ""}`}
-                  />
+                  {isSigning ? <>
+                    <Field label="Artist" value={contract.data.show.artist || contract.data.show.name} />
+                    <Field label="Signing time" value={formatDateTime(contract.data.show.signing_at)} />
+                    <Field label="Setup time" value={formatDateTime(contract.data.show.setup_at)} />
+                    <Field label="Location" value={contract.data.show.venue_name || contract.data.show.city} />
+                  </> : <>
+                    <Field label="Assignment" value={statusLabel(contract.data.kind)} />
+                    <Field label="Show dates" value={dateRange(contract.data.show)} />
+                    <Field label={`${statusLabel(contract.data.kind)} date and time`} value={`${formatWorkDate(contract.data.service_date)}${contract.data.service_time ? ` at ${formatTime(contract.data.service_time)}` : ""}`} />
+                    <Field label="Location" value={`${contract.data.show.city}${contract.data.show.state ? `, ${contract.data.show.state}` : ""}`} />
+                  </>}
                   <Field
                     label="Address"
                     value={
                       contract.data.show.address || "Provided closer to show"
                     }
                   />
-                  <Field
+                  {!isSigning && <Field
                     label="Bins"
                     value={contract.data.show.bin_count?.toString() || "—"}
-                  />
-                  {contract.data.show.meals_included && (
-                    <Field label="Meals" value="Included" />
-                  )}
+                  />}
+                  {!isSigning && contract.data.show.per_diem != null && <Field label="Per diem" value={`$${contract.data.show.per_diem.toLocaleString()}`} />}
                   {contract.data.show.lodging_included && (
-                    <Field label="Lodging" value="Included" />
+                    <>
+                      <Field label="Lodging" value={contract.data.show.lodging_name || "Included"} />
+                      <Field label="Lodging address" value={contract.data.show.lodging_address || "—"} />
+                      <Field label="Lodging phone" value={contract.data.show.lodging_phone || "—"} />
+                      <Field label="Confirmation" value={contract.data.show.lodging_confirmation || "—"} />
+                      <Field label="Check-in" value={formatDate(contract.data.show.lodging_check_in)} />
+                      <Field label="Check-out" value={formatDate(contract.data.show.lodging_check_out)} />
+                    </>
                   )}
-                  <Field
+                  {!isSigning && <Field
                     label="Contract pay"
                     value={
                       contract.data.contract_pay == null
                         ? "—"
                         : `$${contract.data.contract_pay.toLocaleString()}`
                     }
-                  />
-                  <Field
+                  />}
+                  {!isSigning && <Field
                     label="Potential bonus"
                     value={
                       contract.data.bonus_pay == null
                         ? "—"
                         : `$${contract.data.bonus_pay.toLocaleString()}`
                     }
-                  />
+                  />}
                 </div>
+                {contract.data.show.lodging_notes && <p className="detail-note"><strong>Lodging notes:</strong> {contract.data.show.lodging_notes}</p>}
+                {isSigning && linkedSignings.data && linkedSignings.data.length > 0 && <div className="linked-signings"><h3>Linked signings</h3>{linkedSignings.data.map((signing) => <div key={signing.id}><strong>{signing.artist || signing.name}</strong><span>{formatDateTime(signing.signing_at)} · {signing.venue_name || signing.city}</span></div>)}</div>}
               </section>
             )}
             {tab === "checklist" && (
@@ -252,7 +283,9 @@ export function ContractDetailPage() {
                         onToggle={toggle}
                       />
                     ))}
-                    {["submitted", "under_review"].includes(
+                    {isSigning ? (
+                      <p className={requiredComplete ? "success review-submitted" : "muted"}>{requiredComplete ? <><Check /> Signing checklist complete—no admin approval is required.</> : "Complete the checklist as the signing progresses."}</p>
+                    ) : ["submitted", "under_review"].includes(
                       contract.data.status,
                     ) ? (
                       <p className="success review-submitted">
@@ -301,25 +334,18 @@ export function ContractDetailPage() {
                   your team.
                 </p>
                 <div className="photo-grid">
-                  {["Front", "Back", "Side 1", "Side 2"].map((slot) => (
-                    <label className="photo-slot" key={slot}>
-                      <Camera />
+                  {["Front", "Back", "Side 1", "Side 2"].map((slot) => {
+                    const photo = latestPhotos.get(slot);
+                    return <div className={`photo-slot ${photo ? "has-photo" : ""}`} key={slot}>
+                      {photo ? <ImageViewer src={photo.signed_url} alt={`${slot} view`} /> : <Camera />}
                       <strong>{slot}</strong>
-                      <span>
-                        {busy === slot ? "Uploading…" : "Tap to upload"}
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={(e) =>
-                          e.target.files?.[0] &&
-                          void upload(e.target.files[0], slot)
-                        }
-                      />
-                      <Upload />
-                    </label>
-                  ))}
+                      <label className="photo-upload-action">
+                        <span>{busy === slot ? "Uploading…" : photo ? "Replace photo" : "Tap to upload"}</span>
+                        <input type="file" accept="image/*" capture="environment" onChange={(event) => event.target.files?.[0] && void upload(event.target.files[0], slot)} />
+                        <Upload />
+                      </label>
+                    </div>;
+                  })}
                 </div>
               </section>
             )}
@@ -411,6 +437,32 @@ function Field({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </div>
   );
+}
+function formatDateTime(value: string | null) {
+  return value ? new Date(value).toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }) : "Not scheduled";
+}
+function formatWorkDate(value: string) {
+  return new Date(`${value}T12:00:00`).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+function formatTime(value: string) {
+  return new Date(`2000-01-01T${value}`).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+function formatDate(value: string | null) {
+  return value ? new Date(`${value}T12:00:00`).toLocaleDateString() : "—";
 }
 function ChecklistSectionView({
   section,
