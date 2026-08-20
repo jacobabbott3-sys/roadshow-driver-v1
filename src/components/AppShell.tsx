@@ -2,6 +2,7 @@ import { BriefcaseBusiness, CircleUserRound, FolderOpen, House, ShieldCheck } fr
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { TopBar } from "./TopBar";
+import { ReleaseBadge } from "./ReleaseBadge";
 
 const base = [
   { to: "/", label: "Home", icon: House },
@@ -14,5 +15,5 @@ export function AppShell() {
   const nav = profile?.role === "admin"
     ? [...base, { to: "/admin", label: "Admin", icon: ShieldCheck }, { to: "/profile", label: "Profile", icon: CircleUserRound }]
     : [...base, { to: "/profile", label: "Profile", icon: CircleUserRound }];
-  return <div className="app-shell"><aside className="side-nav"><div className="brand"><span className="brand-mark"><img src="/favicon.svg" alt="" /></span><span>Roadshow<br /><strong>Driver</strong></span></div><nav>{nav.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"}><Icon size={20} /><span>{label}</span></NavLink>)}</nav><p className="role-pill">{profile?.role === "admin" ? "Admin access" : "Driver account"}</p></aside><div className="app-main"><TopBar /><Outlet /></div><nav className="bottom-nav">{nav.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"}><Icon size={21} /><span>{label}</span></NavLink>)}</nav></div>;
+  return <div className="app-shell"><aside className="side-nav"><div className="brand"><span className="brand-mark"><img src="/favicon.svg" alt="" /></span><span>Roadshow<br /><strong>Driver</strong></span></div><ReleaseBadge /><nav>{nav.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"}><Icon size={20} /><span>{label}</span></NavLink>)}</nav><p className="role-pill">{profile?.role === "admin" ? "Admin access" : "Driver account"}</p></aside><div className="app-main"><TopBar /><Outlet /></div><nav className="bottom-nav">{nav.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"}><Icon size={21} /><span>{label}</span></NavLink>)}</nav></div>;
 }

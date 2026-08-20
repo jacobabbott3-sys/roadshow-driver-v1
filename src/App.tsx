@@ -25,6 +25,7 @@ import { RedFolderPage } from "./pages/RedFolderPage";
 import { ResourcesPage } from "./pages/ResourcesPage";
 import { ToolbagPage } from "./pages/ToolbagPage";
 import { UpdatePasswordPage } from "./pages/UpdatePasswordPage";
+import { AuthConfirmPage } from "./pages/AuthConfirmPage";
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/auth/confirm" element={<AuthConfirmPage />} />
         <Route path="/update-password" element={<UpdatePasswordPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>

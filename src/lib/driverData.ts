@@ -50,6 +50,11 @@ export type AvailabilityRow = {
   status: "available" | "unavailable" | "pending" | "assigned";
   show: Show;
   assignees: { id: string; full_name: string; role: "driver" | "admin" }[];
+  contract_pay: number | null;
+  bonus_pay: number | null;
+  contract_kind: "setup" | "teardown" | null;
+  service_date: string | null;
+  service_time: string | null;
 };
 export type Resource = {
   id: string;
@@ -80,6 +85,13 @@ export type ChecklistSection = {
   title: string;
   position: number;
   items: ChecklistItem[];
+};
+export type ContractPhoto = {
+  id: string;
+  slot_name: string | null;
+  storage_path: string;
+  created_at: string;
+  signed_url: string;
 };
 
 export async function getContracts() {
@@ -137,6 +149,22 @@ export async function getChecklist(contractId: string) {
     })) as ChecklistSection[],
   };
 }
+export async function getContractPhotos(contractId: string) {
+  const { data, error } = await supabase
+    .from("photos")
+    .select("id,slot_name,storage_path,created_at")
+    .eq("contract_id", contractId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const photos = await Promise.all((data || []).map(async (photo) => {
+    const { data: signed, error: signedError } = await supabase.storage
+      .from("roadshow-photos")
+      .createSignedUrl(photo.storage_path, 3600);
+    if (signedError) throw signedError;
+    return { ...photo, signed_url: signed.signedUrl };
+  }));
+  return photos as ContractPhoto[];
+}
 export async function setChecklistItem(
   checklistId: string,
   itemId: string,
@@ -163,7 +191,7 @@ export async function getAvailability(userId: string) {
     .eq("event_type", "show")
     .gte("ends_on", new Date().toISOString().slice(0, 10))
     .order("starts_on"),
-    supabase.rpc("get_public_show_assignments"),
+    supabase.rpc("get_public_show_availability"),
   ]);
   if (error) throw error;
   if (assignmentError) throw assignmentError;
@@ -176,22 +204,27 @@ export async function getAvailability(userId: string) {
   const typedAssignments = (assignmentRows || []) as {
     show_id: string;
     assignees: AvailabilityRow["assignees"];
+    contract_pay: number | null;
+    bonus_pay: number | null;
+    contract_kind: "setup" | "teardown" | null;
+    service_date: string | null;
+    service_time: string | null;
   }[];
-  const assignments = new Map<string, AvailabilityRow["assignees"]>(
-    typedAssignments.map((row) => [
-      row.show_id,
-      (row.assignees || []) as AvailabilityRow["assignees"],
-    ]),
-  );
+  const assignmentDetails = new Map(typedAssignments.map((row) => [row.show_id, row]));
   return (shows || []).map((show) => ({
     ...byShow.get(show.id),
     show_id: show.id,
     driver_id: userId,
-    status: assignments.get(show.id)?.length
+    status: assignmentDetails.get(show.id)?.assignees?.length
       ? "assigned"
       : byShow.get(show.id)?.status || "pending",
     show,
-    assignees: assignments.get(show.id) || [],
+    assignees: assignmentDetails.get(show.id)?.assignees || [],
+    contract_pay: assignmentDetails.get(show.id)?.contract_pay ?? null,
+    bonus_pay: assignmentDetails.get(show.id)?.bonus_pay ?? null,
+    contract_kind: assignmentDetails.get(show.id)?.contract_kind ?? null,
+    service_date: assignmentDetails.get(show.id)?.service_date ?? null,
+    service_time: assignmentDetails.get(show.id)?.service_time ?? null,
   })) as AvailabilityRow[];
 }
 export async function setAvailability(

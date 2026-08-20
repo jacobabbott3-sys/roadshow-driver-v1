@@ -31,6 +31,15 @@ export type ContractTemplate = {
   terms: string | null;
   active: boolean;
 };
+export type AdminResource = {
+  id: string;
+  kind: "handbook" | "faq" | "link";
+  title: string;
+  content: string | null;
+  file_path: string | null;
+  position: number;
+  published: boolean;
+};
 export type ShowInput = Pick<
   Show,
   "name" | "starts_on" | "ends_on" | "city"
@@ -360,6 +369,7 @@ export async function getTemplates() {
     .select(
       "id,name,kind,version,active,sections:checklist_sections(id,title,position,items:checklist_items(id,title,photo_required,required,position))",
     )
+    .eq("active", true)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data || [];
@@ -410,6 +420,34 @@ export async function getFeedback() {
   if (error) throw error;
   return (data || []) as unknown as AdminFeedback[];
 }
+export async function getAdminResources() {
+  const { data, error } = await supabase
+    .from("resources")
+    .select("id,kind,title,content,file_path,position,published")
+    .order("position")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as AdminResource[];
+}
+export async function saveResource(resource: Omit<AdminResource, "id"> & { id?: string }) {
+  const values = {
+    kind: resource.kind,
+    title: resource.title.trim(),
+    content: resource.content?.trim() || null,
+    file_path: resource.file_path,
+    position: resource.position,
+    published: resource.published,
+  };
+  const query = resource.id
+    ? supabase.from("resources").update(values).eq("id", resource.id)
+    : supabase.from("resources").insert(values);
+  const { error } = await query;
+  if (error) throw error;
+}
+export async function deleteResource(id: string) {
+  const { error } = await supabase.from("resources").delete().eq("id", id);
+  if (error) throw error;
+}
 export async function getToolbags() {
   const { data, error } = await supabase
     .from("toolbags")
@@ -426,10 +464,10 @@ export async function createToolbag(number: string, driver: string | null) {
     .insert({ number, assigned_to: driver || null });
   if (error) throw error;
 }
-export async function updateToolbag(id: string, driver: string | null) {
+export async function updateToolbag(id: string, number: string, driver: string | null) {
   const { error } = await supabase
     .from("toolbags")
-    .update({ assigned_to: driver || null })
+    .update({ number: number.trim(), assigned_to: driver || null })
     .eq("id", id);
   if (error) throw error;
 }

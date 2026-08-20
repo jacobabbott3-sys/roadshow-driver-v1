@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import { getChatThreads, getNotifications, isThreadUnread } from "../lib/communications";
 import { supabase } from "../lib/supabase";
+import { ReleaseBadge } from "./ReleaseBadge";
 
 export function TopBar() {
   const { user, profile, updateAppearance } = useAuth();
@@ -61,6 +62,7 @@ export function TopBar() {
 
   return (
     <header className="top-bar">
+      <span className="top-release"><ReleaseBadge compact /></span>
       <button aria-label="Toggle dark mode" onClick={() => void toggleTheme()}>{dark ? <Sun /> : <Moon />}</button>
       <Link to="/notifications" aria-label={`${unreadNotifications} unread notifications`}><Bell />{unreadNotifications > 0 && <span>{unreadNotifications > 9 ? "9+" : unreadNotifications}</span>}</Link>
       <Link to="/chat" aria-label={`${unreadChats} unread chats`}><MessageCircle />{unreadChats > 0 && <span>{unreadChats > 9 ? "9+" : unreadChats}</span>}</Link>

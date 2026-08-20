@@ -4,6 +4,7 @@ import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
 import { getResources } from "../lib/driverData";
 import { supabase } from "../lib/supabase";
+import { ImageViewer } from "../components/ImageViewer";
 
 export function RedFolderPage() {
   const resources = useAsync(getResources, []);
@@ -44,7 +45,7 @@ export function RedFolderPage() {
         <div className="red-folder-grid">
           {items.map((item) => (
             <article key={item.id}>
-              {urls[item.id] && <img src={urls[item.id]} alt={item.title} />}
+              {urls[item.id] && <ImageViewer src={urls[item.id]} alt={item.title} />}
               <BookOpen />
               <h2>{item.title}</h2>
               {item.content && <p>{item.content}</p>}

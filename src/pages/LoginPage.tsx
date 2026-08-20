@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { isSupabaseConfigured } from "../lib/supabase";
+import { ReleaseBadge } from "../components/ReleaseBadge";
 
 export function LoginPage() {
   const { user, signIn } = useAuth();
@@ -30,7 +31,7 @@ export function LoginPage() {
 
   return (
     <main className="auth-page">
-      <section className="auth-intro"><div className="auth-brand"><Route size={26} /> Roadshow Driver</div><div><p className="eyebrow">READY FOR THE NEXT SHOW</p><h1>Your route.<br />Your checklist.<br /><em>All in one place.</em></h1><p>Everything your crew needs—from signed contract to final walkthrough.</p></div><p className="auth-foot">Built for life on the road.</p></section>
+      <section className="auth-intro"><div><div className="auth-brand"><Route size={26} /> Roadshow Driver</div><ReleaseBadge /></div><div><p className="eyebrow">READY FOR THE NEXT SHOW</p><h1>Your route.<br />Your checklist.<br /><em>All in one place.</em></h1><p>Everything your crew needs—from signed contract to final walkthrough.</p></div><p className="auth-foot">Built for life on the road.</p></section>
       <section className="auth-panel">
         <form className="auth-card" onSubmit={submit}>
           <div className="mobile-logo"><img src="/favicon.svg" alt="" /></div>

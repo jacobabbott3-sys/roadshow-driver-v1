@@ -58,6 +58,8 @@ Run `202608190001_operations_expansion.sql` for account-synced appearance settin
 
 If an earlier beta database already installed the contract-email queue, run `202608190002_remove_contract_email.sql` to remove it safely.
 
+Run `202608190003_beta_v3b.sql` for beta v3b availability pay/work-date details and safe checklist-template editing that preserves completed checklist history.
+
 ## Device notification setup
 
 The app and database are ready for web push, but each Supabase/Vercel environment needs its own keys and webhook setup:
@@ -75,23 +77,37 @@ Users can then turn device notifications on and choose assignment, work-day, and
 
 In Supabase, open **Authentication → URL Configuration**:
 
-1. Set **Site URL** to the production app's root URL: `https://YOUR-PRODUCTION-DOMAIN.vercel.app` (do not include `/update-password`).
-2. Add the exact password page, `https://YOUR-PRODUCTION-DOMAIN.vercel.app/update-password`, to **Redirect URLs**.
-3. Also add the main app URL followed by `/**` to **Redirect URLs**.
-4. Add `https://*-jacobabbott3-sys.vercel.app/**` for Vercel beta previews.
-5. Keep `http://localhost:5173/**` only for local testing.
+1. Set **Site URL** to the stable production app root: `https://YOUR-PRODUCTION-DOMAIN.vercel.app`. Do not use a deployment-specific preview URL and do not add `/update-password`.
+2. Add `https://YOUR-PRODUCTION-DOMAIN.vercel.app/**` to **Redirect URLs**.
+3. Add the beta's stable Vercel branch URL followed by `/**` if beta uses the same Supabase project.
+4. Keep `http://localhost:5173/**` only for local testing.
 
-In **Authentication → Email Templates → Invite user**, make sure the
-invite button uses Supabase's complete confirmation URL:
+In **Authentication → Email Templates → Invite user**, replace the invite
+button link with the app's token-verification route:
 
 ```html
-<a href="{{ .ConfirmationURL }}">Accept the invite</a>
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite">Accept invitation</a>
 ```
 
-Do not build the invitation link from `.SiteURL` or `.RedirectTo`; those values
-do not verify the invitation token by themselves.
+The `/auth/confirm` page verifies the one-time token with Supabase and then opens
+the password setup page. A raw `.SiteURL` or `/update-password` link cannot
+verify an invitation by itself.
+
+In **Email Templates → Reset password**, the normal confirmation URL remains
+valid because the app supplies `/update-password` as its allowed redirect:
+
+```html
+<a href="{{ .ConfirmationURL }}">Reset password</a>
+```
 
 Invite users from **Authentication → Users → Add user → Send invitation**. Supabase handles their password securely; the app and its administrators never receive it.
+
+## Release labels
+
+Vercel beta-branch deployments automatically show `Beta v3b`; production shows
+`Public v3`. To change either label without editing code, set
+`VITE_RELEASE_CHANNEL` (`beta` or `public`) and `VITE_RELEASE_VERSION` in the
+corresponding Vercel environment, then redeploy.
 
 ## Beta workflow
 

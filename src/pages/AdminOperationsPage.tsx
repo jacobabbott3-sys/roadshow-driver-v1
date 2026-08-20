@@ -17,54 +17,91 @@ import {
   addToolbagItem,
   applyToolbagTemplate,
   createToolbag,
+  deleteResource,
   deleteToolbagItem,
+  getAdminResources,
   getTeamMembers,
   getFeedback,
   getToolbags,
   getToolbagTemplates,
+  saveResource,
   updateToolbag,
   updateToolbagItem,
 } from "../lib/adminData";
-import { getResources } from "../lib/driverData";
 import { supabase } from "../lib/supabase";
 export function AdminOperationsPage() {
-  const resources = useAsync(getResources, []),
+  const resources = useAsync(getAdminResources, []),
     feedback = useAsync(getFeedback, []),
     toolbags = useAsync(getToolbags, []),
     toolbagTemplates = useAsync(getToolbagTemplates, []),
     teamMembers = useAsync(getTeamMembers, []);
-  const [resource, setResource] = useState({
+  const blankResource = {
+      id: "",
       title: "",
-      kind: "faq",
+      kind: "faq" as "faq" | "handbook" | "link",
       content: "",
-    }),
+      file_path: null as string | null,
+      position: 0,
+      published: true,
+    };
+  const [resource, setResource] = useState(blankResource),
     [resourceFile, setResourceFile] = useState<File | null>(null),
+    [removeResourceFile, setRemoveResourceFile] = useState(false),
     [bag, setBag] = useState({ number: "", driver: "" }),
+    [bagEdit, setBagEdit] = useState({ number: "", driver: "" }),
     [openBag, setOpenBag] = useState<string | null>(null),
     [item, setItem] = useState({ name: "", quantity: 1 }),
     [editingItem, setEditingItem] = useState<string | null>(null),
     [message, setMessage] = useState("");
-  async function addResource(e: FormEvent) {
+  async function submitResource(e: FormEvent) {
     e.preventDefault();
-    let file_path: string | null = null;
+    setMessage("");
+    let file_path = resource.kind !== "handbook" || removeResourceFile ? null : resource.file_path;
+    let uploadedPath: string | null = null;
     if (resourceFile) {
-      file_path = `red-folder/${crypto.randomUUID()}-${resourceFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+      uploadedPath = `red-folder/${crypto.randomUUID()}-${resourceFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
       const { error: uploadError } = await supabase.storage
         .from("resources")
-        .upload(file_path, resourceFile);
+        .upload(uploadedPath, resourceFile);
       if (uploadError) {
         setMessage(uploadError.message);
         return;
       }
+      file_path = uploadedPath;
     }
-    const { error } = await supabase
-      .from("resources")
-      .insert({ ...resource, file_path, published: true });
-    setMessage(error ? error.message : "Resource published.");
-    if (!error) {
-      setResource({ title: "", kind: "faq", content: "" });
+    try {
+      await saveResource({
+        id: resource.id || undefined,
+        title: resource.title,
+        kind: resource.kind,
+        content: resource.content,
+        file_path,
+        position: resource.position,
+        published: resource.published,
+      });
+      if (resource.file_path && resource.file_path !== file_path) {
+        await supabase.storage.from("resources").remove([resource.file_path]);
+      }
+      setMessage(resource.id ? "Resource updated." : "Resource saved.");
+      setResource(blankResource);
       setResourceFile(null);
+      setRemoveResourceFile(false);
       await resources.refresh();
+    } catch (error) {
+      if (uploadedPath) await supabase.storage.from("resources").remove([uploadedPath]);
+      setMessage(error instanceof Error ? error.message : "Unable to save resource.");
+    }
+  }
+  async function removeResource(id: string, filePath: string | null) {
+    if (!window.confirm("Delete this resource? Drivers will no longer be able to view it.")) return;
+    try {
+      await deleteResource(id);
+      if (filePath) await supabase.storage.from("resources").remove([filePath]);
+      if (resource.id === id) setResource(blankResource);
+      await resources.refresh();
+      setMessage("Resource deleted.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to delete resource.");
     }
   }
   async function addBag(e: FormEvent) {
@@ -102,20 +139,21 @@ export function AdminOperationsPage() {
       <div className="operations-grid">
         <section className="admin-section">
           <h2>
-            <BookOpen /> Publish resource
+            <BookOpen /> {resource.id ? "Edit resource" : "Publish resource"}
           </h2>
-          <form className="stack-form" onSubmit={addResource}>
+          <form className="stack-form" onSubmit={submitResource}>
             <label>
               Type
               <select
                 value={resource.kind}
                 onChange={(e) => {
-                  setResource({ ...resource, kind: e.target.value });
+                  setResource({ ...resource, kind: e.target.value as "faq" | "handbook" | "link" });
                   setResourceFile(null);
                 }}
               >
                 <option value="faq">FAQ</option>
                 <option value="handbook">Red Folder</option>
+                {resource.kind === "link" && <option value="link">Legacy link</option>}
               </select>
             </label>
             <label>
@@ -139,24 +177,35 @@ export function AdminOperationsPage() {
               />
             </label>
             {resource.kind === "handbook" && (
-              <label>
-                Picture (optional)
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setResourceFile(e.target.files?.[0] || null)}
-                />
-              </label>
+              <>
+                <label>
+                  {resource.file_path ? "Replace picture (optional)" : "Picture (optional)"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => { setResourceFile(e.target.files?.[0] || null); setRemoveResourceFile(false); }}
+                  />
+                </label>
+                {resource.file_path && <label className="checkbox-field"><input type="checkbox" checked={removeResourceFile} onChange={(e) => { setRemoveResourceFile(e.target.checked); if (e.target.checked) setResourceFile(null); }} /> Remove current picture</label>}
+              </>
             )}
+            <label>
+              Display order
+              <input type="number" min="0" value={resource.position} onChange={(e) => setResource({ ...resource, position: Number(e.target.value) })} />
+            </label>
+            <label className="checkbox-field"><input type="checkbox" checked={resource.published} onChange={(e) => setResource({ ...resource, published: e.target.checked })} /> Published for drivers</label>
             <button className="button primary">
-              <Plus /> Publish
+              {resource.id ? <Save /> : <Plus />} {resource.id ? "Save changes" : "Save resource"}
             </button>
+            {resource.id && <button type="button" className="button secondary" onClick={() => { setResource(blankResource); setResourceFile(null); setRemoveResourceFile(false); }}>Cancel editing</button>}
           </form>
           <PageState loading={resources.loading} error={resources.error}>
             {resources.data?.map((r) => (
-              <div className="simple-row" key={r.id}>
+              <div className="simple-row resource-admin-row" key={r.id}>
                 {r.kind === "faq" ? <HelpCircle /> : <Image />}
-                <span>{r.title}</span>
+                <span><strong>{r.title}</strong><small>{r.published ? "Published" : "Draft"} · Order {r.position}{r.file_path ? " · Picture attached" : ""}</small></span>
+                <button className="icon-text-button" onClick={() => { setResource({ id: r.id, title: r.title, kind: r.kind, content: r.content || "", file_path: r.file_path, position: r.position, published: r.published }); setResourceFile(null); setRemoveResourceFile(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button>
+                <button className="icon-text-button delete-action" onClick={() => void removeResource(r.id, r.file_path)}><Trash2 /> Delete</button>
               </div>
             ))}
           </PageState>
@@ -201,6 +250,7 @@ export function AdminOperationsPage() {
                   className="simple-row toolbag-toggle"
                   onClick={() => {
                     setOpenBag(openBag === t.id ? null : t.id);
+                    setBagEdit({ number: t.number, driver: t.assigned_to || "" });
                     setEditingItem(null);
                     setItem({ name: "", quantity: 1 });
                   }}
@@ -218,24 +268,17 @@ export function AdminOperationsPage() {
                 </button>
                 {openBag === t.id && (
                   <div className="toolbag-items">
-                    <label>
-                      Assigned team member
-                      <select
-                        value={t.assigned_to || ""}
-                        onChange={async (e) => {
-                          await updateToolbag(t.id, e.target.value || null);
-                          await toolbags.refresh();
-                        }}
-                      >
-                        <option value="">Unassigned</option>
-                        {teamMembers.data?.map((member) => (
-                          <option value={member.id} key={member.id}>
-                            {member.full_name}
-                            {member.role === "admin" ? " (Admin)" : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <form className="toolbag-settings" onSubmit={async (e) => { e.preventDefault(); try { await updateToolbag(t.id, bagEdit.number, bagEdit.driver || null); await toolbags.refresh(); setMessage("Toolbag updated."); } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to update toolbag."); } }}>
+                      <label>Toolbag number<input required value={bagEdit.number} onChange={(e) => setBagEdit({ ...bagEdit, number: e.target.value })} /></label>
+                      <label>
+                        Assigned team member
+                        <select value={bagEdit.driver} onChange={(e) => setBagEdit({ ...bagEdit, driver: e.target.value })}>
+                          <option value="">Unassigned</option>
+                          {teamMembers.data?.map((member) => <option value={member.id} key={member.id}>{member.full_name}{member.role === "admin" ? " (Admin)" : ""}</option>)}
+                        </select>
+                      </label>
+                      <button className="button secondary"><Save /> Save toolbag details</button>
+                    </form>
                     <label>
                       Fill from template
                       <select
