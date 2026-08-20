@@ -2035,6 +2035,8 @@ h2 {
 }
 .release-badge strong { color: var(--orange); }
 .release-badge.compact { padding: 4px 7px; font-size: 0.61rem; }
+.home-release { display: flex; justify-content: center; margin-top: 38px; padding: 18px 0 6px; border-top: 1px solid var(--line); }
+.home-release .release-badge { padding: 7px 11px; font-size: 0.72rem; box-shadow: 0 4px 14px rgba(23, 61, 49, 0.08); }
 .side-nav > .release-badge { margin: 0 23px 18px; }
 .top-release { margin-right: auto; }
 .auth-intro > div:first-child { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }
