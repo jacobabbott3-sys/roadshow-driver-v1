@@ -2037,6 +2037,17 @@ h2 {
 .release-badge.compact { padding: 4px 7px; font-size: 0.61rem; }
 .home-release { display: flex; justify-content: center; margin-top: 38px; padding: 18px 0 6px; border-top: 1px solid var(--line); }
 .home-release .release-badge { padding: 7px 11px; font-size: 0.72rem; box-shadow: 0 4px 14px rgba(23, 61, 49, 0.08); }
+.beta-test-panel { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; margin: 0 0 22px; padding: 22px; border: 1px solid color-mix(in srgb, var(--orange) 45%, var(--line)); border-radius: 17px; background: color-mix(in srgb, var(--orange) 8%, var(--paper)); }
+.beta-test-panel h2 { margin: 3px 0 6px; }
+.beta-test-panel > div:nth-child(2) > p:not(.eyebrow, .notice) { color: var(--muted); max-width: 720px; line-height: 1.5; }
+.beta-test-panel .notice { margin-top: 10px; }
+.beta-test-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 13px; background: var(--orange); color: white; }
+.beta-test-actions { display: grid; gap: 8px; min-width: 190px; }
+.beta-test-actions .button { width: 100%; white-space: nowrap; }
+@media (max-width: 760px) {
+  .beta-test-panel { grid-template-columns: auto 1fr; align-items: start; }
+  .beta-test-actions { grid-column: 1 / -1; width: 100%; }
+}
 .side-nav > .release-badge { margin: 0 23px 18px; }
 .top-release { margin-right: auto; }
 .auth-intro > div:first-child { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }

@@ -60,6 +60,8 @@ If an earlier beta database already installed the contract-email queue, run `202
 
 Run `202608190003_beta_v3b.sql` for beta v3b availability pay/work-date details and safe checklist-template editing that preserves completed checklist history.
 
+Run `202608190004_beta_test_show.sql` to add the admin-only, resettable Beta Test Show sandbox. Each admin can create one Test Show from the beta Admin overview; resetting it clears test workflow progress without touching real shows.
+
 ## Device notification setup
 
 The app and database are ready for web push, but each Supabase/Vercel environment needs its own keys and webhook setup:

@@ -1,22 +1,46 @@
 import {
   ClipboardCheck,
+  FlaskConical,
   Eye,
   FileClock,
   MessageSquareText,
   Mic2,
   Store as TentTree,
   UsersRound,
+  RotateCcw,
 } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
-import { getDashboardStats, getReviews } from "../lib/adminData";
+import { getBetaTestShow, getDashboardStats, getReviews, resetBetaTestShow } from "../lib/adminData";
 import { dateRange, statusLabel } from "../lib/driverData";
+import { release } from "../lib/release";
+import { useAuth } from "../context/AuthContext";
 
 export function AdminPage() {
+  const { user } = useAuth();
   const stats = useAsync(getDashboardStats, []);
   const reviews = useAsync(getReviews, []);
+  const testShow = useAsync(() => getBetaTestShow(user!.id), [user?.id]);
+  const [testBusy, setTestBusy] = useState(false);
+  const [testMessage, setTestMessage] = useState("");
+
+  async function resetTestShow() {
+    if (testShow.data && !window.confirm("Reset the Beta Test Show? This clears its checklist progress, reviews, signatures, bonus result, availability, and submitted photo records.")) return;
+    setTestBusy(true);
+    setTestMessage("");
+    try {
+      await resetBetaTestShow();
+      await Promise.all([testShow.refresh(), stats.refresh(), reviews.refresh()]);
+      setTestMessage(testShow.data ? "Beta Test Show reset and ready." : "Beta Test Show created and assigned to you.");
+    } catch (error) {
+      setTestMessage(error instanceof Error ? error.message : "Unable to prepare the Beta Test Show.");
+    } finally {
+      setTestBusy(false);
+    }
+  }
   return (
     <main className="page">
       <AdminHeader
@@ -58,6 +82,24 @@ export function AdminPage() {
           </Link>
         </div>
       </PageState>
+      {release.channel === "beta" && (
+        <section className="beta-test-panel">
+          <div className="beta-test-icon"><FlaskConical /></div>
+          <div>
+            <p className="eyebrow">BETA TESTING SANDBOX</p>
+            <h2>{testShow.data ? testShow.data.name : "Create a resettable Test Show"}</h2>
+            <p>Assigned only to you for testing contracts, signatures, checklists, reviews, notifications, photos, and bonuses. It is hidden from public builds.</p>
+            {(testMessage || testShow.error) && <p className="notice">{testMessage || testShow.error}</p>}
+          </div>
+          <div className="beta-test-actions">
+            {testShow.data?.contract_id && <Link className="button secondary" to={`/contracts/${testShow.data.contract_id}`}>Open test contract →</Link>}
+            <button className="button primary" disabled={testBusy || testShow.loading} onClick={() => void resetTestShow()}>
+              {testShow.data ? <RotateCcw /> : <FlaskConical />}
+              {testBusy ? "Preparing…" : testShow.data ? "Reset Test Show" : "Create Test Show"}
+            </button>
+          </div>
+        </section>
+      )}
       <section className="admin-section">
         <div className="section-row">
           <div>

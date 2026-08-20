@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { getChecklist, type Contract, type Show } from "./driverData";
 import type { Profile } from "../types";
+import { release } from "./release";
 export type DashboardStats = {
   shows: number;
   unsigned: number;
@@ -55,26 +56,36 @@ export type AdminFeedback = {
 };
 export async function getDashboardStats() {
   const today = new Date().toISOString().slice(0, 10);
-  const [shows, signings, unsigned, reviews, drivers, feedback] = await Promise.all([
-    supabase
+  let showsQuery = supabase
       .from("shows")
       .select("*", { count: "exact", head: true })
       .eq("event_type", "show")
-      .gte("ends_on", today),
-    supabase
+      .gte("ends_on", today);
+  let signingsQuery = supabase
       .from("shows")
       .select("*", { count: "exact", head: true })
       .eq("event_type", "signing")
-      .gte("ends_on", today),
-    supabase
+      .gte("ends_on", today);
+  let unsignedQuery = supabase
       .from("contracts")
-      .select("*,show:shows!inner(event_type)", { count: "exact", head: true })
+      .select("*,show:shows!inner(event_type,is_test)", { count: "exact", head: true })
       .eq("show.event_type", "show")
-      .is("signed_at", null),
-    supabase
+      .is("signed_at", null);
+  let reviewsQuery = supabase
       .from("contracts")
-      .select("*", { count: "exact", head: true })
-      .in("status", ["submitted", "under_review"]),
+      .select("*,show:shows!inner(is_test)", { count: "exact", head: true })
+      .in("status", ["submitted", "under_review"]);
+  if (release.channel !== "beta") {
+    showsQuery = showsQuery.eq("is_test", false);
+    signingsQuery = signingsQuery.eq("is_test", false);
+    unsignedQuery = unsignedQuery.eq("show.is_test", false);
+    reviewsQuery = reviewsQuery.eq("show.is_test", false);
+  }
+  const [shows, signings, unsigned, reviews, drivers, feedback] = await Promise.all([
+    showsQuery,
+    signingsQuery,
+    unsignedQuery,
+    reviewsQuery,
     supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
@@ -128,7 +139,8 @@ export async function getShowsAdmin() {
     )
     .order("starts_on", { ascending: false });
   if (error) throw error;
-  return data as AdminShow[];
+  const shows = data as AdminShow[];
+  return release.channel === "beta" ? shows : shows.filter((show) => !show.is_test);
 }
 export async function createShow(
   input: ShowInput,
@@ -283,10 +295,11 @@ export async function getReviews() {
     .in("status", ["submitted", "under_review"])
     .order("submitted_at");
   if (error) throw error;
-  return data as unknown as (Contract & {
+  const reviews = data as unknown as (Contract & {
     submitted_at: string | null;
     driver: { id: string; full_name: string };
   })[];
+  return release.channel === "beta" ? reviews : reviews.filter((review) => !review.show.is_test);
 }
 export type ReviewHistoryRow = Contract & {
   submitted_at: string | null;
@@ -305,7 +318,7 @@ export async function getReviewHistory() {
   if (error) throw error;
   return (data || []).filter(
     (review) => !["submitted", "under_review"].includes(review.status),
-  ) as unknown as ReviewHistoryRow[];
+  ).filter((review) => release.channel === "beta" || !(review.show as unknown as Show).is_test) as unknown as ReviewHistoryRow[];
 }
 export async function getChecklistReview(contractId: string) {
   const [{ data, error }, checklist] = await Promise.all([
@@ -319,6 +332,7 @@ export async function getChecklistReview(contractId: string) {
     getChecklist(contractId),
   ]);
   if (error) throw error;
+  if (release.channel !== "beta" && (data as unknown as { show: Show }).show.is_test) throw new Error("This test checklist is only available in beta.");
   return {
     contract: data as unknown as Contract & {
       submitted_at: string | null;
@@ -655,4 +669,36 @@ export async function updateContractTerms(id: string, terms: string) {
     .update({ terms })
     .eq("id", id);
   if (error) throw error;
+}
+
+export type BetaTestShow = {
+  id: string;
+  name: string;
+  contract_id: string;
+};
+
+export async function getBetaTestShow(userId: string) {
+  if (release.channel !== "beta") return null;
+  const { data, error } = await supabase
+    .from("shows")
+    .select("id,name,contracts(id)")
+    .eq("is_test", true)
+    .eq("test_owner", userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const contracts = (data.contracts || []) as { id: string }[];
+  return { id: data.id, name: data.name, contract_id: contracts[0]?.id || "" } as BetaTestShow;
+}
+
+export async function resetBetaTestShow() {
+  if (release.channel !== "beta") throw new Error("The Test Show is only available in beta.");
+  const { data, error } = await supabase.rpc("reset_my_beta_test_show");
+  if (error) throw error;
+  const result = data as { show_id: string; contract_id: string; photo_paths: string[] };
+  if (result.photo_paths?.length) {
+    const { error: storageError } = await supabase.storage.from("roadshow-photos").remove(result.photo_paths);
+    if (storageError) console.warn("Test photo cleanup was incomplete:", storageError.message);
+  }
+  return result;
 }

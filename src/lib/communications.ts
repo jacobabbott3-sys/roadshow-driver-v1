@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { release } from "./release";
 
 export type ChatMember = {
   user_id: string;
@@ -32,6 +33,10 @@ export type Notification = {
   kind: string;
   read_at: string | null;
   created_at: string;
+};
+
+type NotificationWithContract = Notification & {
+  contract: null | { show: null | { is_test: boolean } | { is_test: boolean }[] } | { show: null | { is_test: boolean } | { is_test: boolean }[] }[];
 };
 
 export async function getChatThreads() {
@@ -93,11 +98,27 @@ export async function getNotifications(userId: string) {
   await supabase.rpc("ensure_my_due_notifications");
   const { data, error } = await supabase
     .from("notifications")
-    .select("id,title,body,link,kind,read_at,created_at")
+    .select("id,title,body,link,kind,read_at,created_at,contract:contracts(show:shows(is_test))")
     .eq("recipient_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data || []) as Notification[];
+  const rows = (data || []) as unknown as NotificationWithContract[];
+  return rows
+    .filter((notification) => {
+      if (release.channel === "beta") return true;
+      const contract = Array.isArray(notification.contract) ? notification.contract[0] : notification.contract;
+      const show = Array.isArray(contract?.show) ? contract.show[0] : contract?.show;
+      return !show?.is_test;
+    })
+    .map((notification) => ({
+      id: notification.id,
+      title: notification.title,
+      body: notification.body,
+      link: notification.link,
+      kind: notification.kind,
+      read_at: notification.read_at,
+      created_at: notification.created_at,
+    })) as Notification[];
 }
 
 export async function markNotificationRead(id: string) {

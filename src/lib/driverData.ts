@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { release } from "./release";
 
 export type Show = {
   id: string;
@@ -25,6 +26,8 @@ export type Show = {
   lodging_check_in: string | null;
   lodging_check_out: string | null;
   lodging_notes: string | null;
+  is_test: boolean;
+  test_owner: string | null;
 };
 export type Contract = {
   id: string;
@@ -102,7 +105,8 @@ export async function getContracts() {
     )
     .order("service_date");
   if (error) throw error;
-  return (data || []) as unknown as Contract[];
+  const contracts = (data || []) as unknown as Contract[];
+  return release.channel === "beta" ? contracts : contracts.filter((contract) => !contract.show.is_test);
 }
 export async function getContract(id: string) {
   const { data, error } = await supabase
@@ -113,7 +117,9 @@ export async function getContract(id: string) {
     .eq("id", id)
     .single();
   if (error) throw error;
-  return data as unknown as Contract;
+  const contract = data as unknown as Contract;
+  if (release.channel !== "beta" && contract.show.is_test) throw new Error("This test contract is only available in beta.");
+  return contract;
 }
 export async function getChecklist(contractId: string) {
   const { data: cc, error } = await supabase
@@ -211,7 +217,8 @@ export async function getAvailability(userId: string) {
     service_time: string | null;
   }[];
   const assignmentDetails = new Map(typedAssignments.map((row) => [row.show_id, row]));
-  return (shows || []).map((show) => ({
+  const visibleShows = release.channel === "beta" ? (shows || []) : (shows || []).filter((show) => !show.is_test);
+  return visibleShows.map((show) => ({
     ...byShow.get(show.id),
     show_id: show.id,
     driver_id: userId,
@@ -301,7 +308,8 @@ export async function getLinkedSignings(showId: string) {
     .in("id", ids)
     .order("signing_at");
   if (showError) throw showError;
-  return data as Show[];
+  const linked = data as Show[];
+  return release.channel === "beta" ? linked : linked.filter((show) => !show.is_test);
 }
 export function dateRange(show: Show) {
   const start = new Date(`${show.starts_on}T12:00:00`),
