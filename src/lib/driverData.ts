@@ -58,7 +58,9 @@ export type AvailabilityRow = {
   contract_kind: "setup" | "teardown" | null;
   service_date: string | null;
   service_time: string | null;
+  linked_show_ids: string[];
 };
+export type ShowLink = { show_id: string; linked_show_id: string };
 export type Resource = {
   id: string;
   kind: "handbook" | "faq" | "link";
@@ -190,17 +192,18 @@ export async function submitChecklist(contractId: string) {
   if (error) throw error;
 }
 export async function getAvailability(userId: string) {
-  const [{ data: shows, error }, { data: assignmentRows, error: assignmentError }] = await Promise.all([
+  const [{ data: shows, error }, { data: assignmentRows, error: assignmentError }, { data: showLinks, error: linkError }] = await Promise.all([
     supabase
     .from("shows")
     .select("*")
-    .eq("event_type", "show")
     .gte("ends_on", new Date().toISOString().slice(0, 10))
     .order("starts_on"),
     supabase.rpc("get_public_show_availability"),
+    supabase.from("show_links").select("show_id,linked_show_id"),
   ]);
   if (error) throw error;
   if (assignmentError) throw assignmentError;
+  if (linkError) throw linkError;
   const { data: rows, error: rowError } = await supabase
     .from("availability")
     .select("id,show_id,driver_id,status")
@@ -232,6 +235,7 @@ export async function getAvailability(userId: string) {
     contract_kind: assignmentDetails.get(show.id)?.contract_kind ?? null,
     service_date: assignmentDetails.get(show.id)?.service_date ?? null,
     service_time: assignmentDetails.get(show.id)?.service_time ?? null,
+    linked_show_ids: (showLinks || []).flatMap((link) => link.show_id === show.id ? [link.linked_show_id] : link.linked_show_id === show.id ? [link.show_id] : []),
   })) as AvailabilityRow[];
 }
 export async function setAvailability(
@@ -251,6 +255,17 @@ export async function setAvailability(
       { onConflict: "show_id,driver_id" },
     );
   if (error) throw error;
+}
+export async function setAvailabilityMany(showIds: string[], userId: string, status: "available" | "unavailable") {
+  const { error } = await supabase.from("availability").upsert(showIds.map((show_id) => ({
+    show_id, driver_id: userId, status, updated_at: new Date().toISOString(),
+  })), { onConflict: "show_id,driver_id" });
+  if (error) throw error;
+}
+export async function getShowLinks() {
+  const { data, error } = await supabase.from("show_links").select("show_id,linked_show_id");
+  if (error) throw error;
+  return (data || []) as ShowLink[];
 }
 export async function getResources() {
   const { data, error } = await supabase

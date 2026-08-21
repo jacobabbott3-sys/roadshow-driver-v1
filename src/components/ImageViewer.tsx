@@ -9,6 +9,13 @@ export function ImageViewer({ src, alt, className = "" }: { src: string; alt: st
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const drag = useRef<{ pointerId: number; start: Point; origin: Point } | null>(null);
+  const [fitScale, setFitScale] = useState(1);
+
+  function calculateFit(image: HTMLImageElement) {
+    const availableWidth = window.innerWidth * 0.92;
+    const availableHeight = window.innerHeight * 0.76;
+    setFitScale(Math.min(1, availableWidth / image.naturalWidth, availableHeight / image.naturalHeight));
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -61,7 +68,7 @@ export function ImageViewer({ src, alt, className = "" }: { src: string; alt: st
             <button className="viewer-close" onClick={() => setOpen(false)} aria-label="Close image"><X /></button>
           </div>
           <div className={`image-viewer-stage ${scale > 1 ? "can-pan" : ""}`} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag} onWheel={zoomWheel} onDoubleClick={() => changeScale(scale === 1 ? 2 : 1)}>
-            <img src={src} alt={alt} draggable={false} style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }} />
+            <img src={src} alt={alt} draggable={false} onLoad={(event) => calculateFit(event.currentTarget)} style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${fitScale * scale})` }} />
           </div>
           <p>Double-click, scroll, or use the controls to zoom. Drag to pan.</p>
         </div>,

@@ -1,10 +1,10 @@
-import { ClipboardCheck, FileStack, LayoutDashboard, MessageCircle, Mic2, PackageOpen, Store, UsersRound } from "lucide-react";
+import { ClipboardCheck, FileStack, LayoutDashboard, MessageCircle, PackageOpen, PenLine, Store, UsersRound } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const links = [
   ["/admin", "Overview", LayoutDashboard],
   ["/admin/shows", "Shows & contracts", Store],
-  ["/admin/signings", "Signings", Mic2],
+  ["/admin/signings", "Signings", PenLine],
   ["/admin/templates", "Templates", FileStack],
   ["/admin/checklists", "Reviews", ClipboardCheck],
   ["/admin/users", "Users", UsersRound],

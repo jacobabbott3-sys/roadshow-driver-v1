@@ -1,4 +1,4 @@
-import { CalendarPlus, Clock3, Link2, MapPin, Mic2, Pencil, Trash2, UsersRound } from "lucide-react";
+import { CalendarPlus, Clock3, Link2, MapPin, PenLine, Pencil, Trash2, UsersRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
@@ -12,6 +12,7 @@ import {
   getTemplates,
   saveShowContract,
   saveShowLinks,
+  updateLinkedSigningAssignments,
   updateShow,
   type AdminShow,
 } from "../lib/adminData";
@@ -105,6 +106,7 @@ export function AdminSigningsPage() {
         template_id: form.template_id,
       });
       await saveShowLinks(showId, form.linked_ids);
+      await updateLinkedSigningAssignments([showId, ...form.linked_ids], form.assignee_ids);
       close();
       setMessage("Signing saved.");
       await Promise.all([shows.refresh(), links.refresh()]);
@@ -145,7 +147,7 @@ export function AdminSigningsPage() {
         </form>
       )}
       <PageState loading={shows.loading || team.loading || templates.loading || links.loading} error={shows.error || team.error || templates.error || links.error} empty={!signings.length}>
-        <div className="admin-show-list">{signings.map((signing) => { const contract = signing.contracts[0]; const linkedCount = (links.data || []).filter((link) => link.show_id === signing.id || link.linked_show_id === signing.id).length; return <article className="admin-show-card" key={signing.id}><div className="admin-show-head"><span className="show-booth-icon"><Mic2 /></span><div><h2>{signing.artist || signing.name}</h2><p><MapPin /> {signing.venue_name || signing.address || signing.city}</p></div><div className="show-card-actions"><button onClick={() => loadEdit(signing)}><Pencil /> Edit</button><button className="delete-action" onClick={() => setDeleting(signing)}><Trash2 /> Delete</button></div></div><div className="contract-summary"><Clock3 /><span><strong>{formatDateTime(signing.signing_at)}</strong><small>Setup: {formatDateTime(signing.setup_at)}</small><small><UsersRound /> {contract?.contract_drivers.length || 0} assigned · <Link2 /> {linkedCount} linked</small></span></div></article>; })}</div>
+        <div className="admin-show-list">{signings.map((signing) => { const contract = signing.contracts[0]; const linkedCount = (links.data || []).filter((link) => link.show_id === signing.id || link.linked_show_id === signing.id).length; return <article className="admin-show-card" key={signing.id}><div className="admin-show-head"><span className="show-booth-icon"><PenLine /></span><div><h2>{signing.artist || signing.name}</h2><p><MapPin /> {signing.venue_name || signing.address || signing.city}</p></div><div className="show-card-actions"><button onClick={() => loadEdit(signing)}><Pencil /> Edit</button><button className="delete-action" onClick={() => setDeleting(signing)}><Trash2 /> Delete</button></div></div><div className="contract-summary"><Clock3 /><span><strong>{formatDateTime(signing.signing_at)}</strong><small>Setup: {formatDateTime(signing.setup_at)}</small><small><UsersRound /> {contract?.contract_drivers.length || 0} assigned · <Link2 /> {linkedCount} linked</small></span></div></article>; })}</div>
       </PageState>
       {deleting && <div className="modal-backdrop"><section className="confirm-modal" role="dialog" aria-modal="true"><span className="danger-icon"><Trash2 /></span><h2>Delete this signing?</h2><p>This removes its assignments and checklist progress.</p><div><button onClick={() => setDeleting(null)}>Cancel</button><button className="confirm-delete" onClick={() => void remove()} disabled={busy}>{busy ? "Deleting…" : "Delete signing"}</button></div></section></div>}
     </main>

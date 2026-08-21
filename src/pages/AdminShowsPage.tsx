@@ -5,6 +5,7 @@ import {
   Pencil,
   Store,
   Trash2,
+  UsersRound,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { AdminHeader } from "../components/AdminNav";
@@ -15,11 +16,13 @@ import {
   createShow,
   deleteShow,
   getContractTemplates,
+  getShowAvailabilityAdmin,
   getShowsAdmin,
-  getTeamMembers,
   getTemplates,
   saveShowContract,
   updateShow,
+  updateContractAssignments,
+  type AdminAvailabilityPerson,
   type AdminShow,
 } from "../lib/adminData";
 import { dateRange, statusLabel } from "../lib/driverData";
@@ -98,7 +101,6 @@ function savedDraft() {
 
 export function AdminShowsPage() {
   const shows = useAsync(getShowsAdmin, []),
-    teamMembers = useAsync(getTeamMembers, []),
     templates = useAsync(getTemplates, []),
     contractTemplates = useAsync(getContractTemplates, []);
   const draft = savedDraft(),
@@ -106,6 +108,11 @@ export function AdminShowsPage() {
     [open, setOpen] = useState(Boolean(draft)),
     [editing, setEditing] = useState<string | null>(draft?.editing || null),
     [deleting, setDeleting] = useState<AdminShow | null>(null),
+    [assigning, setAssigning] = useState<AdminShow | null>(null),
+    [availabilityPeople, setAvailabilityPeople] = useState<AdminAvailabilityPerson[]>([]),
+    [assignmentIds, setAssignmentIds] = useState<string[]>([]),
+    [assignmentLoading, setAssignmentLoading] = useState(false),
+    [autofillSource, setAutofillSource] = useState(""),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   useEffect(() => {
@@ -121,6 +128,58 @@ export function AdminShowsPage() {
     setEditing(null);
     setForm(blank);
     setOpen(true);
+    setAutofillSource("");
+  }
+  function applyPastShow(showId: string) {
+    setAutofillSource(showId);
+    const source = pastShows.find((show) => show.id === showId);
+    if (!source) return;
+    const contract = source.contracts[0];
+    setForm({
+      ...blank,
+      name: source.name,
+      city: source.city,
+      state: source.state || "",
+      address: source.address || "",
+      bin_count: source.bin_count?.toString() || "",
+      lodging_included: source.lodging_included,
+      per_diem: source.per_diem?.toString() || "",
+      lodging_name: source.lodging_name || "",
+      lodging_address: source.lodging_address || "",
+      lodging_phone: source.lodging_phone || "",
+      lodging_confirmation: "",
+      lodging_notes: source.lodging_notes || "",
+      kind: contract?.kind || "setup",
+      template_id: contract?.contract_checklists?.[0]?.template_id || "",
+      terms: contract?.terms || "",
+    });
+  }
+  async function openAssignments(show: AdminShow) {
+    const contract = show.contracts[0];
+    if (!contract) return;
+    setAssigning(show);
+    setAssignmentLoading(true);
+    try {
+      const people = await getShowAvailabilityAdmin(show.id, contract.id);
+      setAvailabilityPeople(people);
+      setAssignmentIds(people.filter((person) => person.assigned).map((person) => person.id));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to load availability.");
+      setAssigning(null);
+    } finally { setAssignmentLoading(false); }
+  }
+  async function saveAssignments() {
+    const contract = assigning?.contracts[0];
+    if (!contract) return;
+    setAssignmentLoading(true);
+    try {
+      await updateContractAssignments(contract.id, assignmentIds);
+      await shows.refresh();
+      setMessage("Assignments updated.");
+      setAssigning(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to save assignments.");
+    } finally { setAssignmentLoading(false); }
   }
   function loadEdit(show: AdminShow) {
     const contract = show.contracts[0];
@@ -259,6 +318,9 @@ export function AdminShowsPage() {
   const matchingTemplates =
     templates.data?.filter((t) => t.kind === form.kind) || [];
   const regularShows = shows.data?.filter((show) => show.event_type !== "signing") || [];
+  const pastShows = regularShows
+    .filter((show) => show.ends_on < new Date().toISOString().slice(0, 10))
+    .sort((a, b) => b.ends_on.localeCompare(a.ends_on));
   return (
     <main className="page">
       <AdminHeader
@@ -283,6 +345,7 @@ export function AdminShowsPage() {
               Cancel
             </button>
           </div>
+          {!editing && <label className="past-show-autofill">Autofill from a past show<select value={autofillSource} onChange={(event) => applyPastShow(event.target.value)}><option value="">Start with blank details</option>{pastShows.map((show) => <option key={show.id} value={show.id}>{show.name} · {show.city}{show.state ? `, ${show.state}` : ""}</option>)}</select><small>Copies venue, lodging, checklist, and contract terms. Dates, pay, bonus, and assignments stay blank.</small></label>}
           <div className="form-grid">
             <label>
               Show name
@@ -397,7 +460,7 @@ export function AdminShowsPage() {
                 value={form.contract_template_id}
                 onChange={(e) => {
                   const selected = contractTemplates.data?.find((template) => template.id === e.target.value);
-                  setForm(selected ? { ...form, contract_template_id: selected.id, kind: selected.kind, contract_pay: selected.contract_pay?.toString() || "", bonus_pay: selected.bonus_pay?.toString() || "", terms: selected.terms || "", template_id: selected.kind === form.kind ? form.template_id : "" } : { ...form, contract_template_id: "" });
+                  setForm(selected ? { ...form, contract_template_id: selected.id, kind: selected.kind, terms: selected.terms || "", template_id: selected.kind === form.kind ? form.template_id : "" } : { ...form, contract_template_id: "" });
                 }}
               >
                 <option value="">Start without a template</option>
@@ -471,47 +534,6 @@ export function AdminShowsPage() {
               />
             </label>
           </div>
-          <fieldset className="driver-selector">
-            <legend>Assigned team members</legend>
-            <p>
-              Admins can work shows just like drivers. The first selected team
-              member is the lead; additional members are marked as trainees.
-            </p>
-            <div>
-              {teamMembers.data?.map((member) => {
-                const selectedIndex = form.driver_ids.indexOf(member.id);
-                const assignmentLabel =
-                  selectedIndex === 0
-                    ? "Lead"
-                    : selectedIndex > 0
-                      ? "Trainee"
-                      : "";
-                return (
-                  <label key={member.id}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIndex >= 0}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          driver_ids: e.target.checked
-                            ? [...form.driver_ids, member.id]
-                            : form.driver_ids.filter(
-                                (id) => id !== member.id,
-                              ),
-                        })
-                      }
-                    />
-                    <span>{member.full_name || "Unnamed user"}</span>
-                    <small>
-                      {member.role === "admin" ? "Admin" : "Driver"}
-                      {assignmentLabel ? ` · ${assignmentLabel}` : ""}
-                    </small>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
           <label className="terms-editor">
             Published contract terms
             <textarea
@@ -541,8 +563,8 @@ export function AdminShowsPage() {
         </form>
       )}
       <PageState
-        loading={shows.loading || teamMembers.loading || templates.loading || contractTemplates.loading}
-        error={shows.error || teamMembers.error || templates.error || contractTemplates.error}
+        loading={shows.loading || templates.loading || contractTemplates.loading}
+        error={shows.error || templates.error || contractTemplates.error}
         empty={!regularShows.length}
       >
         <div className="admin-show-list">
@@ -563,6 +585,9 @@ export function AdminShowsPage() {
                     </p>
                   </div>
                   <div className="show-card-actions">
+                    <button onClick={() => void openAssignments(show)} disabled={!contract}>
+                      <UsersRound /> Assign user(s)
+                    </button>
                     <button onClick={() => loadEdit(show)}>
                       <Pencil /> Edit
                     </button>
@@ -603,6 +628,7 @@ export function AdminShowsPage() {
           })}
         </div>
       </PageState>
+      {assigning && <div className="modal-backdrop"><section className="assignment-modal" role="dialog" aria-modal="true"><div className="section-row"><div><p className="eyebrow">TEAM AVAILABILITY</p><h2>Assign user(s) · {assigning.name}</h2><p>Select the lead first. Availability responses are shown beside every active user.</p></div><button className="text-button" onClick={() => setAssigning(null)}>Close</button></div>{assignmentLoading && !availabilityPeople.length ? <p className="muted">Loading availability…</p> : <div className="assignment-availability-list">{availabilityPeople.map((person) => { const index = assignmentIds.indexOf(person.id); return <label key={person.id}><input type="checkbox" checked={index >= 0} onChange={(event) => setAssignmentIds(event.target.checked ? [...assignmentIds, person.id] : assignmentIds.filter((id) => id !== person.id))} /><span><strong>{person.full_name || "Unnamed user"}</strong><small>{person.role === "admin" ? "Admin" : "Driver"}{index === 0 ? " · Lead" : index > 0 ? " · Trainee" : ""}</small></span><em className={`availability-response ${person.availability_status || "pending"}`}>{person.availability_status === "available" ? "Available" : person.availability_status === "unavailable" ? "Unavailable" : person.availability_status === "assigned" ? "Assigned" : "No response"}</em></label>; })}</div>}<button className="button primary" disabled={assignmentLoading} onClick={() => void saveAssignments()}>{assignmentLoading ? "Saving…" : "Save assignments"}</button></section></div>}
       {deleting && (
         <div className="modal-backdrop" role="presentation">
           <section

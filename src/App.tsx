@@ -26,6 +26,7 @@ import { ResourcesPage } from "./pages/ResourcesPage";
 import { ToolbagPage } from "./pages/ToolbagPage";
 import { UpdatePasswordPage } from "./pages/UpdatePasswordPage";
 import { AuthConfirmPage } from "./pages/AuthConfirmPage";
+import { SigningGroupPage } from "./pages/SigningGroupPage";
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <Route index element={<HomePage />} />
             <Route path="contracts" element={<ContractsPage />} />
             <Route path="contracts/:id" element={<ContractDetailPage />} />
+            <Route path="signing-groups/:showId" element={<SigningGroupPage />} />
             <Route path="availability" element={<AvailabilityPage />} />
             <Route path="resources" element={<ResourcesPage />} />
             <Route path="resources/toolbag" element={<ToolbagPage />} />

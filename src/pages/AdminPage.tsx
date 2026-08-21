@@ -4,7 +4,7 @@ import {
   Eye,
   FileClock,
   MessageSquareText,
-  Mic2,
+  PenLine,
   Store as TentTree,
   UsersRound,
   RotateCcw,
@@ -61,7 +61,7 @@ export function AdminPage() {
             <span>Awaiting signature</span>
           </article>
           <Link to="/admin/signings">
-            <Mic2 />
+            <PenLine />
             <strong>{stats.data?.signings}</strong>
             <span>Upcoming signings</span>
           </Link>

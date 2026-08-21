@@ -212,12 +212,7 @@ export function ContractDetailPage() {
                     <Field label={`${statusLabel(contract.data.kind)} date and time`} value={`${formatWorkDate(contract.data.service_date)}${contract.data.service_time ? ` at ${formatTime(contract.data.service_time)}` : ""}`} />
                     <Field label="Location" value={`${contract.data.show.city}${contract.data.show.state ? `, ${contract.data.show.state}` : ""}`} />
                   </>}
-                  <Field
-                    label="Address"
-                    value={
-                      contract.data.show.address || "Provided closer to show"
-                    }
-                  />
+                  <AddressField label="Address" address={contract.data.show.address} fallback="Provided closer to show" />
                   {!isSigning && <Field
                     label="Bins"
                     value={contract.data.show.bin_count?.toString() || "—"}
@@ -226,7 +221,7 @@ export function ContractDetailPage() {
                   {contract.data.show.lodging_included && (
                     <>
                       <Field label="Lodging" value={contract.data.show.lodging_name || "Included"} />
-                      <Field label="Lodging address" value={contract.data.show.lodging_address || "—"} />
+                      <AddressField label="Lodging address" address={contract.data.show.lodging_address} />
                       <Field label="Lodging phone" value={contract.data.show.lodging_phone || "—"} />
                       <Field label="Confirmation" value={contract.data.show.lodging_confirmation || "—"} />
                       <Field label="Check-in" value={formatDate(contract.data.show.lodging_check_in)} />
@@ -435,6 +430,18 @@ function Field({ label, value }: { label: string; value: string }) {
     <div>
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+function AddressField({ label, address, fallback = "—" }: { label: string; address: string | null; fallback?: string }) {
+  return (
+    <div>
+      <span>{label}</span>
+      {address ? (
+        <a className="map-address" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer">
+          <MapPin /> {address}
+        </a>
+      ) : <strong>{fallback}</strong>}
     </div>
   );
 }
