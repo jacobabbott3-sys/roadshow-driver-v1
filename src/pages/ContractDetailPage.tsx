@@ -10,7 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { PageState } from "../components/PageState";
 import { ImageViewer } from "../components/ImageViewer";
 import { useAuth } from "../context/AuthContext";
@@ -20,7 +20,7 @@ import {
   getChecklist,
   getContract,
   getContractPhotos,
-  getLinkedSignings,
+  getLinkedSigningContracts,
   setChecklistItem,
   statusLabel,
   submitChecklist,
@@ -28,15 +28,17 @@ import {
   type ChecklistSection,
 } from "../lib/driverData";
 import { supabase } from "../lib/supabase";
+import { launchConfetti } from "../lib/confetti";
 type Tab = "info" | "checklist" | "photos" | "sign";
 export function ContractDetailPage() {
   const { id = "" } = useParams(),
+    [searchParams] = useSearchParams(),
     { user } = useAuth(),
     contract = useAsync(() => getContract(id), [id]),
     checklist = useAsync(() => getChecklist(id), [id]),
     photos = useAsync(() => getContractPhotos(id), [id]),
     linkedSignings = useAsync(
-      () => contract.data?.show.id ? getLinkedSignings(contract.data.show.id) : Promise.resolve([]),
+      () => contract.data?.show.id ? getLinkedSigningContracts(contract.data.show.id) : Promise.resolve([]),
       [contract.data?.show.id],
     );
   const [tab, setTab] = useState<Tab>("info"),
@@ -67,6 +69,8 @@ export function ContractDetailPage() {
         : activeSection?.title ||
           (items.length ? "Ready to submit" : "Waiting for checklist"),
     checklistLocked = !isSigning && ["submitted", "under_review", "approved"].includes(contract.data?.status || "");
+  const signingGroupId = searchParams.get("group");
+  const linkedGroupId = signingGroupId || contract.data?.show.id || "";
   const latestPhotos = useMemo(() => {
     const bySlot = new Map<string, ContractPhoto>();
     for (const photo of photos.data || []) if (photo.slot_name && !bySlot.has(photo.slot_name)) bySlot.set(photo.slot_name, photo);
@@ -74,9 +78,11 @@ export function ContractDetailPage() {
   }, [photos.data]);
   async function toggle(itemId: string, value: boolean) {
     if (!checklist.data?.id) return;
+    const completesChecklist = value && items.length > 0 && !items.find((item) => item.id === itemId)?.response?.completed && done + 1 === items.length;
     setBusy(itemId);
     try {
       await setChecklistItem(checklist.data.id, itemId, value);
+      if (completesChecklist) launchConfetti({ pieces: 140, distance: 560 });
       await checklist.refresh();
     } finally {
       setBusy("");
@@ -143,8 +149,8 @@ export function ContractDetailPage() {
       >
         {contract.data && (
           <>
-            <Link to="/contracts" className="back">
-              ← All contracts
+            <Link to={isSigning && signingGroupId ? `/signing-groups/${signingGroupId}` : "/contracts"} className="back">
+              ← {isSigning && signingGroupId ? "Linked signings" : "All contracts"}
             </Link>
             <header className="contract-detail-head">
               <div>
@@ -246,7 +252,7 @@ export function ContractDetailPage() {
                   />}
                 </div>
                 {contract.data.show.lodging_notes && <p className="detail-note"><strong>Lodging notes:</strong> {contract.data.show.lodging_notes}</p>}
-                {isSigning && linkedSignings.data && linkedSignings.data.length > 0 && <div className="linked-signings"><h3>Linked signings</h3>{linkedSignings.data.map((signing) => <div key={signing.id}><strong>{signing.artist || signing.name}</strong><span>{formatDateTime(signing.signing_at)} · {signing.venue_name || signing.city}</span></div>)}</div>}
+                {isSigning && linkedSignings.data && linkedSignings.data.length > 0 && <div className="linked-signings"><h3>Linked signings</h3>{linkedSignings.data.map((linked) => <Link to={`/contracts/${linked.id}?group=${linkedGroupId}`} key={linked.id}><strong>{linked.show.artist || linked.show.name}</strong><span>{formatDateTime(linked.show.signing_at)} · {linked.show.venue_name || linked.show.city}</span></Link>)}</div>}
               </section>
             )}
             {tab === "checklist" && (

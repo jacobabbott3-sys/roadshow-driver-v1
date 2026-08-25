@@ -36,7 +36,7 @@ export function SigningGroupPage() {
       <PageState loading={query.loading} error={query.error} empty={!query.data?.length}>
         <div className="contract-list signing-group-list">
           {query.data?.map((contract) => (
-            <Link className="contract-card" to={`/contracts/${contract.id}`} key={contract.id}>
+            <Link className="contract-card" to={`/contracts/${contract.id}?group=${showId}`} key={contract.id}>
               <div className="contract-card-icon"><PenLine /></div>
               <div className="contract-card-body">
                 <span className={`status status-${contract.status}`}>Signing</span>

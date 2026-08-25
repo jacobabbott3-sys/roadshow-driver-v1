@@ -37,7 +37,8 @@ export function AdminSigningsPage() {
   const team = useAsync(getTeamMembers, []);
   const templates = useAsync(getTemplates, []);
   const links = useAsync(getShowLinks, []);
-  const signings = shows.data?.filter((show) => show.event_type === "signing") || [];
+  const signings = (shows.data?.filter((show) => show.event_type === "signing") || [])
+    .sort((a, b) => (a.signing_at || a.starts_on).localeCompare(b.signing_at || b.starts_on));
   const [form, setForm] = useState<FormState>(blank);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);

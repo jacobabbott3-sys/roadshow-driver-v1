@@ -106,7 +106,14 @@ function groupAvailability(rows: AvailabilityRow[]) {
     linkedRows.sort((a, b) => (a.show.signing_at || a.show.starts_on).localeCompare(b.show.signing_at || b.show.starts_on));
     groups.push({ id: linkedRows[0]?.show_id || row.show_id, rows: linkedRows.length ? linkedRows : [row] });
   }
-  return groups;
+  return groups.sort((a, b) => availabilityGroupDate(a).localeCompare(availabilityGroupDate(b)));
+}
+
+function availabilityGroupDate(group: AvailabilityGroup) {
+  const first = group.rows[0];
+  return first.show.event_type === "signing"
+    ? earliestSigningSetup(group.rows) || first.show.starts_on
+    : first.service_date || first.show.starts_on;
 }
 
 function commonStatus(rows: AvailabilityRow[]) {

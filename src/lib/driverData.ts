@@ -61,6 +61,12 @@ export type AvailabilityRow = {
   linked_show_ids: string[];
 };
 export type ShowLink = { show_id: string; linked_show_id: string };
+export type ChecklistProgress = {
+  label: string;
+  completed: number;
+  total: number;
+  complete: boolean;
+};
 export type Resource = {
   id: string;
   kind: "handbook" | "faq" | "link";
@@ -109,6 +115,52 @@ export async function getContracts() {
   if (error) throw error;
   const contracts = (data || []) as unknown as Contract[];
   return release.channel === "beta" ? contracts : contracts.filter((contract) => !contract.show.is_test);
+}
+export async function getContractChecklistStatuses(contracts: Contract[]) {
+  const result: Record<string, ChecklistProgress> = {};
+  if (!contracts.length) return result;
+  const contractIds = contracts.map((contract) => contract.id);
+  const { data: assignments, error: assignmentError } = await supabase
+    .from("contract_checklists")
+    .select("id,contract_id,template_id")
+    .in("contract_id", contractIds);
+  if (assignmentError) throw assignmentError;
+  const templateIds = [...new Set((assignments || []).map((assignment) => assignment.template_id).filter(Boolean))];
+  const checklistIds = (assignments || []).map((assignment) => assignment.id);
+  const sectionsResult = templateIds.length
+    ? await supabase.from("checklist_sections").select("id,template_id,title,position").in("template_id", templateIds).order("position")
+    : { data: [], error: null };
+  if (sectionsResult.error) throw sectionsResult.error;
+  const sectionIds = (sectionsResult.data || []).map((section) => section.id);
+  const [itemsResult, responsesResult] = await Promise.all([
+    sectionIds.length
+      ? supabase.from("checklist_items").select("id,section_id,position").in("section_id", sectionIds).order("position")
+      : Promise.resolve({ data: [] as { id: string; section_id: string; position: number }[], error: null }),
+    checklistIds.length
+      ? supabase.from("checklist_responses").select("contract_checklist_id,item_id,completed").in("contract_checklist_id", checklistIds)
+      : Promise.resolve({ data: [] as { contract_checklist_id: string; item_id: string; completed: boolean }[], error: null }),
+  ]);
+  if (itemsResult.error) throw itemsResult.error;
+  if (responsesResult.error) throw responsesResult.error;
+  const assignmentByContract = new Map((assignments || []).map((assignment) => [assignment.contract_id, assignment]));
+  for (const contract of contracts) {
+    const assignment = assignmentByContract.get(contract.id);
+    const sections = (sectionsResult.data || []).filter((section) => section.template_id === assignment?.template_id);
+    const sectionItems = new Map(sections.map((section) => [section.id, (itemsResult.data || []).filter((item) => item.section_id === section.id)]));
+    const completedIds = new Set((responsesResult.data || []).filter((response) => response.contract_checklist_id === assignment?.id && response.completed).map((response) => response.item_id));
+    const total = [...sectionItems.values()].reduce((sum, items) => sum + items.length, 0);
+    const completed = [...sectionItems.values()].flat().filter((item) => completedIds.has(item.id)).length;
+    let label = "Waiting for checklist";
+    if (["submitted", "under_review"].includes(contract.status)) label = "Submitted for review";
+    else if (["approved", "bonus_earned", "bonus_not_earned"].includes(contract.status)) label = "Approved";
+    else if (total && completed === total) label = "Checklist complete";
+    else {
+      const activeSection = sections.find((section) => (sectionItems.get(section.id) || []).some((item) => !completedIds.has(item.id)));
+      if (activeSection) label = activeSection.title;
+    }
+    result[contract.id] = { label, completed, total, complete: total > 0 && completed === total };
+  }
+  return result;
 }
 export async function getContract(id: string) {
   const { data, error } = await supabase
@@ -325,6 +377,26 @@ export async function getLinkedSignings(showId: string) {
   if (showError) throw showError;
   const linked = data as Show[];
   return release.channel === "beta" ? linked : linked.filter((show) => !show.is_test);
+}
+export async function getLinkedSigningContracts(showId: string) {
+  const [contracts, links] = await Promise.all([getContracts(), getShowLinks()]);
+  const connected = new Set([showId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const link of links) {
+      if (connected.has(link.show_id) && !connected.has(link.linked_show_id)) { connected.add(link.linked_show_id); changed = true; }
+      if (connected.has(link.linked_show_id) && !connected.has(link.show_id)) { connected.add(link.show_id); changed = true; }
+    }
+  }
+  return contracts
+    .filter((contract) => contract.show.event_type === "signing" && contract.show.id !== showId && connected.has(contract.show.id))
+    .sort((a, b) => scheduleDate(a).localeCompare(scheduleDate(b)));
+}
+export function scheduleDate(contract: Contract) {
+  return contract.show.event_type === "signing"
+    ? contract.show.setup_at || contract.show.signing_at || contract.service_date
+    : contract.service_date || contract.show.starts_on;
 }
 export function dateRange(show: Show) {
   const start = new Date(`${show.starts_on}T12:00:00`),

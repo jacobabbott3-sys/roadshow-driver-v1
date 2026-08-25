@@ -3,6 +3,7 @@ import {
   CalendarPlus,
   MapPin,
   Pencil,
+  Search,
   Store,
   Trash2,
   UsersRound,
@@ -113,6 +114,7 @@ export function AdminShowsPage() {
     [assignmentIds, setAssignmentIds] = useState<string[]>([]),
     [assignmentLoading, setAssignmentLoading] = useState(false),
     [autofillSource, setAutofillSource] = useState(""),
+    [search, setSearch] = useState(""),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   useEffect(() => {
@@ -130,9 +132,9 @@ export function AdminShowsPage() {
     setOpen(true);
     setAutofillSource("");
   }
-  function applyPastShow(showId: string) {
+  function applyExistingShow(showId: string) {
     setAutofillSource(showId);
-    const source = pastShows.find((show) => show.id === showId);
+    const source = regularShows.find((show) => show.id === showId);
     if (!source) return;
     const contract = source.contracts[0];
     setForm({
@@ -317,10 +319,12 @@ export function AdminShowsPage() {
   }
   const matchingTemplates =
     templates.data?.filter((t) => t.kind === form.kind) || [];
-  const regularShows = shows.data?.filter((show) => show.event_type !== "signing") || [];
-  const pastShows = regularShows
-    .filter((show) => show.ends_on < new Date().toISOString().slice(0, 10))
-    .sort((a, b) => b.ends_on.localeCompare(a.ends_on));
+  const regularShows = (shows.data?.filter((show) => show.event_type !== "signing") || [])
+    .sort((a, b) => a.starts_on.localeCompare(b.starts_on));
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredShows = normalizedSearch
+    ? regularShows.filter((show) => [show.name, show.city, show.state, show.address].some((value) => value?.toLowerCase().includes(normalizedSearch)))
+    : regularShows;
   return (
     <main className="page">
       <AdminHeader
@@ -328,10 +332,11 @@ export function AdminShowsPage() {
         title="Shows & contracts"
         description="Manage each indoor show and its setup or teardown contract in one place."
       />
-      <div className="admin-actions">
+      <div className="admin-actions show-list-toolbar">
         <button className="button primary" onClick={startNew}>
           <CalendarPlus /> Create show
         </button>
+        <label className="admin-search show-search"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shows, cities, or addresses" aria-label="Search shows" /></label>
       </div>
       {message && <div className="notice">{message}</div>}
       {open && (
@@ -345,7 +350,7 @@ export function AdminShowsPage() {
               Cancel
             </button>
           </div>
-          {!editing && <label className="past-show-autofill">Autofill from a past show<select value={autofillSource} onChange={(event) => applyPastShow(event.target.value)}><option value="">Start with blank details</option>{pastShows.map((show) => <option key={show.id} value={show.id}>{show.name} · {show.city}{show.state ? `, ${show.state}` : ""}</option>)}</select><small>Copies venue, lodging, checklist, and contract terms. Dates, pay, bonus, and assignments stay blank.</small></label>}
+          {!editing && <label className="past-show-autofill">Autofill from any scheduled show<select value={autofillSource} onChange={(event) => applyExistingShow(event.target.value)}><option value="">Start with blank details</option>{regularShows.map((show) => <option key={show.id} value={show.id}>{formatWorkDate(show.starts_on)} · {show.name} · {show.city}{show.state ? `, ${show.state}` : ""}</option>)}</select><small>Copies venue, lodging, checklist, and contract terms. Dates, pay, bonus, and assignments stay blank.</small></label>}
           <div className="form-grid">
             <label>
               Show name
@@ -568,7 +573,8 @@ export function AdminShowsPage() {
         empty={!regularShows.length}
       >
         <div className="admin-show-list">
-          {regularShows.map((show) => {
+          {!filteredShows.length && <div className="inline-empty">No shows match “{search}”.</div>}
+          {filteredShows.map((show) => {
             const contract = show.contracts[0];
             return (
               <article className="admin-show-card" key={show.id}>

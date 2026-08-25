@@ -2,21 +2,23 @@ import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin, PenLine } from "lu
 import { Link } from "react-router-dom";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
-import { Contract, getContracts, getShowLinks, ShowLink, statusLabel } from "../lib/driverData";
+import { ChecklistProgress, Contract, getContractChecklistStatuses, getContracts, getShowLinks, scheduleDate, ShowLink, statusLabel } from "../lib/driverData";
 
 type ContractGroup = { id: string; contracts: Contract[] };
 
 export function ContractsPage() {
-  const contractsQuery = useAsync(getContracts, []);
-  const linksQuery = useAsync(getShowLinks, []);
-  const uniqueContracts = contractsQuery.data ? [...new Map(contractsQuery.data.map((contract) => [contract.show.id, contract])).values()] : [];
-  const groups = groupContracts(uniqueContracts, linksQuery.data || []);
-  const error = contractsQuery.error || linksQuery.error;
+  const query = useAsync(async () => {
+    const [contracts, links] = await Promise.all([getContracts(), getShowLinks()]);
+    const uniqueContracts = [...new Map(contracts.map((contract) => [contract.show.id, contract])).values()];
+    const statuses = await getContractChecklistStatuses(uniqueContracts);
+    return { groups: groupContracts(uniqueContracts, links), statuses };
+  }, []);
+  const groups = query.data?.groups || [];
 
   return (
     <main className="page">
       <header className="page-header"><div><p className="eyebrow">YOUR WORK</p><h1>Contracts & signings</h1><p>Assignments, schedules, checklists, and completed work.</p></div></header>
-      <PageState loading={contractsQuery.loading || linksQuery.loading} error={error} empty={!groups.length}>
+      <PageState loading={query.loading} error={query.error} empty={!groups.length}>
         <div className="contract-list">
           {groups.map((group) => {
             const first = group.contracts[0];
@@ -25,7 +27,7 @@ export function ContractsPage() {
             const artists = group.contracts.map((contract) => contract.show.artist || contract.show.name);
             const title = linked ? artists.join(" & ") : signing ? artists[0] : first.show.name;
             const href = linked ? `/signing-groups/${first.show.id}` : `/contracts/${first.id}`;
-            const groupStatus = group.contracts.every((contract) => contract.status === first.status) ? statusLabel(first.status) : "In Progress";
+            const groupStatus = checklistGroupStatus(group.contracts, query.data?.statuses || {});
             const venue = linked
               ? `${group.contracts.length} linked signings`
               : signing ? first.show.venue_name || first.show.city : `${first.show.city}${first.show.state ? `, ${first.show.state}` : ""}`;
@@ -37,7 +39,7 @@ export function ContractsPage() {
               <Link className="contract-card" to={href} key={group.id}>
                 <div className="contract-card-icon">{signing ? <PenLine /> : <BriefcaseBusiness />}</div>
                 <div className="contract-card-body">
-                  <div className="card-line"><span className={`status status-${first.status}`}>{signing ? linked ? "Linked signings" : "Signing" : statusLabel(first.status)}</span><span>{signing ? "Artist appearance" : first.kind}</span></div>
+                  <div className="card-line"><span className="status status-in_progress">{linked ? "Linked signings" : groupStatus}</span><span>{signing ? "Artist appearance" : first.kind}</span></div>
                   <h2>{title}</h2>
                   <p><MapPin />{venue}</p>
                   <p className="work-date"><CalendarDays />{workDate}</p>
@@ -83,7 +85,16 @@ function groupContracts(contracts: Contract[], links: ShowLink[]) {
     linkedContracts.sort((a, b) => (a.show.signing_at || a.show.starts_on).localeCompare(b.show.signing_at || b.show.starts_on));
     groups.push({ id: linkedContracts[0]?.show.id || contract.show.id, contracts: linkedContracts.length ? linkedContracts : [contract] });
   }
-  return groups;
+  return groups.sort((a, b) => scheduleDate(a.contracts[0]).localeCompare(scheduleDate(b.contracts[0])));
+}
+
+function checklistGroupStatus(contracts: Contract[], statuses: Record<string, ChecklistProgress>) {
+  const progress = contracts.map((contract) => statuses[contract.id] || { label: "Waiting for checklist", completed: 0, total: 0, complete: false });
+  if (progress.length === 1) return progress[0].label;
+  const complete = progress.filter((item) => item.complete).length;
+  if (complete === progress.length) return "All checklists complete";
+  const active = progress.find((item) => !item.complete)?.label || "In progress";
+  return `${complete} of ${progress.length} complete · ${active}`;
 }
 
 function signingDateRange(contracts: Contract[]) {

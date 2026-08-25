@@ -135,7 +135,7 @@ export async function getShowsAdmin() {
     .select(
       "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id))",
     )
-    .order("starts_on", { ascending: false });
+    .order("starts_on", { ascending: true });
   if (error) throw error;
   const shows = data as AdminShow[];
   return release.channel === "beta" ? shows : shows.filter((show) => !show.is_test);
@@ -336,7 +336,7 @@ export async function getReviews() {
       "id,kind,status,submitted_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name)",
     )
     .in("status", ["submitted", "under_review"])
-    .order("submitted_at");
+    .order("service_date");
   if (error) throw error;
   const reviews = data as unknown as (Contract & {
     submitted_at: string | null;
@@ -357,7 +357,7 @@ export async function getReviewHistory() {
       "id,kind,status,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name)",
     )
     .not("reviewed_at", "is", null)
-    .order("reviewed_at", { ascending: false });
+    .order("service_date");
   if (error) throw error;
   return (data || []).filter(
     (review) => !["submitted", "under_review"].includes(review.status),

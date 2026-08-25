@@ -5,6 +5,7 @@ import {
   LogOut,
   Palette,
   Save,
+  Sparkles,
   Smartphone,
   UserRound,
 } from "lucide-react";
@@ -36,6 +37,7 @@ export function ProfilePage() {
   const [notificationMessage, setNotificationMessage] = useState("");
   const [theme, setTheme] = useState<ThemePreference>(profile?.theme_preference || "light");
   const [colorScheme, setColorScheme] = useState<ColorScheme>(profile?.color_scheme || "forest");
+  const [extremeConfetti, setExtremeConfetti] = useState(Boolean(profile?.extreme_confetti));
   const [alerts, setAlerts] = useState({
     assignment_alerts: true,
     work_day_alerts: true,
@@ -55,6 +57,7 @@ export function ProfilePage() {
     if (!profile) return;
     setTheme(profile.theme_preference || "light");
     setColorScheme(profile.color_scheme || "forest");
+    setExtremeConfetti(Boolean(profile.extreme_confetti));
   }, [profile]);
 
   async function saveProfile() {
@@ -80,7 +83,7 @@ export function ProfilePage() {
     setSaving(true);
     setMessage("");
     try {
-      await updateAppearance(theme, colorScheme);
+      await updateAppearance(theme, colorScheme, extremeConfetti);
       setMessage("Appearance saved to your account.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to save appearance.");
@@ -206,6 +209,10 @@ export function ProfilePage() {
           </label>
         </div>
         <div className="color-preview" aria-label={`${colorScheme} color preview`}><span /><span /><span /></div>
+        <div className="extreme-confetti-setting">
+          <div className="notification-icon"><Sparkles /></div>
+          <Preference title="Extreme Confetti Mode" description="Launch confetti whenever you click anything in the app" checked={extremeConfetti} onChange={setExtremeConfetti} />
+        </div>
         <button className="button secondary" onClick={() => void saveAppearance()} disabled={saving}><Save /> Save appearance</button>
       </section>
       <section className="detail-panel notification-settings">
