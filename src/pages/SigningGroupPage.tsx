@@ -1,11 +1,16 @@
-import { ArrowLeft, ArrowRight, Clock3, MapPin, PenLine } from "lucide-react";
+import { ArrowRight, Clock3, MapPin, PenLine } from "lucide-react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { BackButton } from "../components/BackButton";
 import { PageState } from "../components/PageState";
+import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import { Contract, getContracts, getShowLinks } from "../lib/driverData";
+import { sortList, type SortMode } from "../lib/listControls";
 
 export function SigningGroupPage() {
   const { showId = "" } = useParams();
+  const [sort, setSort] = useState<SortMode>("date");
   const query = useAsync(async () => {
     const [contracts, links] = await Promise.all([getContracts(), getShowLinks()]);
     const byShow = new Map(contracts.filter((contract) => contract.show.event_type === "signing").map((contract) => [contract.show.id, contract]));
@@ -28,14 +33,21 @@ export function SigningGroupPage() {
     return group.sort((a, b) => (a.show.signing_at || a.show.starts_on).localeCompare(b.show.signing_at || b.show.starts_on));
   }, [showId]);
   const title = query.data?.map((contract) => contract.show.artist || contract.show.name).join(" & ") || "Linked signings";
+  const contracts = sortList(
+    query.data || [],
+    sort,
+    (contract) => contract.show.artist || contract.show.name,
+    (contract) => contract.show.signing_at || contract.show.starts_on,
+  );
 
   return (
     <main className="page">
-      <Link className="back-link" to="/contracts"><ArrowLeft /> Back to contracts</Link>
+      <BackButton to="/contracts" label="Back to contracts" />
       <header className="page-header"><div><p className="eyebrow">LINKED SIGNINGS</p><h1>{title}</h1><p>These appearances are grouped together. Select one to see its full details and checklist.</p></div></header>
       <PageState loading={query.loading} error={query.error} empty={!query.data?.length}>
+        <div className="list-toolbar list-toolbar-sort-only"><SortButton value={sort} onChange={setSort} /></div>
         <div className="contract-list signing-group-list">
-          {query.data?.map((contract) => (
+          {contracts.map((contract) => (
             <Link className="contract-card" to={`/contracts/${contract.id}?group=${showId}`} key={contract.id}>
               <div className="contract-card-icon"><PenLine /></div>
               <div className="contract-card-body">

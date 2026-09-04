@@ -11,6 +11,7 @@ import {
 import { useEffect, useState, type FormEvent } from "react";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
+import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import {
   adminSignContract,
@@ -27,6 +28,7 @@ import {
   type AdminShow,
 } from "../lib/adminData";
 import { dateRange, statusLabel } from "../lib/driverData";
+import { sortList, type SortMode } from "../lib/listControls";
 
 type FormState = {
   name: string;
@@ -115,6 +117,7 @@ export function AdminShowsPage() {
     [assignmentLoading, setAssignmentLoading] = useState(false),
     [autofillSource, setAutofillSource] = useState(""),
     [search, setSearch] = useState(""),
+    [sort, setSort] = useState<SortMode>("date"),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   useEffect(() => {
@@ -319,24 +322,31 @@ export function AdminShowsPage() {
   }
   const matchingTemplates =
     templates.data?.filter((t) => t.kind === form.kind) || [];
-  const regularShows = (shows.data?.filter((show) => show.event_type !== "signing") || [])
-    .sort((a, b) => a.starts_on.localeCompare(b.starts_on));
+  const regularShows = shows.data?.filter((show) => show.event_type !== "signing") || [];
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredShows = normalizedSearch
+  const matchingShows = normalizedSearch
     ? regularShows.filter((show) => [show.name, show.city, show.state, show.address].some((value) => value?.toLowerCase().includes(normalizedSearch)))
     : regularShows;
+  const filteredShows = sortList(
+    matchingShows,
+    sort,
+    (show) => show.name,
+    (show) => show.contracts[0]?.service_date || show.starts_on,
+  );
   return (
     <main className="page">
       <AdminHeader
         eyebrow="SCHEDULING"
         title="Shows & contracts"
         description="Manage each indoor show and its setup or teardown contract in one place."
+        backTo="/admin"
       />
       <div className="admin-actions show-list-toolbar">
         <button className="button primary" onClick={startNew}>
           <CalendarPlus /> Create show
         </button>
         <label className="admin-search show-search"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shows, cities, or addresses" aria-label="Search shows" /></label>
+        <SortButton value={sort} onChange={setSort} />
       </div>
       {message && <div className="notice">{message}</div>}
       {open && (

@@ -2,6 +2,7 @@ import { CalendarPlus, Clock3, Link2, MapPin, PenLine, Pencil, Trash2, UsersRoun
 import { useState, type FormEvent } from "react";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
+import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import {
   createShow,
@@ -16,6 +17,7 @@ import {
   updateShow,
   type AdminShow,
 } from "../lib/adminData";
+import { sortList, type SortMode } from "../lib/listControls";
 
 type FormState = {
   artist: string;
@@ -37,8 +39,13 @@ export function AdminSigningsPage() {
   const team = useAsync(getTeamMembers, []);
   const templates = useAsync(getTemplates, []);
   const links = useAsync(getShowLinks, []);
-  const signings = (shows.data?.filter((show) => show.event_type === "signing") || [])
-    .sort((a, b) => (a.signing_at || a.starts_on).localeCompare(b.signing_at || b.starts_on));
+  const [sort, setSort] = useState<SortMode>("date");
+  const signings = sortList(
+    shows.data?.filter((show) => show.event_type === "signing") || [],
+    sort,
+    (show) => show.artist || show.name,
+    (show) => show.signing_at || show.starts_on,
+  );
   const [form, setForm] = useState<FormState>(blank);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -126,8 +133,8 @@ export function AdminSigningsPage() {
 
   return (
     <main className="page">
-      <AdminHeader eyebrow="SCHEDULING" title="Signings" description="Schedule artist signings, assign teams and checklists, and connect related appearances." />
-      <div className="admin-actions"><button className="button primary" onClick={startNew}><CalendarPlus /> Create signing</button></div>
+      <AdminHeader eyebrow="SCHEDULING" title="Signings" description="Schedule artist signings, assign teams and checklists, and connect related appearances." backTo="/admin" />
+      <div className="admin-actions show-list-toolbar"><button className="button primary" onClick={startNew}><CalendarPlus /> Create signing</button><SortButton value={sort} onChange={setSort} /></div>
       {message && <p className="notice">{message}</p>}
       {open && (
         <form className="admin-form unified-show-form" onSubmit={save}>

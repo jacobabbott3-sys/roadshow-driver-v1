@@ -28,6 +28,7 @@ export function AdminUsersPage() {
         eyebrow="TEAM"
         title="Users"
         description="Manage driver access and roles. Passwords remain private."
+        backTo="/admin"
       />
       <input
         className="admin-search"

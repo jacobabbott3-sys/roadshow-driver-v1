@@ -99,7 +99,7 @@ Invite users from **Authentication → Users → Add user → Send invitation**.
 
 ## Release labels
 
-Vercel beta-branch deployments automatically show `Beta 4B`; production shows
+Vercel beta-branch deployments automatically show `Beta 4A`; production shows
 `Public 4`. Beta labels may include letters, while public release numbers are always displayed as numbers only. To change either label without editing code, set
 `VITE_RELEASE_CHANNEL` (`beta` or `public`) and `VITE_RELEASE_VERSION` in the
 corresponding Vercel environment, then redeploy.

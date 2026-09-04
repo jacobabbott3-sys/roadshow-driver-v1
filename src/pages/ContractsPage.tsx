@@ -1,12 +1,17 @@
-import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin, PenLine } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin, PenLine, Search } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PageState } from "../components/PageState";
+import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import { ChecklistProgress, Contract, getContractChecklistStatuses, getContracts, getShowLinks, scheduleDate, ShowLink, statusLabel } from "../lib/driverData";
+import { matchesListSearch, sortList, type SortMode } from "../lib/listControls";
 
 type ContractGroup = { id: string; contracts: Contract[] };
 
 export function ContractsPage() {
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortMode>("date");
   const query = useAsync(async () => {
     const [contracts, links] = await Promise.all([getContracts(), getShowLinks()]);
     const uniqueContracts = [...new Map(contracts.map((contract) => [contract.show.id, contract])).values()];
@@ -14,18 +19,32 @@ export function ContractsPage() {
     return { groups: groupContracts(uniqueContracts, links), statuses };
   }, []);
   const groups = query.data?.groups || [];
+  const visibleGroups = sortList(
+    groups.filter((group) => matchesListSearch(
+      search,
+      groupTitle(group),
+      ...group.contracts.flatMap((contract) => [contract.show.name, contract.show.artist, contract.show.city, contract.show.state, contract.show.venue_name]),
+    )),
+    sort,
+    groupTitle,
+    groupDate,
+  );
 
   return (
     <main className="page">
       <header className="page-header"><div><p className="eyebrow">YOUR WORK</p><h1>Contracts & signings</h1><p>Assignments, schedules, checklists, and completed work.</p></div></header>
       <PageState loading={query.loading} error={query.error} empty={!groups.length}>
-        <div className="contract-list">
-          {groups.map((group) => {
+        <>
+          <div className="list-toolbar">
+            <label className="list-search"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shows, artists, or locations" aria-label="Search contracts and signings" /></label>
+            <SortButton value={sort} onChange={setSort} />
+          </div>
+          {!visibleGroups.length ? <div className="inline-empty">No contracts or signings match “{search}”.</div> : <div className="contract-list">
+          {visibleGroups.map((group) => {
             const first = group.contracts[0];
             const signing = first.show.event_type === "signing";
             const linked = signing && group.contracts.length > 1;
-            const artists = group.contracts.map((contract) => contract.show.artist || contract.show.name);
-            const title = linked ? artists.join(" & ") : signing ? artists[0] : first.show.name;
+            const title = groupTitle(group);
             const href = linked ? `/signing-groups/${first.show.id}` : `/contracts/${first.id}`;
             const groupStatus = checklistGroupStatus(group.contracts, query.data?.statuses || {});
             const venue = linked
@@ -49,10 +68,21 @@ export function ContractsPage() {
               </Link>
             );
           })}
-        </div>
+          </div>}
+        </>
       </PageState>
     </main>
   );
+}
+
+function groupTitle(group: ContractGroup) {
+  const artists = group.contracts.map((contract) => contract.show.artist || contract.show.name);
+  const signing = group.contracts[0].show.event_type === "signing";
+  return signing ? artists.join(" & ") : group.contracts[0].show.name;
+}
+
+function groupDate(group: ContractGroup) {
+  return group.contracts.map(scheduleDate).sort()[0] || "";
 }
 
 function groupContracts(contracts: Contract[], links: ShowLink[]) {

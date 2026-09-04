@@ -41,7 +41,7 @@ export function AdminTemplatesPage() {
 
   return (
     <main className="page">
-      <AdminHeader eyebrow="REUSABLE CONTENT" title="Templates" description="Manage contract terms, checklists, and toolbag inventories in one place." />
+      <AdminHeader eyebrow="REUSABLE CONTENT" title="Templates" description="Manage contract terms, checklists, and toolbag inventories in one place." backTo="/admin" />
       <div className="template-tabs">
         <button className={tab === "contract" ? "active" : ""} onClick={() => setTab("contract")}><BriefcaseBusiness /> Contracts</button>
         <button className={tab === "checklist" ? "active" : ""} onClick={() => setTab("checklist")}><ClipboardCheck /> Checklists</button>

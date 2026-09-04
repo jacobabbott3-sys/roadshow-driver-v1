@@ -150,6 +150,7 @@ export function AdminOperationsPage() {
         eyebrow="OPERATIONS"
         title="Resources & toolbags"
         description="Publish driver guidance, review feedback, and manage every toolbag item."
+        backTo="/admin"
       />
       {message && <div className="notice">{message}</div>}
       <div className="operations-grid">

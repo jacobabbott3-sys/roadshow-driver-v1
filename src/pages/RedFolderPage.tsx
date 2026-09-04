@@ -5,6 +5,7 @@ import { useAsync } from "../hooks/useAsync";
 import { getResources } from "../lib/driverData";
 import { supabase } from "../lib/supabase";
 import { ImageViewer } from "../components/ImageViewer";
+import { BackButton } from "../components/BackButton";
 
 export function RedFolderPage() {
   const resources = useAsync(getResources, []);
@@ -30,6 +31,7 @@ export function RedFolderPage() {
 
   return (
     <main className="page">
+      <BackButton to="/resources" label="Back to resources" />
       <header className="page-header">
         <div>
           <p className="eyebrow">REFERENCE LIBRARY</p>

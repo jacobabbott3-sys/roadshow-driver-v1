@@ -1,7 +1,8 @@
-import { ArrowLeft, MessageCircle, Plus, Send, UsersRound, X } from "lucide-react";
+import { MessageCircle, Plus, Send, UsersRound, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageState } from "../components/PageState";
+import { BackButton } from "../components/BackButton";
 import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import {
@@ -15,7 +16,7 @@ import { getDirectory } from "../lib/driverData";
 import { supabase } from "../lib/supabase";
 
 export function ChatPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [params, setParams] = useSearchParams();
   const threads = useAsync(getChatThreads, [user?.id]);
   const refreshThreads = threads.refresh;
@@ -98,6 +99,7 @@ export function ChatPage() {
 
   return (
     <main className="page chat-page">
+      {profile?.role === "admin" && <BackButton to="/admin" label="Back to Admin" />}
       <header className="page-header">
         <div>
           <p className="eyebrow">TEAM COMMUNICATION</p>
@@ -168,7 +170,7 @@ export function ChatPage() {
           {selected ? (
             <>
               <header>
-                <button className="chat-back" onClick={() => setParams({})}><ArrowLeft /></button>
+                <BackButton className="chat-back" label="All chats" onClick={() => setParams({})} />
                 <div><h2>{selected.subject}</h2><p>{participants.join(", ")}</p></div>
               </header>
               <div className="chat-messages">

@@ -2,9 +2,11 @@ import { CalendarDays, Check, CircleDollarSign, Clock3, PenLine, UsersRound, X }
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PageState } from "../components/PageState";
+import { SortButton } from "../components/SortButton";
 import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import { AvailabilityRow, dateRange, getAvailability, setAvailabilityMany } from "../lib/driverData";
+import { sortList, type SortMode } from "../lib/listControls";
 
 type AvailabilityGroup = { id: string; rows: AvailabilityRow[] };
 
@@ -12,7 +14,9 @@ export function AvailabilityPage() {
   const { user } = useAuth();
   const availability = useAsync(() => getAvailability(user!.id), [user?.id]);
   const [saving, setSaving] = useState("");
+  const [sort, setSort] = useState<SortMode>("date");
   const groups = groupAvailability(availability.data || []);
+  const visibleGroups = sortList(groups, sort, availabilityGroupTitle, availabilityGroupDate);
 
   async function choose(group: AvailabilityGroup, status: "available" | "unavailable") {
     const signings = group.rows.filter((row) => row.show.event_type === "signing");
@@ -37,14 +41,13 @@ export function AvailabilityPage() {
         <div><p className="eyebrow">PLAN AHEAD</p><h1>Availability</h1><p>Open shows and signings accept availability. Assigned work shows the confirmed team.</p></div>
       </header>
       <PageState loading={availability.loading} error={availability.error} empty={!groups.length}>
+        <div className="list-toolbar list-toolbar-sort-only"><SortButton value={sort} onChange={setSort} /></div>
         <div className="availability-list">
-          {groups.map((group) => {
+          {visibleGroups.map((group) => {
             const first = group.rows[0];
             const signing = first.show.event_type === "signing";
             const linked = signing && group.rows.length > 1;
-            const title = linked
-              ? group.rows.map((row) => row.show.artist || row.show.name).join(" & ")
-              : signing ? first.show.artist || first.show.name : first.show.name;
+            const title = availabilityGroupTitle(group);
             const status = commonStatus(group.rows);
             const assignees = uniqueAssignees(group.rows);
             const detailPath = linked ? `/signing-groups/${first.show_id}` : undefined;
@@ -79,6 +82,13 @@ export function AvailabilityPage() {
       </PageState>
     </main>
   );
+}
+
+function availabilityGroupTitle(group: AvailabilityGroup) {
+  const first = group.rows[0];
+  return first.show.event_type === "signing"
+    ? group.rows.map((row) => row.show.artist || row.show.name).join(" & ")
+    : first.show.name;
 }
 
 function groupAvailability(rows: AvailabilityRow[]) {

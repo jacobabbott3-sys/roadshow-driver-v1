@@ -13,6 +13,7 @@ import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { PageState } from "../components/PageState";
 import { ImageViewer } from "../components/ImageViewer";
+import { BackButton } from "../components/BackButton";
 import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import {
@@ -149,9 +150,10 @@ export function ContractDetailPage() {
       >
         {contract.data && (
           <>
-            <Link to={isSigning && signingGroupId ? `/signing-groups/${signingGroupId}` : "/contracts"} className="back">
-              ← {isSigning && signingGroupId ? "Linked signings" : "All contracts"}
-            </Link>
+            <BackButton
+              to={isSigning && signingGroupId ? `/signing-groups/${signingGroupId}` : "/contracts"}
+              label={isSigning && signingGroupId ? "Back to linked signings" : "Back to contracts"}
+            />
             <header className="contract-detail-head">
               <div>
                 <span className={`status status-${contract.data.status}`}>

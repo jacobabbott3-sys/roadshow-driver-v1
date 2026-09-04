@@ -1,5 +1,6 @@
 import { Bell } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BackButton } from "../components/BackButton";
 import { PageState } from "../components/PageState";
 import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
@@ -20,6 +21,7 @@ export function NotificationsPage() {
 
   return (
     <main className="page">
+      <BackButton to="/" label="Back to home" />
       <header className="page-header">
         <div>
           <p className="eyebrow">ACTIVITY</p>
