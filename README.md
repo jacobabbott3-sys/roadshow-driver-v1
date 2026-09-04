@@ -64,6 +64,10 @@ Run `202608190004_beta_test_show.sql` to add the admin-only, resettable Beta Tes
 
 Run `202608190005_checklist_review_fix.sql` to correct item-level checklist review saves and final approvals by removing ambiguous database variable names.
 
+Run `202608210001_beta_round.sql` to include signings in the shared availability and assignment summaries used by the linked-signing experience.
+
+Run `202608240001_beta_4b.sql` to add the account-synced Extreme Confetti Mode profile setting used by Beta 4B.
+
 ## Device notification setup
 
 The app and database are ready for web push, but each Supabase/Vercel environment needs its own keys and webhook setup:
@@ -95,8 +99,8 @@ Invite users from **Authentication → Users → Add user → Send invitation**.
 
 ## Release labels
 
-Vercel beta-branch deployments automatically show `Beta v3b`; production shows
-`Public v3`. To change either label without editing code, set
+Vercel beta-branch deployments automatically show `Beta 4A`; production shows
+`Public 4`. Beta labels may include letters, while public release numbers are always displayed as numbers only. To change either label without editing code, set
 `VITE_RELEASE_CHANNEL` (`beta` or `public`) and `VITE_RELEASE_VERSION` in the
 corresponding Vercel environment, then redeploy.
 

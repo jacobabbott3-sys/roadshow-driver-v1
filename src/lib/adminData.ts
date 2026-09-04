@@ -27,8 +27,6 @@ export type ContractTemplate = {
   id: string;
   name: string;
   kind: "setup" | "teardown";
-  contract_pay: number | null;
-  bonus_pay: number | null;
   terms: string | null;
   active: boolean;
 };
@@ -137,7 +135,7 @@ export async function getShowsAdmin() {
     .select(
       "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id))",
     )
-    .order("starts_on", { ascending: false });
+    .order("starts_on", { ascending: true });
   if (error) throw error;
   const shows = data as AdminShow[];
   return release.channel === "beta" ? shows : shows.filter((show) => !show.is_test);
@@ -264,6 +262,51 @@ export async function saveShowContract(input: {
   }
   return contractId;
 }
+export type AdminAvailabilityPerson = Profile & {
+  availability_status: "available" | "unavailable" | "pending" | "assigned" | null;
+  assigned: boolean;
+};
+export async function getShowAvailabilityAdmin(showId: string, contractId?: string) {
+  const [members, availabilityResult, assignmentsResult] = await Promise.all([
+    getTeamMembers(),
+    supabase.from("availability").select("driver_id,status").eq("show_id", showId),
+    contractId
+      ? supabase.from("contract_drivers").select("driver_id").eq("contract_id", contractId)
+      : Promise.resolve({ data: [] as { driver_id: string }[], error: null }),
+  ]);
+  if (availabilityResult.error) throw availabilityResult.error;
+  if (assignmentsResult.error) throw assignmentsResult.error;
+  const statuses = new Map((availabilityResult.data || []).map((row) => [row.driver_id, row.status]));
+  const assigned = new Set((assignmentsResult.data || []).map((row) => row.driver_id));
+  return members.map((member) => ({ ...member, availability_status: statuses.get(member.id) || null, assigned: assigned.has(member.id) })) as AdminAvailabilityPerson[];
+}
+export async function updateContractAssignments(contractId: string, driverIds: string[]) {
+  const { error: contractError } = await supabase.from("contracts").update({ driver_id: driverIds[0] || null }).eq("id", contractId);
+  if (contractError) throw contractError;
+  const { error: deleteError } = await supabase.from("contract_drivers").delete().eq("contract_id", contractId);
+  if (deleteError) throw deleteError;
+  if (driverIds.length) {
+    const { error } = await supabase.from("contract_drivers").insert(driverIds.map((driver_id, index) => ({ contract_id: contractId, driver_id, is_trainee: index > 0 })));
+    if (error) throw error;
+  }
+}
+export async function updateLinkedSigningAssignments(showIds: string[], driverIds: string[]) {
+  if (!showIds.length) return;
+  const { data: links, error: linkError } = await supabase.from("show_links").select("show_id,linked_show_id");
+  if (linkError) throw linkError;
+  const connected = new Set(showIds);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const link of links || []) {
+      if (connected.has(link.show_id) && !connected.has(link.linked_show_id)) { connected.add(link.linked_show_id); changed = true; }
+      if (connected.has(link.linked_show_id) && !connected.has(link.show_id)) { connected.add(link.show_id); changed = true; }
+    }
+  }
+  const { data, error } = await supabase.from("contracts").select("id").in("show_id", [...connected]);
+  if (error) throw error;
+  for (const contract of data || []) await updateContractAssignments(contract.id, driverIds);
+}
 export async function adminSignContract(id: string, name: string) {
   const { error } = await supabase
     .from("contracts")
@@ -293,7 +336,7 @@ export async function getReviews() {
       "id,kind,status,submitted_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name)",
     )
     .in("status", ["submitted", "under_review"])
-    .order("submitted_at");
+    .order("service_date");
   if (error) throw error;
   const reviews = data as unknown as (Contract & {
     submitted_at: string | null;
@@ -314,7 +357,7 @@ export async function getReviewHistory() {
       "id,kind,status,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name)",
     )
     .not("reviewed_at", "is", null)
-    .order("reviewed_at", { ascending: false });
+    .order("service_date");
   if (error) throw error;
   return (data || []).filter(
     (review) => !["submitted", "under_review"].includes(review.status),
@@ -462,6 +505,13 @@ export async function deleteResource(id: string) {
   const { error } = await supabase.from("resources").delete().eq("id", id);
   if (error) throw error;
 }
+export async function reorderResources(ids: string[]) {
+  const updates = await Promise.all(ids.map((id, position) =>
+    supabase.from("resources").update({ position }).eq("id", id),
+  ));
+  const failed = updates.find((result) => result.error)?.error;
+  if (failed) throw failed;
+}
 export async function getToolbags() {
   const { data, error } = await supabase
     .from("toolbags")
@@ -579,7 +629,7 @@ export async function getToolbagTemplates() {
 export async function getContractTemplates() {
   const { data, error } = await supabase
     .from("contract_templates")
-    .select("id,name,kind,contract_pay,bonus_pay,terms,active")
+    .select("id,name,kind,terms,active")
     .order("name");
   if (error) throw error;
   return (data || []) as ContractTemplate[];
@@ -588,8 +638,6 @@ export async function saveContractTemplate(template: Omit<ContractTemplate, "id"
   const values = {
     name: template.name.trim(),
     kind: template.kind,
-    contract_pay: template.contract_pay,
-    bonus_pay: template.bonus_pay,
     terms: template.terms,
     active: template.active,
     updated_at: new Date().toISOString(),

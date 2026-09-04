@@ -1,4 +1,5 @@
 import { Phone, ShieldCheck, UserRound } from "lucide-react";
+import { BackButton } from "../components/BackButton";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
 import { getDirectory } from "../lib/driverData";
@@ -7,6 +8,7 @@ export function DirectoryPage() {
   const directory = useAsync(getDirectory, []);
   return (
     <main className="page">
+      <BackButton to="/resources" label="Back to resources" />
       <header className="page-header"><div><p className="eyebrow">TEAM RESOURCE</p><h1>Driver directory</h1><p>Contact active drivers and administrators.</p></div></header>
       <PageState loading={directory.loading} error={directory.error} empty={!directory.data?.length}>
         <div className="directory-grid">

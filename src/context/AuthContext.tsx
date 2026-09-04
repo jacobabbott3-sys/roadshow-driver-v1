@@ -21,7 +21,7 @@ type AuthValue = {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateAppearance: (theme: ThemePreference, color: ColorScheme) => Promise<void>;
+  updateAppearance: (theme: ThemePreference, color: ColorScheme, extremeConfetti: boolean) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const { data, error: profileError } = await supabase
       .from("profiles")
-      .select("id,full_name,avatar_url,phone,role,is_active,theme_preference,color_scheme")
+      .select("id,full_name,avatar_url,phone,role,is_active,theme_preference,color_scheme,extreme_confetti")
       .eq("id", session.user.id)
       .single();
     if (profileError) setError("We could not load your profile. Please try again.");
@@ -115,12 +115,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (resetError) throw resetError;
     },
     refreshProfile,
-    updateAppearance: async (theme, color) => {
+    updateAppearance: async (theme, color, extremeConfetti) => {
       applyAppearance(theme, color);
       if (!session?.user) return;
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ theme_preference: theme, color_scheme: color, updated_at: new Date().toISOString() })
+        .update({ theme_preference: theme, color_scheme: color, extreme_confetti: extremeConfetti, updated_at: new Date().toISOString() })
         .eq("id", session.user.id);
       if (updateError) throw updateError;
       await refreshProfile();

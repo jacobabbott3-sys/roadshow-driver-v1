@@ -1,5 +1,7 @@
 import {
   BookOpen,
+  ArrowDown,
+  ArrowUp,
   HelpCircle,
   Image,
   MessageSquareText,
@@ -25,6 +27,7 @@ import {
   getToolbags,
   getToolbagTemplates,
   saveResource,
+  reorderResources,
   updateToolbag,
   updateToolbagItem,
 } from "../lib/adminData";
@@ -104,6 +107,19 @@ export function AdminOperationsPage() {
       setMessage(error instanceof Error ? error.message : "Unable to delete resource.");
     }
   }
+  async function moveResource(index: number, direction: -1 | 1) {
+    if (!resources.data) return;
+    const target = index + direction;
+    if (target < 0 || target >= resources.data.length) return;
+    const ordered = [...resources.data];
+    [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+    try {
+      await reorderResources(ordered.map((entry) => entry.id));
+      await resources.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to reorder resources.");
+    }
+  }
   async function addBag(e: FormEvent) {
     e.preventDefault();
     try {
@@ -134,6 +150,7 @@ export function AdminOperationsPage() {
         eyebrow="OPERATIONS"
         title="Resources & toolbags"
         description="Publish driver guidance, review feedback, and manage every toolbag item."
+        backTo="/admin"
       />
       {message && <div className="notice">{message}</div>}
       <div className="operations-grid">
@@ -200,10 +217,11 @@ export function AdminOperationsPage() {
             {resource.id && <button type="button" className="button secondary" onClick={() => { setResource(blankResource); setResourceFile(null); setRemoveResourceFile(false); }}>Cancel editing</button>}
           </form>
           <PageState loading={resources.loading} error={resources.error}>
-            {resources.data?.map((r) => (
+            {resources.data?.map((r, index) => (
               <div className="simple-row resource-admin-row" key={r.id}>
                 {r.kind === "faq" ? <HelpCircle /> : <Image />}
                 <span><strong>{r.title}</strong><small>{r.published ? "Published" : "Draft"} · Order {r.position}{r.file_path ? " · Picture attached" : ""}</small></span>
+                <span className="reorder-actions"><button disabled={index === 0} aria-label={`Move ${r.title} up`} onClick={() => void moveResource(index, -1)}><ArrowUp /></button><button disabled={index === (resources.data?.length || 0) - 1} aria-label={`Move ${r.title} down`} onClick={() => void moveResource(index, 1)}><ArrowDown /></button></span>
                 <button className="icon-text-button" onClick={() => { setResource({ id: r.id, title: r.title, kind: r.kind, content: r.content || "", file_path: r.file_path, position: r.position, published: r.published }); setResourceFile(null); setRemoveResourceFile(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button>
                 <button className="icon-text-button delete-action" onClick={() => void removeResource(r.id, r.file_path)}><Trash2 /> Delete</button>
               </div>

@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   Check,
   CheckCircle2,
   ClipboardCheck,
@@ -10,7 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
@@ -104,10 +103,9 @@ export function AdminChecklistReviewPage() {
         eyebrow="CHECKLIST REVIEW"
         title={contract?.show.name || "Review checklist"}
         description="Review the driver's complete submission item by item."
+        backTo="/admin/checklists"
+        backLabel="Back to checklists"
       />
-      <Link className="back review-back" to="/admin/checklists">
-        <ArrowLeft /> All checklists
-      </Link>
       <PageState
         loading={review.loading}
         error={review.error}

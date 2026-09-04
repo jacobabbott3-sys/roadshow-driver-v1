@@ -56,7 +56,7 @@ export function TopBar() {
   async function toggleTheme() {
     const next = dark ? "light" : "dark";
     setDark(!dark);
-    await updateAppearance(next, profile?.color_scheme || "forest");
+    await updateAppearance(next, profile?.color_scheme || "forest", Boolean(profile?.extreme_confetti));
   }
 
   return (
