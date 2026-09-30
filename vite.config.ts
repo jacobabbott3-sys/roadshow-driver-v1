@@ -1,5 +1,6 @@
-import { defineConfig, loadEnv } from 'vite'
+import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -11,6 +12,11 @@ export default defineConfig(({ mode }) => {
     : requestedVersion.replace(/^v/i, '').toUpperCase()
   return {
     plugins: [react()],
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: './src/test/setup.ts',
+    },
     define: {
       __RELEASE_CHANNEL__: JSON.stringify(channel),
       __APP_VERSION__: JSON.stringify(version),
