@@ -3263,6 +3263,34 @@ h2 {
   background: transparent;
   color: var(--ink);
 }
+.list-search input::-webkit-search-cancel-button { display: none; }
+.list-search-clear {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  color: var(--ink);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.list-search-clear:hover { background: color-mix(in srgb, var(--green2) 18%, transparent); color: var(--green2); }
+.list-search-clear:focus-visible { outline: 3px solid color-mix(in srgb, var(--green2) 34%, transparent); outline-offset: 2px; }
+.list-search-clear svg { width: 16px; height: 16px; }
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
 .sort-control { position: relative; margin-left: auto; flex: 0 0 auto; }
 .sort-button {
   min-height: 46px;

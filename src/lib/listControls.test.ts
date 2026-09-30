@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { matchesListSearch, sortList, type SortMode } from "./listControls.ts";
+import { matchesListSearch, normalizeListText, sortList, type SortMode } from "./listControls.ts";
 
 type Listing = { title: string; date: string; details: string[] };
 
@@ -14,6 +14,14 @@ test("search matches any supplied field without case sensitivity", () => {
   assert.equal(matchesListSearch(" salt LAKE ", listings[1].title, ...listings[1].details), true);
   assert.equal(matchesListSearch("arena", listings[0].title, ...listings[0].details), true);
   assert.equal(matchesListSearch("missing", listings[0].title, ...listings[0].details), false);
+});
+
+test("search normalizes accents without changing the displayed value", () => {
+  const displayed = "José Álvarez";
+  assert.equal(normalizeListText(displayed), "jose alvarez");
+  assert.equal(matchesListSearch("jose", displayed), true);
+  assert.equal(matchesListSearch("ALVAREZ", displayed), true);
+  assert.equal(displayed, "José Álvarez");
 });
 
 test("an empty search shows every listing", () => {
