@@ -1,7 +1,7 @@
 # Contract Publishing and Reliability Design
 
 **Date:** September 29, 2026  
-**Target:** Next Roadshow Driver beta after Beta 4A
+**Target:** Roadshow Driver Beta 5A
 
 ## Summary
 
