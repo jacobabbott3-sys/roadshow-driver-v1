@@ -39,6 +39,7 @@ export function ProfilePage() {
   const [colorScheme, setColorScheme] = useState<ColorScheme>(profile?.color_scheme || "forest");
   const [extremeConfetti, setExtremeConfetti] = useState(Boolean(profile?.extreme_confetti));
   const [alerts, setAlerts] = useState({
+    availability_release_alerts: true,
     assignment_alerts: true,
     work_day_alerts: true,
     message_alerts: true,
@@ -47,6 +48,7 @@ export function ProfilePage() {
   useEffect(() => {
     if (!preferences.data) return;
     setAlerts({
+      availability_release_alerts: preferences.data.availability_release_alerts,
       assignment_alerts: preferences.data.assignment_alerts,
       work_day_alerts: preferences.data.work_day_alerts,
       message_alerts: preferences.data.message_alerts,
@@ -245,6 +247,14 @@ export function ProfilePage() {
           </button>
         )}
         <div className="preference-list">
+          <Preference
+            title="New contract batches"
+            description="When administrators publish new work for availability"
+            checked={alerts.availability_release_alerts}
+            onChange={(checked) =>
+              setAlerts({ ...alerts, availability_release_alerts: checked })
+            }
+          />
           <Preference
             title="Contract assignments"
             description="When a contract is assigned to you"

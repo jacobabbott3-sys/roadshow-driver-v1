@@ -31,6 +31,7 @@ export type Notification = {
   body: string;
   link: string | null;
   kind: string;
+  release_batch_id: string | null;
   read_at: string | null;
   created_at: string;
 };
@@ -98,7 +99,7 @@ export async function getNotifications(userId: string) {
   await supabase.rpc("ensure_my_due_notifications");
   const { data, error } = await supabase
     .from("notifications")
-    .select("id,title,body,link,kind,read_at,created_at,contract:contracts(show:shows(is_test))")
+    .select("id,title,body,link,kind,release_batch_id,read_at,created_at,contract:contracts(show:shows(is_test))")
     .eq("recipient_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -116,6 +117,7 @@ export async function getNotifications(userId: string) {
       body: notification.body,
       link: notification.link,
       kind: notification.kind,
+      release_batch_id: notification.release_batch_id,
       read_at: notification.read_at,
       created_at: notification.created_at,
     })) as Notification[];

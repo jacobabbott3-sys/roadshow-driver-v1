@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 export type NotificationPreferences = {
   user_id: string;
   device_notifications: boolean;
+  availability_release_alerts: boolean;
   assignment_alerts: boolean;
   work_day_alerts: boolean;
   message_alerts: boolean;
@@ -14,6 +15,7 @@ export const defaultNotificationPreferences: Omit<
   "user_id" | "updated_at"
 > = {
   device_notifications: false,
+  availability_release_alerts: true,
   assignment_alerts: true,
   work_day_alerts: true,
   message_alerts: true,
