@@ -3169,6 +3169,21 @@ h2 {
 .external-name-list > span button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 27px; height: 27px; padding: 4px; border: 0; background: transparent; color: var(--muted); }
 .external-name-list > span button svg { width: 16px; }
 .assignment-dialog-actions, .release-batch-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.recovery-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--bg); color: var(--ink); }
+.recovery-card { width: min(520px, 100%); display: grid; justify-items: center; gap: 13px; padding: 36px; border: 1px solid var(--line); border-radius: 22px; background: var(--paper); box-shadow: var(--shadow); text-align: center; }
+.recovery-card h1, .recovery-card p { margin: 0; }
+.recovery-card > p:not(.eyebrow):not(.error) { color: var(--muted); line-height: 1.6; }
+.recovery-card > div { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.recovery-icon { width: 62px; height: 62px; display: grid; place-items: center; border-radius: 18px; background: color-mix(in srgb, var(--orange) 14%, var(--paper)); color: var(--orange); }
+.recovery-icon svg { width: 31px; height: 31px; }
+.inactive-account-screen .recovery-icon { background: color-mix(in srgb, #a4442f 13%, var(--paper)); color: #a4442f; }
+.mutation-notice { display: flex; align-items: center; gap: 9px; padding: 11px 13px; border-radius: 11px; }
+.mutation-notice.saved { background: #e1f2e7; color: #25613b; }
+.mutation-notice.failed { background: #fbe8e2; color: #91412b; }
+.mutation-notice > svg { width: 18px; }
+.mutation-notice > span { flex: 1; }
+.mutation-notice button { display: inline-flex; align-items: center; gap: 5px; }
+.mutation-notice button svg { width: 15px; }
 @media (max-width: 650px) {
   .availability-toolbar .sort-control { margin-left: 0; }
   .availability-batch { padding: 11px; }
