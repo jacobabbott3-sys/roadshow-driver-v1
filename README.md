@@ -72,7 +72,9 @@ Run `202609290001_beta_5a_contract_publishing.sql` for Beta 5A contract publishi
 
 Run `202609290002_beta_5a_reliability.sql` next for active-account enforcement, final-admin protection, atomic show/signing saves, and safer operational permissions.
 
-Run `202609290003_beta_5a_chat_performance.sql` last for paginated chat summaries, 50-message history pages, and lightweight unread-chat counts. These three migrations must be applied to the beta Supabase project in filename order before the `beta` branch deploy is tested. Do not apply them to the production project until Beta 5A is approved for public release.
+Run `202609290003_beta_5a_chat_performance.sql` next for paginated chat summaries, 50-message history pages, and lightweight unread-chat counts.
+
+Run `202609290004_beta_5a_contract_clarity.sql` last for consistent contract wording, fully reversible assignments that preserve availability-response order, and admin publication statuses and filters. These four migrations must be applied to the beta Supabase project in filename order before the `beta` branch deploy is tested. Do not apply them to the production project until Beta 5A is approved for public release.
 
 The complete pre-deploy, migration, multi-account, and mobile test sequence is in [`docs/releases/beta-5a-test-checklist.md`](docs/releases/beta-5a-test-checklist.md).
 

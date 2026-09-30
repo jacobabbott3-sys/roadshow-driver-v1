@@ -6,6 +6,9 @@ import type {
 } from "../types";
 import type { SortMode } from "./listControls";
 
+export type ContractPublicationState = "not_published" | "published_open" | "published_assigned";
+export type ContractPublicationFilter = "all" | "published" | "not_published";
+
 export function toAvailabilityBatches(
   rows: PublishedAvailabilityRow[],
 ): AvailabilityBatch[] {
@@ -44,13 +47,40 @@ export function sortAvailabilityBatches(
   });
 }
 
+export function publicationStateForShow(
+  showId: string,
+  batches: AvailabilityBatch[],
+): ContractPublicationState {
+  const publishedContract = batches
+    .flatMap((batch) => batch.opportunities)
+    .find((contract) => contract.batch_id !== null && contract.shows.some((show) => show.id === showId));
+  if (!publishedContract) return "not_published";
+  return publishedContract.status === "assigned" ? "published_assigned" : "published_open";
+}
+
+export function matchesPublicationFilter(
+  showId: string,
+  batches: AvailabilityBatch[],
+  filter: ContractPublicationFilter,
+) {
+  if (filter === "all") return true;
+  const published = publicationStateForShow(showId, batches) !== "not_published";
+  return filter === "published" ? published : !published;
+}
+
+export function publicationStateLabel(state: ContractPublicationState) {
+  if (state === "published_open") return "Published — accepting responses";
+  if (state === "published_assigned") return "Published — assigned";
+  return "Not published";
+}
+
 export function availabilityOpportunityTitle(
   opportunity: AvailabilityOpportunity,
 ) {
   const signing = opportunity.shows.some((show) => show.event_type === "signing");
   return signing
     ? opportunity.shows.map((show) => show.artist || show.name).join(" & ")
-    : opportunity.shows[0]?.name || "Untitled opportunity";
+    : opportunity.shows[0]?.name || "Untitled contract";
 }
 
 export function availabilityOpportunityDate(

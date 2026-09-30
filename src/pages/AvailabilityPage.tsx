@@ -60,14 +60,14 @@ export function AvailabilityPage() {
       <header className="page-header">
         <div><p className="eyebrow">PLAN AHEAD</p><h1>Availability</h1><p>Published contract batches appear here. Your administrator always makes the final assignment.</p></div>
       </header>
-      {actionError && <p className="error" role="alert">{actionError} The opportunity may have closed; the list has been refreshed.</p>}
+      {actionError && <p className="error" role="alert">{actionError} The contract may have closed; the list has been refreshed.</p>}
       <PageState loading={availability.loading} error={availability.error} empty={!availability.data?.length}>
         <div className="list-toolbar availability-toolbar">
           <ListSearch value={query} onChange={setQuery} placeholder="Search shows, artists, venues, or cities" label="Search availability" resultCount={resultCount} />
           <SortButton value={sort} onChange={setSort} />
         </div>
         {!batches.length ? (
-          <section className="empty-state compact"><h2>No matching opportunities</h2><p>Try a different search.</p></section>
+          <section className="empty-state compact"><h2>No matching contracts</h2><p>Try a different search.</p></section>
         ) : (
           <div className="availability-batches">
             {batches.map((batch, index) => {
@@ -140,7 +140,7 @@ function AvailabilityCard({ opportunity, saving, onChoose }: {
           <strong>{opportunity.assignees.map((person) => person.full_name).join(", ") || "Team confirmed"}</strong>
         </div>
       ) : opportunity.status === "withdrawn" ? (
-        <div className="assigned-team"><span className="status">Closed</span><small>This opportunity is no longer accepting responses.</small></div>
+        <div className="assigned-team"><span className="status">Closed</span><small>This contract is no longer accepting responses.</small></div>
       ) : (
         <div className="availability-actions" aria-label={`Availability response for ${title}`}>
           <button className={opportunity.response_status === "available" ? "selected yes" : "yes"} disabled={saving} onClick={() => void onChoose(opportunity, "available")}><Check aria-hidden="true" /> Available</button>

@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
 import { AssignmentDialog } from "../components/AssignmentDialog";
+import { ContractPublicationFilter } from "../components/ContractPublicationFilter";
 import { ListSearch } from "../components/ListSearch";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
@@ -16,6 +17,12 @@ import {
   type AdminShow,
 } from "../lib/adminData";
 import { getPublishedAvailability } from "../lib/availabilityData";
+import {
+  matchesPublicationFilter,
+  publicationStateForShow,
+  publicationStateLabel,
+  type ContractPublicationFilter as PublicationFilter,
+} from "../lib/availabilityModel";
 import { matchesListSearch, sortList, type SortMode } from "../lib/listControls";
 
 type FormState = {
@@ -40,8 +47,9 @@ export function AdminSigningsPage() {
   const publishedAvailability = useAsync(getPublishedAvailability, []);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("date");
+  const [publicationFilter, setPublicationFilter] = useState<PublicationFilter>("all");
   const signings = sortList(
-    shows.data?.filter((show) => show.event_type === "signing" && matchesListSearch(search, show.artist, show.name, show.venue_name, show.city, show.state, show.address, show.signing_at, show.setup_at)) || [],
+    shows.data?.filter((show) => show.event_type === "signing" && matchesListSearch(search, show.artist, show.name, show.venue_name, show.city, show.state, show.address, show.signing_at, show.setup_at) && matchesPublicationFilter(show.id, publishedAvailability.data || [], publicationFilter)) || [],
     sort,
     (show) => show.artist || show.name,
     (show) => show.signing_at || show.starts_on,
@@ -118,7 +126,7 @@ export function AdminSigningsPage() {
     <main className="page">
       <AdminHeader eyebrow="SCHEDULING" title="Signings" description="Schedule artist signings, assign teams and checklists, and connect related appearances." backTo="/admin" />
       <div className="admin-actions show-list-toolbar"><button className="button primary" onClick={startNew}><CalendarPlus /> Create signing</button><Link className="button secondary" to="/admin/shows/publish"><BriefcaseBusiness /> Publish Contracts</Link></div>
-      <div className="list-toolbar"><ListSearch value={search} onChange={setSearch} placeholder="Search artists, venues, cities, or dates" label="Search signings" resultCount={signings.length} /><SortButton value={sort} onChange={setSort} /></div>
+      <div className="list-toolbar"><ListSearch value={search} onChange={setSearch} placeholder="Search artists, venues, cities, or dates" label="Search signings" resultCount={signings.length} /><ContractPublicationFilter value={publicationFilter} onChange={setPublicationFilter} /><SortButton value={sort} onChange={setSort} /></div>
       {message && <p className="notice">{message}</p>}
       {open && (
         <form className="admin-form unified-show-form" onSubmit={save}>
@@ -137,8 +145,8 @@ export function AdminSigningsPage() {
           <button className="button primary" disabled={busy}>{busy ? "Saving…" : "Save signing"}</button>
         </form>
       )}
-      <PageState loading={shows.loading || templates.loading || links.loading} error={shows.error || templates.error || links.error} empty={!shows.data?.some((show) => show.event_type === "signing")}>
-        {!signings.length ? <div className="inline-empty">No signings match “{search}”.</div> : <div className="admin-show-list">{signings.map((signing) => { const contract = signing.contracts[0]; const linkedCount = (links.data || []).filter((link) => link.show_id === signing.id || link.linked_show_id === signing.id).length; return <article className="admin-show-card" key={signing.id}><div className="admin-show-head"><span className="show-booth-icon"><PenLine /></span><div><h2>{signing.artist || signing.name}</h2><p><MapPin /> {signing.venue_name || signing.address || signing.city}</p></div><div className="show-card-actions"><button onClick={() => setAssigning(signing)} disabled={!contract}><UsersRound /> Assign user(s)</button><button onClick={() => loadEdit(signing)}><Pencil /> Edit</button><button className="delete-action" onClick={() => setDeleting(signing)}><Trash2 /> Delete</button></div></div><div className="contract-summary"><Clock3 /><span><strong>{formatDateTime(signing.signing_at)}</strong><small>Setup: {formatDateTime(signing.setup_at)}</small><small><UsersRound /> {contract?.contract_drivers.length || 0} assigned · <Link2 /> {linkedCount} linked</small></span></div></article>; })}</div>}
+      <PageState loading={shows.loading || templates.loading || links.loading || publishedAvailability.loading} error={shows.error || templates.error || links.error || publishedAvailability.error} empty={!shows.data?.some((show) => show.event_type === "signing")}>
+        {!signings.length ? <div className="inline-empty">No signing contracts match the current search and publication filter.</div> : <div className="admin-show-list">{signings.map((signing) => { const contract = signing.contracts[0]; const linkedCount = (links.data || []).filter((link) => link.show_id === signing.id || link.linked_show_id === signing.id).length; const publicationState = publicationStateForShow(signing.id, publishedAvailability.data || []); return <article className="admin-show-card" key={signing.id}><div className="admin-show-head"><span className="show-booth-icon"><PenLine /></span><div><h2>{signing.artist || signing.name}</h2><p><MapPin /> {signing.venue_name || signing.address || signing.city}</p></div><div className="show-card-actions"><button onClick={() => setAssigning(signing)} disabled={!contract}><UsersRound /> Assign user(s)</button><button onClick={() => loadEdit(signing)}><Pencil /> Edit</button><button className="delete-action" onClick={() => setDeleting(signing)}><Trash2 /> Delete</button></div></div><div className="contract-summary"><Clock3 /><span><small className={`contract-publication-status ${publicationState}`}>{publicationStateLabel(publicationState)}</small><strong>{formatDateTime(signing.signing_at)}</strong><small>Setup: {formatDateTime(signing.setup_at)}</small><small><UsersRound /> {contract?.contract_drivers.length || 0} assigned · <Link2 /> {linkedCount} linked</small></span></div></article>; })}</div>}
       </PageState>
       {assigning && <AssignmentDialog
         releaseItemId={findPublishedOpportunity(publishedAvailability.data || [], assigning.id)?.batch_id ? findPublishedOpportunity(publishedAvailability.data || [], assigning.id)!.id : null}

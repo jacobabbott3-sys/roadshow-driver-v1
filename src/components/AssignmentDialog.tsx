@@ -108,7 +108,7 @@ export function AssignmentDialog({
       const detail = error instanceof Error ? error.message : "Unable to save assignments.";
       if (/already been assigned|withdrawn|no longer matches|no longer open/i.test(detail)) {
         await loadPeople(true);
-        setMessage("This opportunity changed while you were viewing it. The latest assignments and responses are shown.");
+        setMessage("This contract changed while you were viewing it. The latest assignments and responses are shown.");
       } else {
         setMessage(detail);
       }
@@ -138,6 +138,9 @@ export function AssignmentDialog({
       first.focus();
     }
   }
+
+  const hasExistingAssignment = initialAssigneeIds.length > 0 || initialExternalNames.length > 0 || people.some((person) => person.assigned);
+  const clearingAssignment = hasExistingAssignment && selected.length === 0 && externalNames.length === 0;
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -183,9 +186,10 @@ export function AssignmentDialog({
           </div>
           {externalNames.length > 0 && <div className="external-name-list">{externalNames.map((name) => <span key={name}><b>{name}</b><small>External</small><button type="button" onClick={() => setExternalNames((current) => current.filter((item) => item !== name))} aria-label={`Remove ${name}`}><X /></button></span>)}</div>}
         </section>
+        {clearingAssignment && <p className="assignment-reopen-note">Saving with no assigned drivers will reopen this contract. Existing availability responses and response order will be preserved.</p>}
         <div className="assignment-dialog-actions">
           <button type="button" className="button secondary" disabled={loading || saving} onClick={() => void loadPeople(true)}><RefreshCw /> Refresh responses</button>
-          <button type="button" className="button primary" disabled={loading || saving} onClick={() => void save()}>{saving ? "Saving…" : "Save assignments"}</button>
+          <button type="button" className="button primary" disabled={loading || saving} onClick={() => void save()}>{saving ? "Saving…" : clearingAssignment ? "Unassign contract" : "Save assignments"}</button>
         </div>
       </section>
     </div>

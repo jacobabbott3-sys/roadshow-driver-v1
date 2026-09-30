@@ -11,6 +11,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
 import { AssignmentDialog } from "../components/AssignmentDialog";
+import { ContractPublicationFilter } from "../components/ContractPublicationFilter";
 import { ListSearch } from "../components/ListSearch";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
@@ -25,6 +26,12 @@ import {
   type AdminShow,
 } from "../lib/adminData";
 import { getPublishedAvailability } from "../lib/availabilityData";
+import {
+  matchesPublicationFilter,
+  publicationStateForShow,
+  publicationStateLabel,
+  type ContractPublicationFilter as PublicationFilter,
+} from "../lib/availabilityModel";
 import { dateRange, statusLabel } from "../lib/driverData";
 import { matchesListSearch, sortList, type SortMode } from "../lib/listControls";
 
@@ -114,6 +121,7 @@ export function AdminShowsPage() {
     [autofillSource, setAutofillSource] = useState(""),
     [search, setSearch] = useState(""),
     [sort, setSort] = useState<SortMode>("date"),
+    [publicationFilter, setPublicationFilter] = useState<PublicationFilter>("all"),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   useEffect(() => {
@@ -293,7 +301,9 @@ export function AdminShowsPage() {
   const matchingTemplates =
     templates.data?.filter((t) => t.kind === form.kind) || [];
   const regularShows = shows.data?.filter((show) => show.event_type !== "signing") || [];
-  const matchingShows = regularShows.filter((show) => matchesListSearch(search, show.name, show.city, show.state, show.address, show.contracts[0]?.service_date, show.starts_on, show.ends_on));
+  const matchingShows = regularShows.filter((show) =>
+    matchesListSearch(search, show.name, show.city, show.state, show.address, show.contracts[0]?.service_date, show.starts_on, show.ends_on) &&
+    matchesPublicationFilter(show.id, publishedAvailability.data || [], publicationFilter));
   const filteredShows = sortList(
     matchingShows,
     sort,
@@ -317,7 +327,7 @@ export function AdminShowsPage() {
         </button>
         <Link className="button secondary" to="/admin/shows/publish"><BriefcaseBusiness /> Publish Contracts</Link>
       </div>
-      <div className="list-toolbar"><ListSearch value={search} onChange={setSearch} placeholder="Search shows, cities, addresses, or dates" label="Search shows" resultCount={filteredShows.length} /><SortButton value={sort} onChange={setSort} /></div>
+      <div className="list-toolbar"><ListSearch value={search} onChange={setSearch} placeholder="Search shows, cities, addresses, or dates" label="Search shows" resultCount={filteredShows.length} /><ContractPublicationFilter value={publicationFilter} onChange={setPublicationFilter} /><SortButton value={sort} onChange={setSort} /></div>
       {message && <div className="notice">{message}</div>}
       {open && (
         <form className="admin-form unified-show-form" onSubmit={save}>
@@ -548,14 +558,15 @@ export function AdminShowsPage() {
         </form>
       )}
       <PageState
-        loading={shows.loading || templates.loading || contractTemplates.loading}
-        error={shows.error || templates.error || contractTemplates.error}
+        loading={shows.loading || templates.loading || contractTemplates.loading || publishedAvailability.loading}
+        error={shows.error || templates.error || contractTemplates.error || publishedAvailability.error}
         empty={!regularShows.length}
       >
         <div className="admin-show-list">
-          {!filteredShows.length && <div className="inline-empty">No shows match “{search}”.</div>}
+          {!filteredShows.length && <div className="inline-empty">No contracts match the current search and publication filter.</div>}
           {filteredShows.map((show) => {
             const contract = show.contracts[0];
+            const publicationState = publicationStateForShow(show.id, publishedAvailability.data || []);
             return (
               <article className="admin-show-card" key={show.id}>
                 <div className="admin-show-head">
@@ -589,6 +600,7 @@ export function AdminShowsPage() {
                   <div className="contract-summary">
                     <BriefcaseBusiness />
                     <span>
+                      <small className={`contract-publication-status ${publicationState}`}>{publicationStateLabel(publicationState)}</small>
                       <strong>{statusLabel(contract.kind)} contract</strong>
                       <small>
                         {formatWorkDate(contract.service_date)}{contract.service_time ? ` at ${formatTime(contract.service_time)}` : ""} ·{" "}

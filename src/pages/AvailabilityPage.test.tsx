@@ -91,6 +91,13 @@ describe("Availability batches", () => {
     await waitFor(() => expect(respond).toHaveBeenLastCalledWith("linked-signings", "available"));
     expect(window.confirm).toHaveBeenCalledTimes(3);
   });
+
+  it("uses contract wording when a search has no matches", async () => {
+    render(<MemoryRouter><AvailabilityPage /></MemoryRouter>);
+    fireEvent.change(await screen.findByRole("searchbox", { name: "Search availability" }), { target: { value: "missing" } });
+    expect(screen.getByRole("heading", { name: "No matching contracts" })).toBeInTheDocument();
+    expect(screen.queryByText(/opportunit/i)).not.toBeInTheDocument();
+  });
 });
 
 function availabilityShow(overrides: Partial<AvailabilityBatch["opportunities"][number]["shows"][number]>) {

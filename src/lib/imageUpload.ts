@@ -1,5 +1,5 @@
 export const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
-const MAX_LONG_EDGE = 3200;
+const MAX_LONG_EDGE = 4800;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 type PrepareDependencies = {
@@ -34,7 +34,7 @@ export async function preparePhoto(file: File, dependencies: PrepareDependencies
   const scale = MAX_LONG_EDGE / longEdge;
   const outputWidth = Math.round(width * scale);
   const outputHeight = Math.round(height * scale);
-  const blob = await dependencies.resizeToJpeg(file, outputWidth, outputHeight, 0.9);
+  const blob = await dependencies.resizeToJpeg(file, outputWidth, outputHeight, 0.95);
   const optimized = new File([blob], normalizedPhotoName(file.name, true), { type: "image/jpeg", lastModified: Date.now() });
   return { file: optimized, width: outputWidth, height: outputHeight, optimized: true };
 }

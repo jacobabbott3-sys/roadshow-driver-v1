@@ -17,6 +17,7 @@ Apply these files to the beta Supabase project in this exact order before deploy
 1. `202609290001_beta_5a_contract_publishing.sql`
 2. `202609290002_beta_5a_reliability.sql`
 3. `202609290003_beta_5a_chat_performance.sql`
+4. `202609290004_beta_5a_contract_clarity.sql`
 
 Then verify:
 
@@ -32,11 +33,13 @@ Then verify:
 - [ ] Select multiple contracts and use **Publish Contracts** once; confirm they appear as one named batch in Availability.
 - [ ] Confirm pay, potential bonus, work date, location, and linked signing details are correct.
 - [ ] With two test accounts, respond **Available** in a known order and confirm the admin view shows the correct first-response ranks and timestamps.
-- [ ] Confirm users can respond only once per opportunity and linked signings are accepted or declined together.
+- [ ] Confirm users can update their response for each contract and linked signings are accepted or declined together.
 - [ ] Make the final assignment as an admin; confirm Availability closes the response buttons and shows the assigned team, while the assigned work also appears under Contracts.
+- [ ] Completely unassign a published contract; confirm it reopens in Availability and every existing response retains its original rank and timestamp.
 - [ ] Assign both an in-app user and an outside driver name. Confirm the outside name is visible to admins but does not create an account or directory entry.
 - [ ] Confirm assignment notifications are created and the new-contract-batch device notification follows the user’s **Profile → New contract batches** preference.
-- [ ] Withdraw one published opportunity and confirm it is hidden without deleting its batch audit history.
+- [ ] Withdraw one published contract and confirm it is hidden without deleting its batch audit history.
+- [ ] Confirm Shows & Contracts and Signings display **Not published**, **Published — accepting responses**, or **Published — assigned**, and that the publication filter returns the correct contracts.
 
 ## Search, recovery, and editing
 
@@ -44,7 +47,7 @@ Then verify:
 - [ ] Confirm accented names match unaccented search text, clearing search restores date order, and no-result messages include the query.
 - [ ] Edit and save a show, signing, checklist template, contract template, toolbag template, resource, toolbag assignment, and user access setting.
 - [ ] Test a recoverable failed save by temporarily disconnecting the network; confirm entered data/selections remain available for retry.
-- [ ] Upload a supported photo near the size limit and a photo wider than 3200 pixels; confirm the upload is readable and oversized dimensions are reduced.
+- [ ] Upload a supported photo near the size limit and a photo wider than 4800 pixels; confirm the upload is readable, text remains legible at high zoom, and oversized dimensions are reduced.
 
 ## Mobile and appearance checks
 
@@ -58,4 +61,4 @@ Then verify:
 - [ ] Run `npm test`, `npm run test:ui`, `npm run lint`, and `npm run build` from a clean checkout.
 - [ ] Resolve every new error or warning. The three known pre-existing lint warnings must not increase.
 - [ ] Record migration completion and test results before merging `beta` into `main`.
-- [ ] Apply the same three migrations to production immediately before the approved public app deployment, with fresh production database and storage backups.
+- [ ] Apply the same four migrations to production immediately before the approved public app deployment, with fresh production database and storage backups.

@@ -40,18 +40,18 @@ vi.mock("../lib/availabilityData", () => ({
 describe("Publish Contracts workspace", () => {
   beforeEach(() => publish.mockReset().mockResolvedValue("batch-new"));
 
-  it("selects a linked signing as one opportunity and publishes unique show ids", async () => {
+  it("selects a linked signing as one contract and publishes unique show ids", async () => {
     render(<MemoryRouter><AdminPublishContractsPage /></MemoryRouter>);
 
     const linked = await screen.findByRole("checkbox", { name: /Artist A & Artist B/i });
     fireEvent.click(linked);
-    expect(screen.getByText("1 opportunity selected")).toBeInTheDocument();
+    expect(screen.getByText("1 contract selected")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("checkbox", { name: /Select all/i }));
-    expect(screen.getByText("2 opportunities selected")).toBeInTheDocument();
+    expect(screen.getByText("2 contracts selected")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Publish selected/i }));
 
-    const dialog = screen.getByRole("dialog", { name: /Publish 2 opportunities/i });
+    const dialog = screen.getByRole("dialog", { name: /Publish 2 contracts/i });
     expect(dialog).toHaveTextContent("Artist A & Artist B");
     expect(dialog).toHaveTextContent("$500.00");
     expect(dialog).toHaveTextContent("Potential bonus: $100.00");

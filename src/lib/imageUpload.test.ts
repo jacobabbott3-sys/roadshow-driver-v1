@@ -10,30 +10,30 @@ test("validatePhoto accepts JPEG PNG and WebP through the inclusive 20 MB bounda
   assert.throws(() => validatePhoto(fileOfSize(10, "image/gif", "moving.gif")), /JPEG, PNG, or WebP/);
 });
 
-test("preparePhoto leaves a 3200 pixel image unchanged", async () => {
+test("preparePhoto leaves a 4800 pixel image unchanged", async () => {
   const original = fileOfSize(20, "image/png", "Booth View.png");
   let resized = false;
   const result = await preparePhoto(original, {
-    dimensions: async () => ({ width: 3200, height: 1800 }),
+    dimensions: async () => ({ width: 4800, height: 2700 }),
     resizeToJpeg: async () => { resized = true; return new Blob(); },
   });
   assert.equal(result.file, original);
   assert.equal(result.optimized, false);
-  assert.equal(result.width, 3200);
+  assert.equal(result.width, 4800);
   assert.equal(resized, false);
 });
 
-test("preparePhoto resizes a 3201+ image to a 3200 long edge at JPEG quality 90", async () => {
+test("preparePhoto resizes a 4801+ image to a 4800 long edge at JPEG quality 95", async () => {
   const original = fileOfSize(20, "image/webp", "My Booth!!.webp");
   let request: { width: number; height: number; quality: number } | undefined;
   const result = await preparePhoto(original, {
-    dimensions: async () => ({ width: 6402, height: 3201 }),
+    dimensions: async () => ({ width: 9602, height: 4801 }),
     resizeToJpeg: async (_file, width, height, quality) => {
       request = { width, height, quality };
       return new Blob(["optimized"], { type: "image/jpeg" });
     },
   });
-  assert.deepEqual(request, { width: 3200, height: 1600, quality: 0.9 });
+  assert.deepEqual(request, { width: 4800, height: 2400, quality: 0.95 });
   assert.equal(result.optimized, true);
   assert.equal(result.file.name, "my-booth.jpg");
   assert.equal(result.file.type, "image/jpeg");

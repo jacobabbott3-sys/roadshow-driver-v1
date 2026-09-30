@@ -80,6 +80,25 @@ describe("AssignmentDialog", () => {
     await waitFor(() => expect(loadResponses).toHaveBeenCalledTimes(2));
     expect(await screen.findByRole("alert")).toHaveTextContent("changed while you were viewing it");
   });
+
+  it("allows every assignee to be removed and explains that the contract will reopen", async () => {
+    const assignedPeople = people.map((person, index) => ({ ...person, assigned: index === 0 }));
+    loadResponses.mockResolvedValueOnce(assignedPeople);
+    renderDialog({ initialAssigneeIds: ["alex"] });
+
+    const alex = await screen.findByRole("checkbox", { name: /Alex Available/ });
+    expect(alex).toBeChecked();
+    fireEvent.click(alex);
+    expect(screen.getByText(/reopen this contract.*responses and response order/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Unassign contract" }));
+
+    await waitFor(() => expect(replaceAssignments).toHaveBeenCalledWith({
+      releaseItemId: "release-1",
+      showIds: ["show-1", "show-2"],
+      driverIds: [],
+      externalNames: [],
+    }));
+  });
 });
 
 function renderDialog(overrides: Partial<React.ComponentProps<typeof AssignmentDialog>> = {}) {

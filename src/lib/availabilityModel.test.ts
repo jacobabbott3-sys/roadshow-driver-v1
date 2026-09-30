@@ -7,6 +7,7 @@ import {
   sortOpportunities,
   toAvailabilityBatches,
 } from "./availabilityModel.ts";
+import * as availabilityModel from "./availabilityModel.ts";
 import type {
   AvailabilityOpportunity,
   AvailabilityResponsePerson,
@@ -100,4 +101,41 @@ test("ranks available responders by time and id before unavailable and nonrespon
   const ranked = rankAvailabilityResponses(people);
   assert.deepEqual(ranked.map((person) => person.profile_id), ["a", "b", "u", "z"]);
   assert.deepEqual(ranked.map((person) => person.response_rank), [1, 2, null, null]);
+});
+
+test("derives and filters contract publication states from real release batches", () => {
+  const publicationStateForShow = (availabilityModel as unknown as {
+    publicationStateForShow?: (showId: string, batches: ReturnType<typeof toAvailabilityBatches>) => string;
+    matchesPublicationFilter?: (showId: string, batches: ReturnType<typeof toAvailabilityBatches>, filter: string) => boolean;
+  }).publicationStateForShow;
+  const matchesPublicationFilter = (availabilityModel as unknown as {
+    matchesPublicationFilter?: (showId: string, batches: ReturnType<typeof toAvailabilityBatches>, filter: string) => boolean;
+  }).matchesPublicationFilter;
+  const publicationStateLabel = (availabilityModel as unknown as {
+    publicationStateLabel?: (state: string) => string;
+  }).publicationStateLabel;
+  assert.equal(typeof publicationStateForShow, "function");
+  assert.equal(typeof matchesPublicationFilter, "function");
+  assert.equal(typeof publicationStateLabel, "function");
+  if (!publicationStateForShow) return;
+
+  const published = row("published", "batch-a", "2026-09-29T10:00:00Z", "Published");
+  const assigned = row("assigned", "batch-a", "2026-09-29T10:00:00Z", "Assigned");
+  assigned.item_status = "assigned";
+  const direct = row("direct", null, "2026-09-29T10:00:00Z", "Direct");
+  direct.item_status = "assigned";
+  const batches = toAvailabilityBatches([published, assigned, direct]);
+
+  assert.equal(publicationStateForShow("published-show", batches), "published_open");
+  assert.equal(publicationStateForShow("assigned-show", batches), "published_assigned");
+  assert.equal(publicationStateForShow("direct-show", batches), "not_published");
+  assert.equal(publicationStateForShow("missing-show", batches), "not_published");
+  assert.equal(matchesPublicationFilter?.("published-show", batches, "published"), true);
+  assert.equal(matchesPublicationFilter?.("assigned-show", batches, "published"), true);
+  assert.equal(matchesPublicationFilter?.("direct-show", batches, "published"), false);
+  assert.equal(matchesPublicationFilter?.("direct-show", batches, "not_published"), true);
+  assert.equal(matchesPublicationFilter?.("missing-show", batches, "all"), true);
+  assert.equal(publicationStateLabel?.("published_open"), "Published — accepting responses");
+  assert.equal(publicationStateLabel?.("published_assigned"), "Published — assigned");
+  assert.equal(publicationStateLabel?.("not_published"), "Not published");
 });

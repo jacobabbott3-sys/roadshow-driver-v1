@@ -57,7 +57,7 @@ export function AdminPublishContractsPage() {
       await publishContractBatch(showIds);
       setSelected([]);
       setConfirming(false);
-      setMessage(`${selectedItems.length} ${selectedItems.length === 1 ? "opportunity" : "opportunities"} published.`);
+      setMessage(`${selectedItems.length} ${selectedItems.length === 1 ? "contract" : "contracts"} published.`);
       await Promise.all([publishable.refresh(), batches.refresh()]);
     } catch (error) {
       setConfirming(false);
@@ -72,10 +72,10 @@ export function AdminPublishContractsPage() {
     setMessage("");
     try {
       await withdrawReleaseItem(itemId);
-      setMessage("Opportunity withdrawn.");
+      setMessage("Contract withdrawn.");
       await Promise.all([publishable.refresh(), batches.refresh()]);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to withdraw this opportunity.");
+      setMessage(error instanceof Error ? error.message : "Unable to withdraw this contract.");
     } finally {
       setBusy(false);
     }
@@ -94,7 +94,7 @@ export function AdminPublishContractsPage() {
       <section className="admin-section publish-workspace">
         <div className="section-row">
           <div><p className="eyebrow">HIDDEN WORK</p><h2>Choose contracts to publish</h2></div>
-          <span className="selection-count">{selected.length} {selected.length === 1 ? "opportunity" : "opportunities"} selected</span>
+          <span className="selection-count">{selected.length} {selected.length === 1 ? "contract" : "contracts"} selected</span>
         </div>
         <div className="list-toolbar publish-toolbar">
           <ListSearch value={search} onChange={setSearch} placeholder="Search shows, artists, venues, or dates" label="Search contracts to publish" resultCount={visible.length} />
@@ -139,7 +139,7 @@ export function AdminPublishContractsPage() {
         <div className="modal-backdrop">
           <section className="confirm-modal publish-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="publish-confirm-title">
             <BellRing />
-            <h2 id="publish-confirm-title">Publish {selectedItems.length} {selectedItems.length === 1 ? "opportunity" : "opportunities"}?</h2>
+            <h2 id="publish-confirm-title">Publish {selectedItems.length} {selectedItems.length === 1 ? "contract" : "contracts"}?</h2>
             <p>Every active driver and administrator will receive one notification for this batch.</p>
             <div className="publish-confirm-list">{selectedItems.map((item) => <div key={item.opportunity_id}><strong>{item.title}</strong><span>{formatDateTime(item.work_at)} · {money(item.contract_pay)}</span><small>Potential bonus: {money(item.bonus_pay)}</small></div>)}</div>
             <div><button disabled={busy} onClick={() => setConfirming(false)}>Cancel</button><button className="button primary" disabled={busy} onClick={() => void publish()}>{busy ? "Publishing…" : "Publish batch"}</button></div>

@@ -6,6 +6,10 @@ const migrationPath = new URL(
   "../../supabase/migrations/202609290001_beta_5a_contract_publishing.sql",
   import.meta.url,
 );
+const unassignmentMigrationPath = new URL(
+  "../../supabase/migrations/202609290004_beta_5a_contract_clarity.sql",
+  import.meta.url,
+);
 
 test("Beta 5A migration declares the publishing schema and RPC contract", async () => {
   const sql = await readFile(migrationPath, "utf8");
@@ -48,4 +52,16 @@ test("Beta 5A migration uses a PostgreSQL-supported UUID ordering expression", a
 
   assert.equal(supportedUuidMinimums.length, 2);
   assert.doesNotMatch(sql, /min\(node_id\)/);
+});
+
+test("contract clarity migration reopens unassigned published contracts without deleting responses", async () => {
+  const sql = (await readFile(unassignmentMigrationPath, "utf8")).toLowerCase();
+  assert.match(sql, /status\s*=\s*case[\s\S]*then 'assigned'[\s\S]*else 'open'/);
+  assert.match(sql, /closed_at\s*=\s*case[\s\S]*else null/);
+  assert.match(sql, /create or replace function public\.set_my_release_response/);
+  assert.doesNotMatch(sql, /choose at least one driver/);
+  assert.doesNotMatch(sql, /delete from public\.availability_release_responses/);
+  assert.match(sql, /new contract batch/);
+  assert.doesNotMatch(sql, /new opportunit/);
+  assert.doesNotMatch(sql, /raise exception '[^']*opportun/);
 });

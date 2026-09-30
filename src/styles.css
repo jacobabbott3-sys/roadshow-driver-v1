@@ -2436,6 +2436,16 @@ h2 {
 .contract-summary small {
   color: var(--muted);
 }
+.contract-publication-status {
+  width: max-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: .68rem;
+  font-weight: 800;
+}
+.contract-publication-status.not_published { background: var(--soft); color: var(--muted); }
+.contract-publication-status.published_open { background: #e8f2ff; color: #265c91; }
+.contract-publication-status.published_assigned { background: #e1f2e7; color: #25613b; }
 .contract-card p.work-date {
   color: var(--green2);
   font-weight: 700;
@@ -3238,6 +3248,30 @@ h2 {
   gap: 10px;
   margin: 0 0 18px;
 }
+.contract-publication-filter {
+  display: inline-flex;
+  min-height: 46px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  flex: 0 0 auto;
+}
+.contract-publication-filter button {
+  padding: 0 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.contract-publication-filter button.active { background: var(--green2); color: white; }
+.contract-publication-filter button:focus-visible { outline: 3px solid color-mix(in srgb, var(--green2) 34%, transparent); outline-offset: 2px; }
+.assignment-reopen-note { padding: 11px 13px; border-radius: 10px; background: color-mix(in srgb, var(--orange) 12%, var(--paper)); color: var(--ink); font-size: .78rem; line-height: 1.45; }
 .list-search {
   min-height: 46px;
   width: min(560px, 100%);
@@ -3357,14 +3391,20 @@ h2 {
 }
 [data-theme="dark"] .list-search,
 [data-theme="dark"] .sort-button,
-[data-theme="dark"] .sort-menu { background: #26332d; border-color: #65776f; color: #f0f6f3; }
+[data-theme="dark"] .sort-menu,
+[data-theme="dark"] .contract-publication-filter { background: #26332d; border-color: #65776f; color: #f0f6f3; }
+[data-theme="dark"] .contract-publication-filter button.active { color: #10251d; }
+[data-theme="dark"] .contract-publication-status.not_published { background: #34433c; color: #d2ddd8; }
+[data-theme="dark"] .contract-publication-status.published_open { background: #203a55; color: #c6e1ff; }
+[data-theme="dark"] .contract-publication-status.published_assigned { background: #203f31; color: #c1f1d4; }
 
 @media (max-width: 760px) {
   .chat-conversation .chat-back { display: inline-flex; }
 }
 @media (max-width: 650px) {
   .list-toolbar { align-items: stretch; flex-direction: column; }
-  .list-search, .sort-control, .sort-button { width: 100%; }
+  .list-search, .sort-control, .sort-button, .contract-publication-filter { width: 100%; }
+  .contract-publication-filter button { flex: 1; }
   .sort-menu { width: 100%; }
   .show-list-toolbar .sort-control { margin-left: 0; }
 }
