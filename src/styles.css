@@ -3280,6 +3280,7 @@ h2 {
 .list-search-clear:hover { background: color-mix(in srgb, var(--green2) 18%, transparent); color: var(--green2); }
 .list-search-clear:focus-visible { outline: 3px solid color-mix(in srgb, var(--green2) 34%, transparent); outline-offset: 2px; }
 .list-search-clear svg { width: 16px; height: 16px; }
+.page > .list-search { margin-bottom: 18px; }
 .sr-only {
   position: absolute !important;
   width: 1px !important;
@@ -3344,6 +3345,9 @@ h2 {
 .sort-menu small { color: var(--muted); font-size: .7rem; }
 .show-list-toolbar .show-search + .sort-control { margin-left: 0; }
 .chat-conversation .chat-back { display: none; margin: 0; }
+.chat-load-more,
+.chat-load-earlier { width: calc(100% - 16px); margin: 10px 8px; }
+.chat-load-earlier { align-self: center; width: auto; margin: 0 auto 10px; }
 
 [data-theme="dark"] .back-button {
   background: color-mix(in srgb, var(--green2) 22%, #1b2521);

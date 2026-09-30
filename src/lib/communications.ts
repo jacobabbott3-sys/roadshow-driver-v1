@@ -1,29 +1,14 @@
 import { supabase } from "./supabase";
 import { release } from "./release";
+import {
+  mergeChatMessages,
+  type ChatMember,
+  type ChatMessage,
+  type ChatThreadSummary,
+} from "./communicationsModel";
 
-export type ChatMember = {
-  user_id: string;
-  read_at: string | null;
-  profile: { full_name: string; role: "driver" | "admin" } | null;
-};
-
-export type ChatMessage = {
-  id: string;
-  sender_id: string;
-  body: string;
-  created_at: string;
-  sender: { full_name: string } | null;
-};
-
-export type ChatThread = {
-  id: string;
-  subject: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  members: ChatMember[];
-  messages: ChatMessage[];
-};
+export { mergeChatMessages };
+export type { ChatMember, ChatMessage, ChatThreadSummary };
 
 export type Notification = {
   id: string;
@@ -40,30 +25,38 @@ type NotificationWithContract = Notification & {
   contract: null | { show: null | { is_test: boolean } | { is_test: boolean }[] } | { show: null | { is_test: boolean } | { is_test: boolean }[] }[];
 };
 
-export async function getChatThreads() {
-  const { data, error } = await supabase
-    .from("chat_threads")
-    .select(
-      "id,subject,created_by,created_at,updated_at,members:chat_thread_members(user_id,read_at,profile:profiles(full_name,role)),messages:chat_messages(id,sender_id,body,created_at,sender:profiles(full_name))",
-    )
-    .order("updated_at", { ascending: false });
+export async function getChatThreadSummaries({ search = "", before = null, limit = 50 }: { search?: string; before?: string | null; limit?: number } = {}) {
+  const { data, error } = await supabase.rpc("get_chat_thread_summaries", {
+    target_search: search.trim(),
+    target_before: before,
+    target_limit: limit,
+  });
   if (error) throw error;
-  return (data || []).map((thread) => ({
-    ...thread,
-    messages: [...(thread.messages || [])].sort((a, b) =>
-      a.created_at.localeCompare(b.created_at),
-    ),
-  })) as unknown as ChatThread[];
+  return (data || []) as unknown as ChatThreadSummary[];
 }
 
-export function isThreadUnread(thread: ChatThread, userId: string) {
-  const membership = thread.members.find((member) => member.user_id === userId);
-  const latest = thread.messages.at(-1);
-  return Boolean(
-    latest &&
-      latest.sender_id !== userId &&
-      (!membership?.read_at || latest.created_at > membership.read_at),
-  );
+export async function getChatMessages({ threadId, before = null, limit = 50 }: { threadId: string; before?: string | null; limit?: number }) {
+  let query = supabase
+    .from("chat_messages")
+    .select("id,thread_id,sender_id,body,created_at,sender:profiles(full_name)")
+    .eq("thread_id", threadId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 50));
+  if (before) query = query.lt("created_at", before);
+  const { data, error } = await query;
+  if (error) throw error;
+  return mergeChatMessages((data || []) as unknown as ChatMessage[]);
+}
+
+export async function getUnreadChatCount() {
+  const { data, error } = await supabase.rpc("get_my_unread_chat_count");
+  if (error) throw error;
+  return Number(data || 0);
+}
+
+export function isThreadUnread(thread: ChatThreadSummary) {
+  return thread.unread;
 }
 
 export async function createChat(
