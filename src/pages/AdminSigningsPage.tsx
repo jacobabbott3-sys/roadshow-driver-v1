@@ -7,14 +7,11 @@ import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import {
-  createShow,
   deleteShow,
   getShowLinks,
   getShowsAdmin,
   getTemplates,
-  saveShowContract,
-  saveShowLinks,
-  updateShow,
+  saveSigningAtomic,
   type AdminShow,
 } from "../lib/adminData";
 import { getPublishedAvailability } from "../lib/availabilityData";
@@ -83,39 +80,22 @@ export function AdminSigningsPage() {
     setBusy(true);
     setMessage("");
     try {
-      const signingDate = form.signing_at.slice(0, 10);
-      const input = {
-        name: `${form.artist} signing`,
-        starts_on: signingDate,
-        ends_on: signingDate,
+      const existingContract = shows.data?.find((show) => show.id === editing)?.contracts[0];
+      await saveSigningAtomic({
+        show_id: editing,
+        contract_id: form.contract_id || null,
+        artist: form.artist,
+        signing_at: new Date(form.signing_at).toISOString(),
+        setup_at: new Date(form.setup_at).toISOString(),
+        venue_name: form.location,
         city: form.city,
         state: form.state || null,
         address: form.address || null,
-        event_type: "signing" as const,
-        artist: form.artist,
-        venue_name: form.location,
-        signing_at: new Date(form.signing_at).toISOString(),
-        setup_at: new Date(form.setup_at).toISOString(),
-        bin_count: null,
-        meals_included: false,
-        lodging_included: false,
-        per_diem: null,
-      };
-      const showId = editing || await createShow(input);
-      if (editing) await updateShow(editing, input);
-      await saveShowContract({
-        id: form.contract_id || undefined,
-        show_id: showId,
         driver_ids: form.assignee_ids,
-        kind: "setup",
-        service_date: signingDate,
-        service_time: form.setup_at.slice(11, 16),
-        contract_pay: null,
-        bonus_pay: null,
-        terms: null,
-        template_id: form.template_id,
+        external_names: existingContract?.contract_external_assignees.map((item) => item.display_name) || [],
+        template_id: form.template_id || null,
+        linked_show_ids: form.linked_ids,
       });
-      await saveShowLinks(showId, form.linked_ids);
       close();
       setMessage("Signing saved.");
       await Promise.all([shows.refresh(), links.refresh()]);

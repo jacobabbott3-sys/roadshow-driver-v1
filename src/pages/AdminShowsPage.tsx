@@ -17,13 +17,11 @@ import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import {
   adminSignContract,
-  createShow,
   deleteShow,
   getContractTemplates,
   getShowsAdmin,
   getTemplates,
-  saveShowContract,
-  updateShow,
+  saveShowContractAtomic,
   type AdminShow,
 } from "../lib/adminData";
 import { getPublishedAvailability } from "../lib/availabilityData";
@@ -247,19 +245,20 @@ export function AdminShowsPage() {
         lodging_check_out: form.lodging_included ? form.lodging_check_out || null : null,
         lodging_notes: form.lodging_included ? form.lodging_notes || null : null,
       };
-      const showId = editing || (await createShow(showInput));
-      if (editing) await updateShow(editing, showInput);
-      const contractId = await saveShowContract({
-        id: form.contract_id || undefined,
-        show_id: showId,
+      const existingContract = shows.data?.find((show) => show.id === editing)?.contracts[0];
+      const contractId = await saveShowContractAtomic({
+        show_id: editing,
+        contract_id: form.contract_id || null,
+        ...showInput,
         driver_ids: form.driver_ids,
+        external_names: existingContract?.contract_external_assignees.map((item) => item.display_name) || [],
         kind: form.kind,
         service_date: form.service_date,
         service_time: form.service_time || null,
         contract_pay: form.contract_pay ? Number(form.contract_pay) : null,
         bonus_pay: form.bonus_pay ? Number(form.bonus_pay) : null,
         terms: form.terms || null,
-        template_id: form.template_id,
+        template_id: form.template_id || null,
       });
       if (form.admin_signature_name.trim())
         await adminSignContract(contractId, form.admin_signature_name.trim());

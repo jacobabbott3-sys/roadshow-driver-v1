@@ -177,6 +177,60 @@ export async function getUsers() {
   if (error) throw error;
   return data as Profile[];
 }
+export type ShowContractSavePayload = {
+  show_id: string | null;
+  contract_id: string | null;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  city: string;
+  state: string | null;
+  address: string | null;
+  bin_count: number | null;
+  lodging_included: boolean;
+  per_diem: number | null;
+  lodging_name: string | null;
+  lodging_address: string | null;
+  lodging_phone: string | null;
+  lodging_confirmation: string | null;
+  lodging_check_in: string | null;
+  lodging_check_out: string | null;
+  lodging_notes: string | null;
+  kind: "setup" | "teardown";
+  service_date: string;
+  service_time: string | null;
+  contract_pay: number | null;
+  bonus_pay: number | null;
+  terms: string | null;
+  template_id: string | null;
+  driver_ids: string[];
+  external_names: string[];
+};
+export type SigningSavePayload = {
+  show_id: string | null;
+  contract_id: string | null;
+  artist: string;
+  signing_at: string;
+  setup_at: string;
+  venue_name: string;
+  city: string;
+  state: string | null;
+  address: string | null;
+  template_id: string | null;
+  linked_show_ids: string[];
+  driver_ids: string[];
+  external_names: string[];
+};
+export async function saveShowContractAtomic(payload: ShowContractSavePayload) {
+  const { data, error } = await supabase.rpc("admin_save_show_contract", { target_payload: payload });
+  if (error) throw error;
+  return data as string;
+}
+export async function saveSigningAtomic(payload: SigningSavePayload) {
+  const { data, error } = await supabase.rpc("admin_save_signing", { target_payload: payload });
+  if (error) throw error;
+  return data as string;
+}
 export async function saveShowContract(input: {
   id?: string;
   show_id: string;

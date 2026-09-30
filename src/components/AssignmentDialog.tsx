@@ -38,6 +38,8 @@ export function AssignmentDialog({
     dialogRef.current?.focus();
     void loadPeople(true);
     return () => previousFocus.current?.focus();
+    // The dialog reloads only when it targets a different published item.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [releaseItemId]);
 
   async function loadPeople(resetSelection: boolean) {

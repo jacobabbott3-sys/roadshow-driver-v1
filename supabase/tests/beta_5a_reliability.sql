@@ -1,10 +1,12 @@
 begin;
-select plan(10);
+select plan(12);
 
 select has_function('public','is_active_user',array[]::text[]);
 select function_returns('public','is_active_user',array[]::text[],'boolean');
 select has_function('public','admin_update_user',array['uuid','app_role','boolean']);
 select function_returns('public','admin_update_user',array['uuid','app_role','boolean'],'void');
+select has_function('public','admin_save_show_contract',array['jsonb']);
+select has_function('public','admin_save_signing',array['jsonb']);
 
 select function_lang_is('public','is_active_user',array[]::text[],'sql');
 

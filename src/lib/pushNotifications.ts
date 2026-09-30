@@ -51,8 +51,7 @@ export async function saveNotificationPreferences(
 ) {
   const { error } = await supabase
     .from("notification_preferences")
-    .update({ ...values, updated_at: new Date().toISOString() })
-    .eq("user_id", userId);
+    .upsert({ user_id: userId, ...values, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
   if (error) throw error;
 }
 

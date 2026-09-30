@@ -1,23 +1,30 @@
 import { Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
 import { useState } from "react";
 import { AdminHeader } from "../components/AdminNav";
+import { MutationNotice } from "../components/MutationNotice";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
+import { useMutationFeedback } from "../hooks/useMutationFeedback";
 import { getUsers, updateUser } from "../lib/adminData";
 
 export function AdminUsersPage() {
   const query = useAsync(getUsers, []);
   const [busy, setBusy] = useState("");
   const [search, setSearch] = useState("");
+  const mutation = useMutationFeedback();
   async function change(
     id: string,
     role: "driver" | "admin",
     active: boolean,
   ) {
     setBusy(id);
-    await updateUser(id, role, active);
-    await query.refresh();
-    setBusy("");
+    try {
+      await mutation.run(async () => {
+        await updateUser(id, role, active);
+        await query.refresh();
+      }, { successMessage: "User access updated." });
+    } catch { /* MutationNotice presents the failure and retry. */ }
+    finally { setBusy(""); }
   }
   const users = query.data?.filter((user) =>
     `${user.full_name}`.toLowerCase().includes(search.toLowerCase()),
@@ -97,6 +104,7 @@ export function AdminUsersPage() {
         <ShieldCheck /> Admins can trigger password recovery from Supabase
         Authentication, but cannot view or retrieve anyone’s password.
       </div>
+      <MutationNotice state={mutation.state} message={mutation.message} onRetry={() => void mutation.retry().catch(() => undefined)} onDismiss={mutation.clear} />
     </main>
   );
 }

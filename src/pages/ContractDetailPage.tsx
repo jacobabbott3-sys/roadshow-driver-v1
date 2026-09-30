@@ -87,6 +87,9 @@ export function ContractDetailPage() {
       await setChecklistItem(checklist.data.id, itemId, value);
       if (completesChecklist) launchConfetti({ pieces: 140, distance: 560 });
       await checklist.refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to update this checklist item.");
+      await checklist.refresh();
     } finally {
       setBusy("");
     }

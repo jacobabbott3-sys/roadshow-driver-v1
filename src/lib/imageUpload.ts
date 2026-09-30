@@ -106,7 +106,7 @@ const browserPrepareDependencies: PrepareDependencies = {
   })),
 };
 
-async function withImage<T>(file: File, use: (image: HTMLImageElement) => T | Promise<T>): Promise<T> {
+async function withImage<T>(file: File, consume: (image: HTMLImageElement) => T | Promise<T>): Promise<T> {
   const url = URL.createObjectURL(file);
   try {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -115,7 +115,7 @@ async function withImage<T>(file: File, use: (image: HTMLImageElement) => T | Pr
       element.onerror = () => reject(new Error("The selected photo could not be read."));
       element.src = url;
     });
-    return await use(image);
+    return await consume(image);
   } finally {
     URL.revokeObjectURL(url);
   }

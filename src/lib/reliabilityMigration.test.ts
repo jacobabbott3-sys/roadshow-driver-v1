@@ -25,3 +25,13 @@ test("reliability migration serializes final-admin protection", async () => {
   assert.match(sql, /at least one active administrator is required/);
   assert.match(sql, /target_user=auth\.uid\(\) and not new_active/);
 });
+
+test("reliability migration exposes atomic show and signing save RPCs", async () => {
+  const sql = (await readFile(migrationPath, "utf8")).toLowerCase();
+  assert.match(sql, /function public\.admin_save_show_contract\(target_payload jsonb\)/);
+  assert.match(sql, /function public\.admin_save_signing\(target_payload jsonb\)/);
+  assert.match(sql, /selected checklist template is unavailable or has the wrong contract type/);
+  assert.match(sql, /every linked signing must still exist/);
+  assert.match(sql, /grant execute on function public\.admin_save_show_contract\(jsonb\)/);
+  assert.match(sql, /function public\.set_my_checklist_item[\s\S]*if not public\.is_active_user\(\)/);
+});

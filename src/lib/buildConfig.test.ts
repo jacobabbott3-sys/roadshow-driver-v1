@@ -17,6 +17,7 @@ test("new contract batch push alerts default on and are saved from Profile", () 
   const preferences = readFileSync(resolve("src/lib/pushNotifications.ts"), "utf8");
   const profile = readFileSync(resolve("src/pages/ProfilePage.tsx"), "utf8");
   assert.match(preferences, /availability_release_alerts:\s*true/);
+  assert.match(preferences, /\.upsert\(\{ user_id: userId/);
   assert.match(profile, /availability_release_alerts:\s*preferences\.data\.availability_release_alerts/);
   assert.match(profile, /title="New contract batches"/);
 });
