@@ -70,6 +70,12 @@ Run `202608240001_beta_4b.sql` to add the account-synced Extreme Confetti Mode p
 
 Run `202609290001_beta_5a_contract_publishing.sql` for Beta 5A contract publishing batches, first-response ordering, final admin assignments, outside-driver names, and the **New contract batches** notification preference. Apply this migration before deploying the Beta 5A app code.
 
+Run `202609290002_beta_5a_reliability.sql` next for active-account enforcement, final-admin protection, atomic show/signing saves, and safer operational permissions.
+
+Run `202609290003_beta_5a_chat_performance.sql` last for paginated chat summaries, 50-message history pages, and lightweight unread-chat counts. These three migrations must be applied to the beta Supabase project in filename order before the `beta` branch deploy is tested. Do not apply them to the production project until Beta 5A is approved for public release.
+
+The complete pre-deploy, migration, multi-account, and mobile test sequence is in [`docs/releases/beta-5a-test-checklist.md`](docs/releases/beta-5a-test-checklist.md).
+
 ## Device notification setup
 
 The app and database are ready for web push, but each Supabase/Vercel environment needs its own keys and webhook setup:
