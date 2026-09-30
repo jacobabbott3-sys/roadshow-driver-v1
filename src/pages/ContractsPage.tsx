@@ -1,7 +1,8 @@
-import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin, PenLine, Search } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin, PenLine } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PageState } from "../components/PageState";
+import { ListSearch } from "../components/ListSearch";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import { ChecklistProgress, Contract, getContractChecklistStatuses, getContracts, getShowLinks, scheduleDate, ShowLink, statusLabel } from "../lib/driverData";
@@ -36,7 +37,7 @@ export function ContractsPage() {
       <PageState loading={query.loading} error={query.error} empty={!groups.length}>
         <>
           <div className="list-toolbar">
-            <label className="list-search"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shows, artists, or locations" aria-label="Search contracts and signings" /></label>
+            <ListSearch value={search} onChange={setSearch} placeholder="Search shows, artists, or locations" label="Search contracts and signings" resultCount={visibleGroups.length} />
             <SortButton value={sort} onChange={setSort} />
           </div>
           {!visibleGroups.length ? <div className="inline-empty">No contracts or signings match “{search}”.</div> : <div className="contract-list">

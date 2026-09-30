@@ -1,6 +1,7 @@
 import { BriefcaseBusiness, ClipboardCheck, GripVertical, PackageOpen, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { useState, type DragEvent, type FormEvent, type KeyboardEvent, type TouchEvent } from "react";
 import { AdminHeader } from "../components/AdminNav";
+import { ListSearch } from "../components/ListSearch";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
 import {
@@ -13,6 +14,7 @@ import {
   updateTemplate,
   updateToolbagTemplate,
 } from "../lib/adminData";
+import { matchesListSearch } from "../lib/listControls";
 
 type Tab = "contract" | "checklist" | "toolbag";
 type DraftItem = { draftId: string; title: string; photo_required: boolean };
@@ -37,7 +39,13 @@ export function AdminTemplatesPage() {
   const checklistTemplates = useAsync(getTemplates, []);
   const toolbagTemplates = useAsync(getToolbagTemplates, []);
   const [tab, setTab] = useState<Tab>("contract");
+  const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
+  const resultCount = tab === "contract"
+    ? contractTemplates.data?.filter((template) => matchesListSearch(search, template.name, template.kind, template.terms)).length || 0
+    : tab === "checklist"
+      ? checklistTemplates.data?.filter((template) => matchesListSearch(search, template.name, template.kind, ...template.sections.flatMap((section) => [section.title, ...section.items.map((item) => item.title)]))).length || 0
+      : toolbagTemplates.data?.filter((template) => matchesListSearch(search, template.name, ...template.items.map((item) => item.name))).length || 0;
 
   return (
     <main className="page">
@@ -47,19 +55,21 @@ export function AdminTemplatesPage() {
         <button className={tab === "checklist" ? "active" : ""} onClick={() => setTab("checklist")}><ClipboardCheck /> Checklists</button>
         <button className={tab === "toolbag" ? "active" : ""} onClick={() => setTab("toolbag")}><PackageOpen /> Toolbags</button>
       </div>
+      <ListSearch value={search} onChange={setSearch} placeholder="Search template names, types, or items" label="Search templates" resultCount={resultCount} />
       {message && <p className="notice">{message}</p>}
-      {tab === "contract" && <ContractTemplates query={contractTemplates} onMessage={setMessage} />}
-      {tab === "checklist" && <ChecklistTemplates query={checklistTemplates} onMessage={setMessage} />}
-      {tab === "toolbag" && <ToolbagTemplates query={toolbagTemplates} onMessage={setMessage} />}
+      {tab === "contract" && <ContractTemplates query={contractTemplates} search={search} onMessage={setMessage} />}
+      {tab === "checklist" && <ChecklistTemplates query={checklistTemplates} search={search} onMessage={setMessage} />}
+      {tab === "toolbag" && <ToolbagTemplates query={toolbagTemplates} search={search} onMessage={setMessage} />}
     </main>
   );
 }
 
-function ContractTemplates({ query, onMessage }: { query: AsyncQuery<Awaited<ReturnType<typeof getContractTemplates>>>; onMessage: (value: string) => void }) {
+function ContractTemplates({ query, search, onMessage }: { query: AsyncQuery<Awaited<ReturnType<typeof getContractTemplates>>>; search: string; onMessage: (value: string) => void }) {
   const blank = { id: "", name: "", kind: "setup" as "setup" | "teardown", terms: "", active: true };
   const [form, setForm] = useState(blank);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const templates = query.data?.filter((template) => matchesListSearch(search, template.name, template.kind, template.terms)) || [];
   async function save(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -81,11 +91,11 @@ function ContractTemplates({ query, onMessage }: { query: AsyncQuery<Awaited<Ret
       <label className="checkbox-field"><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /> Active template</label>
       <button className="button primary" disabled={busy}><Save /> Save template</button>
     </form>}
-    <section className="admin-section"><h2>Reusable contracts</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{query.data?.map((template) => <article className="template-row" key={template.id}><BriefcaseBusiness /><div><strong>{template.name}</strong><span>{template.kind} · Terms template</span></div><button className="icon-text-button" onClick={() => { setForm({ id: template.id, name: template.name, kind: template.kind, terms: template.terms || "", active: template.active }); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
+    <section className="admin-section"><h2>Reusable contracts</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{!templates.length ? <div className="inline-empty">No contract templates match “{search}”.</div> : templates.map((template) => <article className="template-row" key={template.id}><BriefcaseBusiness /><div><strong>{template.name}</strong><span>{template.kind} · Terms template</span></div><button className="icon-text-button" onClick={() => { setForm({ id: template.id, name: template.name, kind: template.kind, terms: template.terms || "", active: template.active }); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
   </>;
 }
 
-function ChecklistTemplates({ query, onMessage }: { query: AsyncQuery<Awaited<ReturnType<typeof getTemplates>>>; onMessage: (value: string) => void }) {
+function ChecklistTemplates({ query, search, onMessage }: { query: AsyncQuery<Awaited<ReturnType<typeof getTemplates>>>; search: string; onMessage: (value: string) => void }) {
   const [name, setName] = useState("");
   const [kind, setKind] = useState<"setup" | "teardown">("setup");
   const [sections, setSections] = useState<DraftSection[]>(initialSections);
@@ -93,6 +103,7 @@ function ChecklistTemplates({ query, onMessage }: { query: AsyncQuery<Awaited<Re
   const [open, setOpen] = useState(false);
   const [sectionDrag, setSectionDrag] = useState<{ from: number; over: number } | null>(null);
   const [itemDrag, setItemDrag] = useState<{ section: number; from: number; over: number } | null>(null);
+  const templates = query.data?.filter((template) => matchesListSearch(search, template.name, template.kind, ...template.sections.flatMap((section) => [section.title, ...section.items.map((item) => item.title)]))) || [];
 
   function reset() { setName(""); setKind("setup"); setSections(initialSections()); setEditing(null); }
   function updateSection(index: number, patch: Partial<DraftSection>) { setSections((current) => current.map((section, itemIndex) => itemIndex === index ? { ...section, ...patch } : section)); }
@@ -154,15 +165,16 @@ function ChecklistTemplates({ query, onMessage }: { query: AsyncQuery<Awaited<Re
       <button type="button" className="text-button" onClick={() => setSections((current) => [...current, { draftId: draftId(), title: "", items: [newChecklistItem()] }])}>+ Add section</button>
       <button className="button primary"><Save /> Save template</button>
     </form>}
-    <section className="admin-section"><h2>Reusable checklists</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{query.data?.map((template) => <article className="template-row" key={template.id}><ClipboardCheck /><div><strong>{template.name}</strong><span>{template.kind} · {template.sections.length} sections</span></div><button className="icon-text-button" onClick={() => { setName(template.name); setKind(template.kind); setSections([...template.sections].sort((a, b) => a.position - b.position).map((section) => ({ draftId: draftId(), title: section.title, items: [...section.items].sort((a, b) => a.position - b.position).map((item) => newChecklistItem(item.title)) }))); setEditing(template.id); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
+    <section className="admin-section"><h2>Reusable checklists</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{!templates.length ? <div className="inline-empty">No checklist templates match “{search}”.</div> : templates.map((template) => <article className="template-row" key={template.id}><ClipboardCheck /><div><strong>{template.name}</strong><span>{template.kind} · {template.sections.length} sections</span></div><button className="icon-text-button" onClick={() => { setName(template.name); setKind(template.kind); setSections([...template.sections].sort((a, b) => a.position - b.position).map((section) => ({ draftId: draftId(), title: section.title, items: [...section.items].sort((a, b) => a.position - b.position).map((item) => newChecklistItem(item.title)) }))); setEditing(template.id); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
   </>;
 }
 
-function ToolbagTemplates({ query, onMessage }: { query: AsyncQuery<Awaited<ReturnType<typeof getToolbagTemplates>>>; onMessage: (value: string) => void }) {
+function ToolbagTemplates({ query, search, onMessage }: { query: AsyncQuery<Awaited<ReturnType<typeof getToolbagTemplates>>>; search: string; onMessage: (value: string) => void }) {
   const empty = () => ({ id: "", name: "", items: [newToolbagItem()] });
   const [form, setForm] = useState(empty);
   const [open, setOpen] = useState(false);
   const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
+  const templates = query.data?.filter((template) => matchesListSearch(search, template.name, ...template.items.map((item) => item.name))) || [];
   function finishDrag() { if (drag) setForm((current) => ({ ...current, items: move(current.items, drag.from, drag.over) })); setDrag(null); }
   function touchMove(event: TouchEvent) {
     event.preventDefault();
@@ -190,7 +202,7 @@ function ToolbagTemplates({ query, onMessage }: { query: AsyncQuery<Awaited<Retu
       <button type="button" className="text-button" onClick={() => setForm({ ...form, items: [...form.items, newToolbagItem()] })}>+ Add item</button>
       <button className="button primary"><Save /> Save template</button>
     </form>}
-    <section className="admin-section"><h2>Reusable toolbags</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{query.data?.map((template) => <article className="template-row" key={template.id}><PackageOpen /><div><strong>{template.name}</strong><span>{template.items.length} items</span></div><button className="icon-text-button" onClick={() => { setForm({ id: template.id, name: template.name, items: [...template.items].sort((a, b) => a.position - b.position).map((item) => newToolbagItem(item.name, item.quantity)) }); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
+    <section className="admin-section"><h2>Reusable toolbags</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{!templates.length ? <div className="inline-empty">No toolbag templates match “{search}”.</div> : templates.map((template) => <article className="template-row" key={template.id}><PackageOpen /><div><strong>{template.name}</strong><span>{template.items.length} items</span></div><button className="icon-text-button" onClick={() => { setForm({ id: template.id, name: template.name, items: [...template.items].sort((a, b) => a.position - b.position).map((item) => newToolbagItem(item.name, item.quantity)) }); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
   </>;
 }
 

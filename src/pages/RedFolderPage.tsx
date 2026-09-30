@@ -6,15 +6,19 @@ import { getResources } from "../lib/driverData";
 import { supabase } from "../lib/supabase";
 import { ImageViewer } from "../components/ImageViewer";
 import { BackButton } from "../components/BackButton";
+import { ListSearch } from "../components/ListSearch";
+import { matchesListSearch } from "../lib/listControls";
 
 export function RedFolderPage() {
   const resources = useAsync(getResources, []);
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
   const items = useMemo(
     () =>
       resources.data?.filter((resource) => resource.kind === "handbook") || [],
     [resources.data],
   );
+  const visibleItems = items.filter((item) => matchesListSearch(search, item.title, item.content));
 
   useEffect(() => {
     void Promise.all(
@@ -39,13 +43,14 @@ export function RedFolderPage() {
           <p>Pictures, documents, and published operating guides.</p>
         </div>
       </header>
+      <ListSearch value={search} onChange={setSearch} placeholder="Search titles or guide content" label="Search Red Folder" resultCount={visibleItems.length} />
       <PageState
         loading={resources.loading}
         error={resources.error}
         empty={!items.length}
       >
-        <div className="red-folder-grid">
-          {items.map((item) => (
+        {!visibleItems.length ? <div className="inline-empty">No Red Folder items match “{search}”.</div> : <div className="red-folder-grid">
+          {visibleItems.map((item) => (
             <article key={item.id}>
               {urls[item.id] && <ImageViewer src={urls[item.id]} alt={item.title} />}
               <BookOpen />
@@ -53,7 +58,7 @@ export function RedFolderPage() {
               {item.content && <p>{item.content}</p>}
             </article>
           ))}
-        </div>
+        </div>}
       </PageState>
     </main>
   );

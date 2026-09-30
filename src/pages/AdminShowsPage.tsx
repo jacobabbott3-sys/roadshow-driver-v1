@@ -3,7 +3,6 @@ import {
   CalendarPlus,
   MapPin,
   Pencil,
-  Search,
   Store,
   Trash2,
   UsersRound,
@@ -12,6 +11,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
 import { AssignmentDialog } from "../components/AssignmentDialog";
+import { ListSearch } from "../components/ListSearch";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
@@ -26,7 +26,7 @@ import {
 } from "../lib/adminData";
 import { getPublishedAvailability } from "../lib/availabilityData";
 import { dateRange, statusLabel } from "../lib/driverData";
-import { sortList, type SortMode } from "../lib/listControls";
+import { matchesListSearch, sortList, type SortMode } from "../lib/listControls";
 
 type FormState = {
   name: string;
@@ -293,10 +293,7 @@ export function AdminShowsPage() {
   const matchingTemplates =
     templates.data?.filter((t) => t.kind === form.kind) || [];
   const regularShows = shows.data?.filter((show) => show.event_type !== "signing") || [];
-  const normalizedSearch = search.trim().toLowerCase();
-  const matchingShows = normalizedSearch
-    ? regularShows.filter((show) => [show.name, show.city, show.state, show.address].some((value) => value?.toLowerCase().includes(normalizedSearch)))
-    : regularShows;
+  const matchingShows = regularShows.filter((show) => matchesListSearch(search, show.name, show.city, show.state, show.address, show.contracts[0]?.service_date, show.starts_on, show.ends_on));
   const filteredShows = sortList(
     matchingShows,
     sort,
@@ -319,9 +316,8 @@ export function AdminShowsPage() {
           <CalendarPlus /> Create show
         </button>
         <Link className="button secondary" to="/admin/shows/publish"><BriefcaseBusiness /> Publish Contracts</Link>
-        <label className="admin-search show-search"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shows, cities, or addresses" aria-label="Search shows" /></label>
-        <SortButton value={sort} onChange={setSort} />
       </div>
+      <div className="list-toolbar"><ListSearch value={search} onChange={setSearch} placeholder="Search shows, cities, addresses, or dates" label="Search shows" resultCount={filteredShows.length} /><SortButton value={sort} onChange={setSort} /></div>
       {message && <div className="notice">{message}</div>}
       {open && (
         <form className="admin-form unified-show-form" onSubmit={save}>

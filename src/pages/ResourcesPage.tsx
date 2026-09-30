@@ -1,8 +1,11 @@
 import { BookOpen, HelpCircle, MessageSquareText, UsersRound, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import { ListSearch } from "../components/ListSearch";
 import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import { getMyToolbag } from "../lib/driverData";
+import { matchesListSearch } from "../lib/listControls";
 
 const resources = [
   ["/resources/toolbag", "My Toolbag", "Assigned inventory and quantities", Wrench],
@@ -14,10 +17,12 @@ const resources = [
 
 export function ResourcesPage() {
   const { user } = useAuth();
+  const [search, setSearch] = useState("");
   const toolbag = useAsync(() => getMyToolbag(user!.id), [user?.id]);
-  return <main className="page"><header className="page-header"><div><p className="eyebrow">ON-THE-ROAD HELP</p><h1>Resources</h1><p>Choose the resource you need.</p></div></header><div className="resource-link-grid">{resources.map(([to, title, description, Icon]) => {
+  const visible = resources.filter(([, title, description]) => matchesListSearch(search, title, description));
+  return <main className="page"><header className="page-header"><div><p className="eyebrow">ON-THE-ROAD HELP</p><h1>Resources</h1><p>Choose the resource you need.</p></div></header><ListSearch value={search} onChange={setSearch} placeholder="Search resources" label="Search resources" resultCount={visible.length} />{!visible.length ? <div className="inline-empty">No resources match “{search}”.</div> : <div className="resource-link-grid">{visible.map(([to, title, description, Icon]) => {
     const toolbagTitle = to === "/resources/toolbag" && toolbag.data ? `My Toolbag #${toolbag.data.number}` : title;
     const toolbagDescription = to === "/resources/toolbag" && toolbag.loading ? "Loading assigned toolbag…" : description;
     return <Link key={to} to={to}><Icon /><span><strong>{toolbagTitle}</strong><small>{toolbagDescription}</small></span><b>→</b></Link>;
-  })}</div></main>;
+  })}</div>}</main>;
 }

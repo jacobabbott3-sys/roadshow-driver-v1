@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { AdminHeader } from "../components/AdminNav";
+import { ListSearch } from "../components/ListSearch";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
 import {
@@ -32,6 +33,7 @@ import {
   updateToolbagItem,
 } from "../lib/adminData";
 import { supabase } from "../lib/supabase";
+import { matchesListSearch } from "../lib/listControls";
 export function AdminOperationsPage() {
   const resources = useAsync(getAdminResources, []),
     feedback = useAsync(getFeedback, []),
@@ -55,7 +57,12 @@ export function AdminOperationsPage() {
     [openBag, setOpenBag] = useState<string | null>(null),
     [item, setItem] = useState({ name: "", quantity: 1 }),
     [editingItem, setEditingItem] = useState<string | null>(null),
+    [search, setSearch] = useState(""),
     [message, setMessage] = useState("");
+  const visibleResources = resources.data?.filter((entry) => matchesListSearch(search, entry.title, entry.kind, entry.content, entry.published ? "published" : "draft")) || [];
+  const visibleToolbags = toolbags.data?.filter((toolbag) => matchesListSearch(search, toolbag.number, toolbag.driver?.full_name, toolbag.driver?.role, ...toolbag.items.map((entry) => entry.name))) || [];
+  const visibleFeedback = feedback.data?.filter((entry) => matchesListSearch(search, entry.profile?.full_name, entry.category, entry.message, entry.status)) || [];
+  const resultCount = visibleResources.length + visibleToolbags.length + visibleFeedback.length;
   async function submitResource(e: FormEvent) {
     e.preventDefault();
     setMessage("");
@@ -153,6 +160,7 @@ export function AdminOperationsPage() {
         backTo="/admin"
       />
       {message && <div className="notice">{message}</div>}
+      <ListSearch value={search} onChange={setSearch} placeholder="Search resources, toolbags, or feedback" label="Search resources and toolbags" resultCount={resultCount} />
       <div className="operations-grid">
         <section className="admin-section">
           <h2>
@@ -217,7 +225,9 @@ export function AdminOperationsPage() {
             {resource.id && <button type="button" className="button secondary" onClick={() => { setResource(blankResource); setResourceFile(null); setRemoveResourceFile(false); }}>Cancel editing</button>}
           </form>
           <PageState loading={resources.loading} error={resources.error}>
-            {resources.data?.map((r, index) => (
+            {!visibleResources.length && search ? <div className="inline-empty">No resources match “{search}”.</div> : visibleResources.map((r) => {
+              const index = resources.data?.findIndex((entry) => entry.id === r.id) ?? -1;
+              return (
               <div className="simple-row resource-admin-row" key={r.id}>
                 {r.kind === "faq" ? <HelpCircle /> : <Image />}
                 <span><strong>{r.title}</strong><small>{r.published ? "Published" : "Draft"} · Order {r.position}{r.file_path ? " · Picture attached" : ""}</small></span>
@@ -225,7 +235,8 @@ export function AdminOperationsPage() {
                 <button className="icon-text-button" onClick={() => { setResource({ id: r.id, title: r.title, kind: r.kind, content: r.content || "", file_path: r.file_path, position: r.position, published: r.published }); setResourceFile(null); setRemoveResourceFile(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button>
                 <button className="icon-text-button delete-action" onClick={() => void removeResource(r.id, r.file_path)}><Trash2 /> Delete</button>
               </div>
-            ))}
+              );
+            })}
           </PageState>
         </section>
         <section className="admin-section">
@@ -262,7 +273,7 @@ export function AdminOperationsPage() {
             </button>
           </form>
           <PageState loading={toolbags.loading} error={toolbags.error}>
-            {toolbags.data?.map((t) => (
+            {!visibleToolbags.length && search ? <div className="inline-empty">No toolbags match “{search}”.</div> : visibleToolbags.map((t) => (
               <div className="toolbag-editor" key={t.id}>
                 <button
                   className="simple-row toolbag-toggle"
@@ -384,8 +395,10 @@ export function AdminOperationsPage() {
         <PageState loading={feedback.loading} error={feedback.error}>
           {!feedback.data?.length ? (
             <div className="inline-empty">No feedback submitted yet.</div>
+          ) : !visibleFeedback.length ? (
+            <div className="inline-empty">No feedback matches “{search}”.</div>
           ) : (
-            feedback.data.map((f) => (
+            visibleFeedback.map((f) => (
               <article className="feedback-row" key={f.id}>
                 <MessageSquareText />
                 <div>
