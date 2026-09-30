@@ -66,7 +66,7 @@ export function filterOpportunities(
   opportunities: AvailabilityOpportunity[],
   query: string,
 ) {
-  const normalized = query.trim().toLocaleLowerCase();
+  const normalized = normalizeSearchText(query);
   if (!normalized) return opportunities;
   return opportunities.filter((opportunity) => [
     availabilityOpportunityTitle(opportunity),
@@ -78,7 +78,11 @@ export function filterOpportunities(
       show.state,
       show.address,
     ]),
-  ].some((value) => value?.toLocaleLowerCase().includes(normalized)));
+  ].some((value) => value ? normalizeSearchText(value).includes(normalized) : false));
+}
+
+function normalizeSearchText(value: string) {
+  return value.normalize("NFKD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase().trim();
 }
 
 export function sortOpportunities(

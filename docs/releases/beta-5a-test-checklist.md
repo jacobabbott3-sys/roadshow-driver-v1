@@ -33,7 +33,7 @@ Then verify:
 - [ ] Confirm pay, potential bonus, work date, location, and linked signing details are correct.
 - [ ] With two test accounts, respond **Available** in a known order and confirm the admin view shows the correct first-response ranks and timestamps.
 - [ ] Confirm users can respond only once per opportunity and linked signings are accepted or declined together.
-- [ ] Make the final assignment as an admin; confirm the opportunity becomes hidden from everyone’s Availability screen and the assigned work appears under Contracts.
+- [ ] Make the final assignment as an admin; confirm Availability closes the response buttons and shows the assigned team, while the assigned work also appears under Contracts.
 - [ ] Assign both an in-app user and an outside driver name. Confirm the outside name is visible to admins but does not create an account or directory entry.
 - [ ] Confirm assignment notifications are created and the new-contract-batch device notification follows the user’s **Profile → New contract batches** preference.
 - [ ] Withdraw one published opportunity and confirm it is hidden without deleting its batch audit history.

@@ -1,7 +1,8 @@
-import { BellRing, CalendarDays, Check, CircleDollarSign, Search, Send, X } from "lucide-react";
+import { BellRing, CalendarDays, Check, CircleDollarSign, Send, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AdminHeader } from "../components/AdminNav";
 import { AssignmentDialog } from "../components/AssignmentDialog";
+import { ListSearch } from "../components/ListSearch";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
@@ -12,7 +13,7 @@ import {
   withdrawReleaseItem,
 } from "../lib/availabilityData";
 import { availabilityOpportunityTitle } from "../lib/availabilityModel";
-import type { SortMode } from "../lib/listControls";
+import { matchesListSearch, type SortMode } from "../lib/listControls";
 import type { AvailabilityOpportunity, PublishableOpportunity } from "../types";
 
 export function AdminPublishContractsPage() {
@@ -27,14 +28,7 @@ export function AdminPublishContractsPage() {
   const [message, setMessage] = useState("");
 
   const visible = useMemo(() => {
-    const normalized = search.trim().toLocaleLowerCase();
-    const matches = (publishable.data || []).filter((item) => !normalized || [
-      item.title,
-      item.location,
-      item.work_at,
-      item.event_type,
-      item.contract_kind,
-    ].some((value) => value?.toLocaleLowerCase().includes(normalized)));
+    const matches = (publishable.data || []).filter((item) => matchesListSearch(search, item.title, item.location, item.work_at, item.event_type, item.contract_kind));
     return [...matches].sort((left, right) => sort === "alpha"
       ? left.title.localeCompare(right.title) || left.work_at.localeCompare(right.work_at)
       : left.work_at.localeCompare(right.work_at) || left.title.localeCompare(right.title));
@@ -103,7 +97,7 @@ export function AdminPublishContractsPage() {
           <span className="selection-count">{selected.length} {selected.length === 1 ? "opportunity" : "opportunities"} selected</span>
         </div>
         <div className="list-toolbar publish-toolbar">
-          <label className="list-search"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shows, artists, venues, or dates" aria-label="Search contracts to publish" /></label>
+          <ListSearch value={search} onChange={setSearch} placeholder="Search shows, artists, venues, or dates" label="Search contracts to publish" resultCount={visible.length} />
           <SortButton value={sort} onChange={setSort} />
         </div>
         <label className="publish-select-all">

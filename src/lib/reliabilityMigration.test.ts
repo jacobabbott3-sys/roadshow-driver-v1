@@ -35,3 +35,9 @@ test("reliability migration exposes atomic show and signing save RPCs", async ()
   assert.match(sql, /grant execute on function public\.admin_save_show_contract\(jsonb\)/);
   assert.match(sql, /function public\.set_my_checklist_item[\s\S]*if not public\.is_active_user\(\)/);
 });
+
+test("notification preference upserts can create a missing current-user row", async () => {
+  const sql = (await readFile(migrationPath, "utf8")).toLowerCase();
+  assert.match(sql, /create policy "notification preferences own insert"[\s\S]{0,300}for insert to authenticated[\s\S]{0,300}user_id=auth\.uid\(\)/);
+  assert.match(sql, /grant insert on public\.notification_preferences to authenticated/);
+});

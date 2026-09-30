@@ -1,7 +1,8 @@
-import { CalendarDays, Check, CircleDollarSign, Clock3, PenLine, Search, UsersRound, X } from "lucide-react";
+import { CalendarDays, Check, CircleDollarSign, Clock3, PenLine, UsersRound, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { PageState } from "../components/PageState";
+import { ListSearch } from "../components/ListSearch";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import { getPublishedAvailability, setReleaseResponse } from "../lib/availabilityData";
@@ -28,6 +29,7 @@ export function AvailabilityPage() {
     ...batch,
     opportunities: sortOpportunities(filterOpportunities(batch.opportunities, query), sort),
   })).filter((batch) => batch.opportunities.length), [availability.data, query, sort]);
+  const resultCount = batches.reduce((total, batch) => total + batch.opportunities.length, 0);
 
   useEffect(() => {
     if (targetBatch && targetRef.current?.scrollIntoView) targetRef.current.scrollIntoView({ block: "center" });
@@ -61,11 +63,7 @@ export function AvailabilityPage() {
       {actionError && <p className="error" role="alert">{actionError} The opportunity may have closed; the list has been refreshed.</p>}
       <PageState loading={availability.loading} error={availability.error} empty={!availability.data?.length}>
         <div className="list-toolbar availability-toolbar">
-          <label className="show-search">
-            <Search aria-hidden="true" />
-            <span className="sr-only">Search availability</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search shows, artists, venues, or cities" />
-          </label>
+          <ListSearch value={query} onChange={setQuery} placeholder="Search shows, artists, venues, or cities" label="Search availability" resultCount={resultCount} />
           <SortButton value={sort} onChange={setSort} />
         </div>
         {!batches.length ? (

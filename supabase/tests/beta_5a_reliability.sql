@@ -1,5 +1,5 @@
 begin;
-select plan(12);
+select plan(14);
 
 select has_function('public','is_active_user',array[]::text[]);
 select function_returns('public','is_active_user',array[]::text[],'boolean');
@@ -14,6 +14,8 @@ select policy_roles_are('public','profiles','active team directory read',array['
 select policy_cmd_is('public','profiles','active team directory read','SELECT');
 select policy_roles_are('public','contracts','contracts assigned read',array['authenticated']);
 select policy_roles_are('public','notifications','notifications own read',array['authenticated']);
+select policy_roles_are('public','notification_preferences','notification preferences own insert',array['authenticated']);
+select policy_cmd_is('public','notification_preferences','notification preferences own insert','INSERT');
 
 select throws_ok(
   $$ select public.admin_update_user(gen_random_uuid(),'driver',false) $$,

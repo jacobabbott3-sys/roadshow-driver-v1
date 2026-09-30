@@ -125,6 +125,10 @@ using(public.is_active_user() and (user_id=auth.uid() or public.is_admin()));
 drop policy if exists "notification preferences own update" on public.notification_preferences;
 create policy "notification preferences own update" on public.notification_preferences for update to authenticated
 using(public.is_active_user() and user_id=auth.uid()) with check(public.is_active_user() and user_id=auth.uid());
+drop policy if exists "notification preferences own insert" on public.notification_preferences;
+create policy "notification preferences own insert" on public.notification_preferences for insert to authenticated
+with check(public.is_active_user() and user_id=auth.uid());
+grant insert on public.notification_preferences to authenticated;
 
 drop policy if exists "push subscriptions own read" on public.push_subscriptions;
 create policy "push subscriptions own read" on public.push_subscriptions for select to authenticated using(public.is_active_user() and user_id=auth.uid());
