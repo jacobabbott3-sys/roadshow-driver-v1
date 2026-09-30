@@ -30,6 +30,7 @@ import {
 } from "../lib/driverData";
 import { supabase } from "../lib/supabase";
 import { launchConfetti } from "../lib/confetti";
+import { uploadContractPhoto, type UploadClient } from "../lib/imageUpload";
 type Tab = "info" | "checklist" | "photos" | "sign";
 export function ContractDetailPage() {
   const { id = "" } = useParams(),
@@ -44,6 +45,7 @@ export function ContractDetailPage() {
     );
   const [tab, setTab] = useState<Tab>("info"),
     [busy, setBusy] = useState(""),
+    [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}),
     [signature, setSignature] = useState(""),
     [message, setMessage] = useState("");
   const items = useMemo(
@@ -120,26 +122,27 @@ export function ContractDetailPage() {
   }
   async function upload(file: File, slot: string) {
     setBusy(slot);
-    const path = `${user!.id}/${id}/${crypto.randomUUID()}-${file.name}`;
-    const { error } = await supabase.storage
-      .from("roadshow-photos")
-      .upload(path, file);
-    if (!error) {
-      const { error: recordError } = await supabase.from("photos").insert({
-        contract_id: id,
-        slot_name: slot,
-        storage_path: path,
-        uploaded_by: user!.id,
-      });
-      if (recordError) {
-        setMessage(recordError.message);
-        setBusy("");
-        return;
-      }
+    setMessage("");
+    try {
+      const result = await uploadContractPhoto({
+        contractId: id,
+        userId: user!.id,
+        slot,
+        file,
+        onProgress: (percent) => setUploadProgress((current) => ({ ...current, [slot]: percent })),
+      }, { client: supabase as unknown as UploadClient });
       await photos.refresh();
+      setMessage(`${slot} photo uploaded${result.optimized ? " and optimized for storage" : ""}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to upload this photo. Please try again.");
+    } finally {
+      setBusy("");
+      setUploadProgress((current) => {
+        const next = { ...current };
+        delete next[slot];
+        return next;
+      });
     }
-    setMessage(error ? error.message : `${slot} photo uploaded.`);
-    setBusy("");
   }
   return (
     <main className="page">
@@ -343,10 +346,11 @@ export function ContractDetailPage() {
                       {photo ? <ImageViewer src={photo.signed_url} alt={`${slot} view`} /> : <Camera />}
                       <strong>{slot}</strong>
                       <label className="photo-upload-action">
-                        <span>{busy === slot ? "Uploading…" : photo ? "Replace photo" : "Tap to upload"}</span>
-                        <input type="file" accept="image/*" capture="environment" onChange={(event) => event.target.files?.[0] && void upload(event.target.files[0], slot)} />
+                        <span>{busy === slot ? `Uploading… ${uploadProgress[slot] || 0}%` : photo ? "Replace photo" : "Tap to upload"}</span>
+                        <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy === slot} onChange={(event) => { const input = event.currentTarget; const selected = input.files?.[0]; if (selected) void upload(selected, slot).finally(() => { input.value = ""; }); }} />
                         <Upload />
                       </label>
+                      {busy === slot && <progress className="photo-upload-progress" max="100" value={uploadProgress[slot] || 0} aria-label={`${slot} upload progress`} />}
                     </div>;
                   })}
                 </div>
