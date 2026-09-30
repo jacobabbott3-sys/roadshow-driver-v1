@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import { getChecklist, type Contract, type Show } from "./driverData";
 import type { Profile } from "../types";
 import { release } from "./release";
+import { localDateKey } from "./calendarDate";
 export type DashboardStats = {
   shows: number;
   unsigned: number;
@@ -53,7 +54,7 @@ export type AdminFeedback = {
   profile: { full_name: string } | null;
 };
 export async function getDashboardStats() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey();
   let showsQuery = supabase
       .from("shows")
       .select("*", { count: "exact", head: true })
@@ -94,6 +95,8 @@ export async function getDashboardStats() {
       .select("*", { count: "exact", head: true })
       .eq("status", "new"),
   ]);
+  const failedQuery = [shows, signings, unsigned, reviews, drivers, feedback].find((result) => result.error);
+  if (failedQuery?.error) throw failedQuery.error;
   return {
     shows: shows.count || 0,
     unsigned: unsigned.count || 0,

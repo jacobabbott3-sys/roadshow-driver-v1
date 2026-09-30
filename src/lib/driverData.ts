@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { release } from "./release";
+import { localDateKey, parseDateOnly } from "./calendarDate";
 
 export type Show = {
   id: string;
@@ -248,7 +249,7 @@ export async function getAvailability(userId: string) {
     supabase
     .from("shows")
     .select("*")
-    .gte("ends_on", new Date().toISOString().slice(0, 10))
+    .gte("ends_on", localDateKey())
     .order("starts_on"),
     supabase.rpc("get_public_show_availability"),
     supabase.from("show_links").select("show_id,linked_show_id"),
@@ -399,8 +400,8 @@ export function scheduleDate(contract: Contract) {
     : contract.service_date || contract.show.starts_on;
 }
 export function dateRange(show: Show) {
-  const start = new Date(`${show.starts_on}T12:00:00`),
-    end = new Date(`${show.ends_on}T12:00:00`);
+  const start = parseDateOnly(show.starts_on),
+    end = parseDateOnly(show.ends_on);
   return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}–${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 export function statusLabel(status: string) {
