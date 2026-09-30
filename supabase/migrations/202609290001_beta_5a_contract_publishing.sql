@@ -109,7 +109,7 @@ language sql stable security definer set search_path=public as $$
     join public.show_links links
       on links.show_id=signing_walk.node_id or links.linked_show_id=signing_walk.node_id
   ), signing_components as (
-    select root_id,min(node_id) component_id
+    select root_id,min(node_id::text)::uuid component_id
     from signing_walk group by root_id
   ), grouped as (
     select s.id component_id,array[s.id]::uuid[] show_ids
@@ -224,7 +224,7 @@ begin
         on links.show_id=signing_walk.node_id or links.linked_show_id=signing_walk.node_id
       where (case when links.show_id=signing_walk.node_id then links.linked_show_id else links.show_id end)=any(selected_ids)
     ), signing_components as (
-      select root_id,min(node_id) component_id from signing_walk group by root_id
+      select root_id,min(node_id::text)::uuid component_id from signing_walk group by root_id
     ), groups as (
       select s.id component_id,array[s.id]::uuid[] show_ids
       from public.shows s where s.id=any(selected_ids) and s.event_type='show'

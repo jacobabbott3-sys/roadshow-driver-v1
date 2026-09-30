@@ -41,3 +41,11 @@ test("Beta 5A migration keeps release timestamps and external names server contr
   assert.match(sql, /null::uuid batch_id[\s\S]*'assigned'::text item_status/);
   assert.match(sql, /status in \('open','assigned'\) for update/);
 });
+
+test("Beta 5A migration uses a PostgreSQL-supported UUID ordering expression", async () => {
+  const sql = (await readFile(migrationPath, "utf8")).toLowerCase();
+  const supportedUuidMinimums = sql.match(/min\(node_id::text\)::uuid/g) ?? [];
+
+  assert.equal(supportedUuidMinimums.length, 2);
+  assert.doesNotMatch(sql, /min\(node_id\)/);
+});
