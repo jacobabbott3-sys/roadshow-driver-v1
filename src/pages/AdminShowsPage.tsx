@@ -11,6 +11,7 @@ import {
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
+import { AssignmentDialog } from "../components/AssignmentDialog";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
@@ -19,15 +20,13 @@ import {
   createShow,
   deleteShow,
   getContractTemplates,
-  getShowAvailabilityAdmin,
   getShowsAdmin,
   getTemplates,
   saveShowContract,
   updateShow,
-  updateContractAssignments,
-  type AdminAvailabilityPerson,
   type AdminShow,
 } from "../lib/adminData";
+import { getPublishedAvailability } from "../lib/availabilityData";
 import { dateRange, statusLabel } from "../lib/driverData";
 import { sortList, type SortMode } from "../lib/listControls";
 
@@ -106,16 +105,14 @@ function savedDraft() {
 export function AdminShowsPage() {
   const shows = useAsync(getShowsAdmin, []),
     templates = useAsync(getTemplates, []),
-    contractTemplates = useAsync(getContractTemplates, []);
+    contractTemplates = useAsync(getContractTemplates, []),
+    publishedAvailability = useAsync(getPublishedAvailability, []);
   const draft = savedDraft(),
     [form, setForm] = useState<FormState>(draft?.form || blank),
     [open, setOpen] = useState(Boolean(draft)),
     [editing, setEditing] = useState<string | null>(draft?.editing || null),
     [deleting, setDeleting] = useState<AdminShow | null>(null),
     [assigning, setAssigning] = useState<AdminShow | null>(null),
-    [availabilityPeople, setAvailabilityPeople] = useState<AdminAvailabilityPerson[]>([]),
-    [assignmentIds, setAssignmentIds] = useState<string[]>([]),
-    [assignmentLoading, setAssignmentLoading] = useState(false),
     [autofillSource, setAutofillSource] = useState(""),
     [search, setSearch] = useState(""),
     [sort, setSort] = useState<SortMode>("date"),
@@ -159,33 +156,6 @@ export function AdminShowsPage() {
       template_id: contract?.contract_checklists?.[0]?.template_id || "",
       terms: contract?.terms || "",
     });
-  }
-  async function openAssignments(show: AdminShow) {
-    const contract = show.contracts[0];
-    if (!contract) return;
-    setAssigning(show);
-    setAssignmentLoading(true);
-    try {
-      const people = await getShowAvailabilityAdmin(show.id, contract.id);
-      setAvailabilityPeople(people);
-      setAssignmentIds(people.filter((person) => person.assigned).map((person) => person.id));
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load availability.");
-      setAssigning(null);
-    } finally { setAssignmentLoading(false); }
-  }
-  async function saveAssignments() {
-    const contract = assigning?.contracts[0];
-    if (!contract) return;
-    setAssignmentLoading(true);
-    try {
-      await updateContractAssignments(contract.id, assignmentIds);
-      await shows.refresh();
-      setMessage("Assignments updated.");
-      setAssigning(null);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to save assignments.");
-    } finally { setAssignmentLoading(false); }
   }
   function loadEdit(show: AdminShow) {
     const contract = show.contracts[0];
@@ -334,6 +304,9 @@ export function AdminShowsPage() {
     (show) => show.name,
     (show) => show.contracts[0]?.service_date || show.starts_on,
   );
+  const assignmentOpportunity = assigning
+    ? publishedAvailability.data?.flatMap((batch) => batch.opportunities).find((item) => item.shows.some((show) => show.id === assigning.id))
+    : undefined;
   return (
     <main className="page">
       <AdminHeader
@@ -603,7 +576,7 @@ export function AdminShowsPage() {
                     </p>
                   </div>
                   <div className="show-card-actions">
-                    <button onClick={() => void openAssignments(show)} disabled={!contract}>
+                    <button onClick={() => setAssigning(show)} disabled={!contract}>
                       <UsersRound /> Assign user(s)
                     </button>
                     <button onClick={() => loadEdit(show)}>
@@ -646,7 +619,15 @@ export function AdminShowsPage() {
           })}
         </div>
       </PageState>
-      {assigning && <div className="modal-backdrop"><section className="assignment-modal" role="dialog" aria-modal="true"><div className="section-row"><div><p className="eyebrow">TEAM AVAILABILITY</p><h2>Assign user(s) · {assigning.name}</h2><p>Select the lead first. Availability responses are shown beside every active user.</p></div><button className="text-button" onClick={() => setAssigning(null)}>Close</button></div>{assignmentLoading && !availabilityPeople.length ? <p className="muted">Loading availability…</p> : <div className="assignment-availability-list">{availabilityPeople.map((person) => { const index = assignmentIds.indexOf(person.id); return <label key={person.id}><input type="checkbox" checked={index >= 0} onChange={(event) => setAssignmentIds(event.target.checked ? [...assignmentIds, person.id] : assignmentIds.filter((id) => id !== person.id))} /><span><strong>{person.full_name || "Unnamed user"}</strong><small>{person.role === "admin" ? "Admin" : "Driver"}{index === 0 ? " · Lead" : index > 0 ? " · Trainee" : ""}</small></span><em className={`availability-response ${person.availability_status || "pending"}`}>{person.availability_status === "available" ? "Available" : person.availability_status === "unavailable" ? "Unavailable" : person.availability_status === "assigned" ? "Assigned" : "No response"}</em></label>; })}</div>}<button className="button primary" disabled={assignmentLoading} onClick={() => void saveAssignments()}>{assignmentLoading ? "Saving…" : "Save assignments"}</button></section></div>}
+      {assigning && <AssignmentDialog
+        releaseItemId={assignmentOpportunity?.batch_id ? assignmentOpportunity.id : null}
+        showIds={assignmentOpportunity?.shows.map((show) => show.id) || [assigning.id]}
+        title={assignmentOpportunity ? assignmentOpportunity.shows.map((show) => show.artist || show.name).join(" & ") : assigning.name}
+        initialAssigneeIds={[...new Set([...(assigning.contracts[0]?.driver_id ? [assigning.contracts[0].driver_id] : []), ...(assigning.contracts[0]?.contract_drivers.map((item) => item.driver_id) || [])])]}
+        initialExternalNames={assigning.contracts[0]?.contract_external_assignees.sort((left, right) => left.position - right.position).map((item) => item.display_name) || []}
+        onClose={() => setAssigning(null)}
+        onSaved={async () => { await Promise.all([shows.refresh(), publishedAvailability.refresh()]); setMessage("Assignments updated."); setAssigning(null); }}
+      />}
       {deleting && (
         <div className="modal-backdrop" role="presentation">
           <section

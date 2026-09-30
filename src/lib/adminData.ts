@@ -121,6 +121,7 @@ export type AdminContract = {
     driver: { full_name: string; role: "driver" | "admin" } | null;
   }[];
   contract_checklists: { template_id: string }[];
+  contract_external_assignees: { id: string; display_name: string; position: number }[];
 };
 export type AdminShow = Show & {
   contracts: AdminContract[];
@@ -133,7 +134,7 @@ export async function getShowsAdmin() {
   const { data, error } = await supabase
     .from("shows")
     .select(
-      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id))",
+      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id),contract_external_assignees(id,display_name,position))",
     )
     .order("starts_on", { ascending: true });
   if (error) throw error;

@@ -3153,10 +3153,31 @@ h2 {
 .assigned-team { display: grid; justify-items: end; gap: 6px; text-align: right; }
 .assigned-team .status { display: inline-flex; align-items: center; gap: 5px; }
 .assigned-team svg { width: 15px; }
+.assignment-dialog { display: grid; gap: 18px; }
+.assignment-dialog:focus { outline: none; }
+.assignment-dialog .assignment-availability-list { margin-top: 0; }
+.assignment-response-detail { justify-items: end; }
+.external-assignment-section { display: grid; gap: 12px; padding: 15px; border: 1px solid var(--line); border-radius: 13px; background: color-mix(in srgb, var(--green2) 5%, var(--paper)); }
+.external-assignment-section > div:first-child { display: flex; align-items: center; gap: 10px; }
+.external-assignment-section > div:first-child > svg { color: var(--green2); width: 22px; }
+.external-assignment-section > div:first-child > span { display: grid; gap: 2px; }
+.external-assignment-section small { color: var(--muted); }
+.external-assignment-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; }
+.external-assignment-form input { width: 100%; }
+.external-name-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.external-name-list > span { display: grid; grid-template-columns: auto auto; gap: 1px 8px; position: relative; padding: 8px 38px 8px 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--paper); }
+.external-name-list > span button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 27px; height: 27px; padding: 4px; border: 0; background: transparent; color: var(--muted); }
+.external-name-list > span button svg { width: 16px; }
+.assignment-dialog-actions, .release-batch-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 @media (max-width: 650px) {
   .availability-toolbar .sort-control { margin-left: 0; }
   .availability-batch { padding: 11px; }
   .availability-batch-header { align-items: start; flex-direction: column; gap: 3px; }
+  .external-assignment-form { grid-template-columns: 1fr; }
+  .assignment-dialog-actions { align-items: stretch; flex-direction: column-reverse; }
+  .assignment-dialog-actions .button { width: 100%; justify-content: center; }
+  .assignment-response-detail { grid-column: 2; justify-items: start; }
+  .release-batch-actions { align-items: flex-end; flex-direction: column; }
 }
 
 [data-theme="dark"] .show-search,

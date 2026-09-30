@@ -1,6 +1,7 @@
 import { BellRing, CalendarDays, Check, CircleDollarSign, Search, Send, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AdminHeader } from "../components/AdminNav";
+import { AssignmentDialog } from "../components/AssignmentDialog";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
@@ -12,7 +13,7 @@ import {
 } from "../lib/availabilityData";
 import { availabilityOpportunityTitle } from "../lib/availabilityModel";
 import type { SortMode } from "../lib/listControls";
-import type { PublishableOpportunity } from "../types";
+import type { AvailabilityOpportunity, PublishableOpportunity } from "../types";
 
 export function AdminPublishContractsPage() {
   const publishable = useAsync(getPublishableOpportunities, []);
@@ -21,6 +22,7 @@ export function AdminPublishContractsPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("date");
   const [confirming, setConfirming] = useState(false);
+  const [assigning, setAssigning] = useState<AvailabilityOpportunity | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -133,7 +135,7 @@ export function AdminPublishContractsPage() {
           {batches.data?.map((batch) => (
             <article className="release-batch-card" key={batch.id || "assigned-work"}>
               <header><strong>{batch.id ? `Published ${new Date(batch.released_at).toLocaleString()}` : "Assigned work"}</strong><span>{batch.opportunities.filter((item) => item.status === "assigned").length}/{batch.opportunities.length} assigned</span></header>
-              {batch.opportunities.map((item) => <div key={item.id}><span><b>{availabilityOpportunityTitle(item)}</b><small className={`status status-${item.status}`}>{capitalize(item.status)}</small></span>{item.status === "open" && <button className="text-button" disabled={busy} onClick={() => void withdraw(item.id)}><X /> Withdraw</button>}</div>)}
+              {batch.opportunities.map((item) => <div key={item.id}><span><b>{availabilityOpportunityTitle(item)}</b><small className={`status status-${item.status}`}>{capitalize(item.status)}</small></span><span className="release-batch-actions"><button className="text-button" disabled={busy || item.status === "withdrawn"} onClick={() => setAssigning(item)}>{item.status === "assigned" ? "Edit assignment" : "View responses / Assign"}</button>{item.status === "open" && <button className="text-button" disabled={busy} onClick={() => void withdraw(item.id)}><X /> Withdraw</button>}</span></div>)}
             </article>
           ))}
         </PageState>
@@ -150,6 +152,15 @@ export function AdminPublishContractsPage() {
           </section>
         </div>
       )}
+      {assigning && <AssignmentDialog
+        releaseItemId={assigning.batch_id ? assigning.id : null}
+        showIds={assigning.shows.map((show) => show.id)}
+        title={availabilityOpportunityTitle(assigning)}
+        initialAssigneeIds={assigning.assignees.filter((person) => !person.external).map((person) => person.id)}
+        initialExternalNames={assigning.assignees.filter((person) => person.external).map((person) => person.full_name)}
+        onClose={() => setAssigning(null)}
+        onSaved={async () => { await Promise.all([publishable.refresh(), batches.refresh()]); setMessage("Assignments updated."); setAssigning(null); }}
+      />}
     </main>
   );
 }

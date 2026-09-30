@@ -305,16 +305,74 @@ language sql stable security definer set search_path=public as $$
       where ris.release_item_id=items.item_id
     ) people on true
     group by items.item_id
+  ), direct_rows as (
+    select null::uuid batch_id,coalesce(c.updated_at,c.created_at) batch_released_at,
+      c.id release_item_id,'assigned'::text item_status,
+      jsonb_build_array(jsonb_build_object(
+        'id',s.id,'name',s.name,'starts_on',s.starts_on,'ends_on',s.ends_on,
+        'city',s.city,'state',s.state,'address',s.address,'event_type',s.event_type,
+        'artist',s.artist,'venue_name',s.venue_name,'signing_at',s.signing_at,
+        'setup_at',s.setup_at,'is_test',s.is_test,'contract_id',c.id,
+        'contract_kind',c.kind,'service_date',c.service_date,'service_time',c.service_time,
+        'contract_pay',c.contract_pay,'bonus_pay',c.bonus_pay
+      )) shows,
+      null::text response_status,null::timestamptz responded_at,null::timestamptz available_at,
+      coalesce((
+        select jsonb_agg(people.person order by people.position)
+        from (
+          select jsonb_build_object('id',p.id,'full_name',p.full_name,'role',p.role,'external',false) person,
+            drivers.position
+          from (
+            select c.driver_id driver_id,0 position where c.driver_id is not null
+            union
+            select cd.driver_id,case when cd.is_trainee then 2 else 1 end
+            from public.contract_drivers cd where cd.contract_id=c.id
+          ) drivers
+          join public.profiles p on p.id=drivers.driver_id and p.is_active
+          union all
+          select jsonb_build_object('id',ce.id,'full_name',ce.display_name,'role','external','external',true),
+            ce.position+1000
+          from public.contract_external_assignees ce where ce.contract_id=c.id
+        ) people
+      ),'[]'::jsonb) assignees
+    from public.shows s
+    join lateral (
+      select current_contract.* from public.contracts current_contract
+      where current_contract.show_id=s.id order by current_contract.created_at desc limit 1
+    ) c on true
+    where s.ends_on>=current_date
+      and not exists(
+        select 1 from public.availability_release_item_shows ris
+        join public.availability_release_items ri on ri.id=ris.release_item_id
+        where ris.show_id=s.id and ri.status in ('open','assigned')
+      )
+      and (
+        public.is_admin()
+        or c.driver_id=auth.uid()
+        or public.is_contract_driver(c.id)
+      )
+      and (
+        c.driver_id is not null
+        or exists(select 1 from public.contract_drivers cd where cd.contract_id=c.id)
+        or (public.is_admin() and exists(select 1 from public.contract_external_assignees ce where ce.contract_id=c.id))
+      )
   )
-  select item_rows.batch_id,item_rows.released_at,item_rows.item_id,item_rows.status,
-    item_rows.shows,response.status,response.responded_at,response.available_at,
-    coalesce(assignment_rows.assignees,'[]'::jsonb)
+  select item_rows.batch_id,item_rows.released_at as batch_released_at,
+    item_rows.item_id as release_item_id,item_rows.status as item_status,
+    item_rows.shows,response.status as response_status,response.responded_at,response.available_at,
+    coalesce(assignment_rows.assignees,'[]'::jsonb) as assignees
   from item_rows
   left join public.availability_release_responses response
     on response.release_item_id=item_rows.item_id and response.profile_id=auth.uid()
   left join assignment_rows on assignment_rows.item_id=item_rows.item_id
   where exists(select 1 from public.profiles p where p.id=auth.uid() and p.is_active)
-  order by item_rows.released_at desc,item_rows.item_id
+  union all
+  select direct_rows.batch_id,direct_rows.batch_released_at,direct_rows.release_item_id,
+    direct_rows.item_status,direct_rows.shows,direct_rows.response_status,
+    direct_rows.responded_at,direct_rows.available_at,direct_rows.assignees
+  from direct_rows
+  where exists(select 1 from public.profiles p where p.id=auth.uid() and p.is_active)
+  order by batch_released_at desc,release_item_id
 $$;
 
 create or replace function public.set_my_release_response(
@@ -412,8 +470,12 @@ begin
   if not public.is_admin() then raise exception 'Admin access required'; end if;
   select array_agg(distinct value order by value) into clean_show_ids
     from unnest(coalesce(target_show_ids,array[]::uuid[])) value;
-  select array_agg(distinct value order by value) into clean_driver_ids
-    from unnest(coalesce(target_driver_ids,array[]::uuid[])) value;
+  select array_agg(value order by first_position) into clean_driver_ids
+  from (
+    select distinct on (value) value,ordinality first_position
+    from unnest(coalesce(target_driver_ids,array[]::uuid[])) with ordinality input(value,ordinality)
+    order by value,ordinality
+  ) ordered_drivers;
   select array_agg(name order by first_position) into clean_external_names
   from (
     select distinct on (lower(trim(value))) ordinality first_position,trim(value) name
@@ -434,8 +496,8 @@ begin
 
   if target_release_item is not null then
     perform 1 from public.availability_release_items
-      where id=target_release_item and status='open' for update;
-    if not found then raise exception 'This opportunity has already been assigned or withdrawn'; end if;
+      where id=target_release_item and status in ('open','assigned') for update;
+    if not found then raise exception 'This opportunity has been withdrawn or removed'; end if;
     if coalesce(cardinality(clean_driver_ids),0)+coalesce(cardinality(clean_external_names),0)=0 then
       raise exception 'Choose at least one driver';
     end if;

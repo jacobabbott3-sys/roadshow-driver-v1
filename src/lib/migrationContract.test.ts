@@ -37,4 +37,7 @@ test("Beta 5A migration keeps release timestamps and external names server contr
   assert.match(sql, /check\s*\(char_length\(display_name\) between 1 and 120\)/);
   assert.match(sql, /unique index[\s\S]*lower\(display_name\)/);
   assert.match(sql, /for update/);
+  assert.match(sql, /array_agg\(value order by first_position\) into clean_driver_ids/);
+  assert.match(sql, /null::uuid batch_id[\s\S]*'assigned'::text item_status/);
+  assert.match(sql, /status in \('open','assigned'\) for update/);
 });

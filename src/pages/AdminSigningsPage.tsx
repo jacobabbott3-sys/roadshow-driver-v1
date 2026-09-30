@@ -2,6 +2,7 @@ import { BriefcaseBusiness, CalendarPlus, Clock3, Link2, MapPin, PenLine, Pencil
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
+import { AssignmentDialog } from "../components/AssignmentDialog";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
@@ -10,14 +11,13 @@ import {
   deleteShow,
   getShowLinks,
   getShowsAdmin,
-  getTeamMembers,
   getTemplates,
   saveShowContract,
   saveShowLinks,
-  updateLinkedSigningAssignments,
   updateShow,
   type AdminShow,
 } from "../lib/adminData";
+import { getPublishedAvailability } from "../lib/availabilityData";
 import { sortList, type SortMode } from "../lib/listControls";
 
 type FormState = {
@@ -37,9 +37,9 @@ const blank: FormState = { artist: "", signing_at: "", setup_at: "", location: "
 
 export function AdminSigningsPage() {
   const shows = useAsync(getShowsAdmin, []);
-  const team = useAsync(getTeamMembers, []);
   const templates = useAsync(getTemplates, []);
   const links = useAsync(getShowLinks, []);
+  const publishedAvailability = useAsync(getPublishedAvailability, []);
   const [sort, setSort] = useState<SortMode>("date");
   const signings = sortList(
     shows.data?.filter((show) => show.event_type === "signing") || [],
@@ -51,6 +51,7 @@ export function AdminSigningsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<AdminShow | null>(null);
+  const [assigning, setAssigning] = useState<AdminShow | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -115,7 +116,6 @@ export function AdminSigningsPage() {
         template_id: form.template_id,
       });
       await saveShowLinks(showId, form.linked_ids);
-      await updateLinkedSigningAssignments([showId, ...form.linked_ids], form.assignee_ids);
       close();
       setMessage("Signing saved.");
       await Promise.all([shows.refresh(), links.refresh()]);
@@ -150,17 +150,41 @@ export function AdminSigningsPage() {
             <label className="wide-field">Street address<input value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} /></label>
             <label>Checklist (optional)<select value={form.template_id} onChange={(event) => setForm({ ...form, template_id: event.target.value })}><option value="">No checklist</option>{templates.data?.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
           </div>
-          <fieldset className="driver-selector"><legend>Assigned team members</legend><p>The first selected person is the lead.</p><div>{team.data?.map((person) => { const index = form.assignee_ids.indexOf(person.id); return <label key={person.id}><input type="checkbox" checked={index >= 0} onChange={(event) => setForm({ ...form, assignee_ids: event.target.checked ? [...form.assignee_ids, person.id] : form.assignee_ids.filter((id) => id !== person.id) })} /><span>{person.full_name}</span><small>{person.role === "admin" ? "Admin" : "Driver"}{index === 0 ? " · Lead" : index > 0 ? " · Team" : ""}</small></label>; })}</div></fieldset>
           <fieldset className="driver-selector"><legend>Linked signings</legend><p>Connect related signings so the assigned team can move between them easily.</p><div>{signings.filter((signing) => signing.id !== editing).map((signing) => <label key={signing.id}><input type="checkbox" checked={form.linked_ids.includes(signing.id)} onChange={(event) => setForm({ ...form, linked_ids: event.target.checked ? [...form.linked_ids, signing.id] : form.linked_ids.filter((id) => id !== signing.id) })} /><span>{signing.artist || signing.name}</span><small>{formatDateTime(signing.signing_at)}</small></label>)}</div></fieldset>
           <button className="button primary" disabled={busy}>{busy ? "Saving…" : "Save signing"}</button>
         </form>
       )}
-      <PageState loading={shows.loading || team.loading || templates.loading || links.loading} error={shows.error || team.error || templates.error || links.error} empty={!signings.length}>
-        <div className="admin-show-list">{signings.map((signing) => { const contract = signing.contracts[0]; const linkedCount = (links.data || []).filter((link) => link.show_id === signing.id || link.linked_show_id === signing.id).length; return <article className="admin-show-card" key={signing.id}><div className="admin-show-head"><span className="show-booth-icon"><PenLine /></span><div><h2>{signing.artist || signing.name}</h2><p><MapPin /> {signing.venue_name || signing.address || signing.city}</p></div><div className="show-card-actions"><button onClick={() => loadEdit(signing)}><Pencil /> Edit</button><button className="delete-action" onClick={() => setDeleting(signing)}><Trash2 /> Delete</button></div></div><div className="contract-summary"><Clock3 /><span><strong>{formatDateTime(signing.signing_at)}</strong><small>Setup: {formatDateTime(signing.setup_at)}</small><small><UsersRound /> {contract?.contract_drivers.length || 0} assigned · <Link2 /> {linkedCount} linked</small></span></div></article>; })}</div>
+      <PageState loading={shows.loading || templates.loading || links.loading} error={shows.error || templates.error || links.error} empty={!signings.length}>
+        <div className="admin-show-list">{signings.map((signing) => { const contract = signing.contracts[0]; const linkedCount = (links.data || []).filter((link) => link.show_id === signing.id || link.linked_show_id === signing.id).length; return <article className="admin-show-card" key={signing.id}><div className="admin-show-head"><span className="show-booth-icon"><PenLine /></span><div><h2>{signing.artist || signing.name}</h2><p><MapPin /> {signing.venue_name || signing.address || signing.city}</p></div><div className="show-card-actions"><button onClick={() => setAssigning(signing)} disabled={!contract}><UsersRound /> Assign user(s)</button><button onClick={() => loadEdit(signing)}><Pencil /> Edit</button><button className="delete-action" onClick={() => setDeleting(signing)}><Trash2 /> Delete</button></div></div><div className="contract-summary"><Clock3 /><span><strong>{formatDateTime(signing.signing_at)}</strong><small>Setup: {formatDateTime(signing.setup_at)}</small><small><UsersRound /> {contract?.contract_drivers.length || 0} assigned · <Link2 /> {linkedCount} linked</small></span></div></article>; })}</div>
       </PageState>
+      {assigning && <AssignmentDialog
+        releaseItemId={findPublishedOpportunity(publishedAvailability.data || [], assigning.id)?.batch_id ? findPublishedOpportunity(publishedAvailability.data || [], assigning.id)!.id : null}
+        showIds={findPublishedOpportunity(publishedAvailability.data || [], assigning.id)?.shows.map((show) => show.id) || linkedShowIds(assigning.id, links.data || [])}
+        title={findPublishedOpportunity(publishedAvailability.data || [], assigning.id)?.shows.map((show) => show.artist || show.name).join(" & ") || assigning.artist || assigning.name}
+        initialAssigneeIds={[...new Set([...(assigning.contracts[0]?.driver_id ? [assigning.contracts[0].driver_id] : []), ...(assigning.contracts[0]?.contract_drivers.map((item) => item.driver_id) || [])])]}
+        initialExternalNames={assigning.contracts[0]?.contract_external_assignees.sort((left, right) => left.position - right.position).map((item) => item.display_name) || []}
+        onClose={() => setAssigning(null)}
+        onSaved={async () => { await Promise.all([shows.refresh(), publishedAvailability.refresh()]); setMessage("Assignments updated."); setAssigning(null); }}
+      />}
       {deleting && <div className="modal-backdrop"><section className="confirm-modal" role="dialog" aria-modal="true"><span className="danger-icon"><Trash2 /></span><h2>Delete this signing?</h2><p>This removes its assignments and checklist progress.</p><div><button onClick={() => setDeleting(null)}>Cancel</button><button className="confirm-delete" onClick={() => void remove()} disabled={busy}>{busy ? "Deleting…" : "Delete signing"}</button></div></section></div>}
     </main>
   );
+}
+
+function findPublishedOpportunity(batches: import("../types").AvailabilityBatch[], showId: string) {
+  return batches.flatMap((batch) => batch.opportunities).find((item) => item.shows.some((show) => show.id === showId));
+}
+function linkedShowIds(showId: string, links: { show_id: string; linked_show_id: string }[]) {
+  const connected = new Set([showId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const link of links) {
+      if (connected.has(link.show_id) && !connected.has(link.linked_show_id)) { connected.add(link.linked_show_id); changed = true; }
+      if (connected.has(link.linked_show_id) && !connected.has(link.show_id)) { connected.add(link.show_id); changed = true; }
+    }
+  }
+  return [...connected];
 }
 
 function toLocalInput(value: string | null) { if (!value) return ""; const date = new Date(value); const offset = date.getTimezoneOffset() * 60_000; return new Date(date.getTime() - offset).toISOString().slice(0, 16); }
