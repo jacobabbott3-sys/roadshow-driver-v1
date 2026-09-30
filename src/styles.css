@@ -3138,6 +3138,27 @@ h2 {
   .publish-selected-button { width: 100%; justify-content: center; }
 }
 
+.availability-toolbar { margin-bottom: 20px; }
+.availability-toolbar .show-search { margin-left: 0; }
+.availability-toolbar .sort-control { margin-left: auto; }
+.availability-batches { display: grid; gap: 22px; }
+.availability-batch { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 19px; background: color-mix(in srgb, var(--paper) 92%, var(--green2)); transition: border-color .2s, box-shadow .2s; }
+.availability-batch.targeted { border-color: var(--green2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green2) 18%, transparent); }
+.availability-batch-header { display: flex; align-items: end; justify-content: space-between; gap: 14px; padding: 0 3px; }
+.availability-batch-header h2 { margin: 2px 0 0; font-size: 1.25rem; }
+.availability-batch-header small { color: var(--muted); }
+.availability-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.availability-title-row h3 { margin: 0; font-size: 1.08rem; }
+.availability-card-withdrawn { opacity: .72; }
+.assigned-team { display: grid; justify-items: end; gap: 6px; text-align: right; }
+.assigned-team .status { display: inline-flex; align-items: center; gap: 5px; }
+.assigned-team svg { width: 15px; }
+@media (max-width: 650px) {
+  .availability-toolbar .sort-control { margin-left: 0; }
+  .availability-batch { padding: 11px; }
+  .availability-batch-header { align-items: start; flex-direction: column; gap: 3px; }
+}
+
 [data-theme="dark"] .show-search,
 [data-theme="dark"] .drag-handle { background: #26332d; color: #e8f3ee; }
 
