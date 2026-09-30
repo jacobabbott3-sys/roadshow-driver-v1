@@ -9,6 +9,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
@@ -345,6 +346,7 @@ export function AdminShowsPage() {
         <button className="button primary" onClick={startNew}>
           <CalendarPlus /> Create show
         </button>
+        <Link className="button secondary" to="/admin/shows/publish"><BriefcaseBusiness /> Publish Contracts</Link>
         <label className="admin-search show-search"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shows, cities, or addresses" aria-label="Search shows" /></label>
         <SortButton value={sort} onChange={setSort} />
       </div>

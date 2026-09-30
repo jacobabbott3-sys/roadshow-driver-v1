@@ -1,5 +1,6 @@
-import { CalendarPlus, Clock3, Link2, MapPin, PenLine, Pencil, Trash2, UsersRound } from "lucide-react";
+import { BriefcaseBusiness, CalendarPlus, Clock3, Link2, MapPin, PenLine, Pencil, Trash2, UsersRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
@@ -134,7 +135,7 @@ export function AdminSigningsPage() {
   return (
     <main className="page">
       <AdminHeader eyebrow="SCHEDULING" title="Signings" description="Schedule artist signings, assign teams and checklists, and connect related appearances." backTo="/admin" />
-      <div className="admin-actions show-list-toolbar"><button className="button primary" onClick={startNew}><CalendarPlus /> Create signing</button><SortButton value={sort} onChange={setSort} /></div>
+      <div className="admin-actions show-list-toolbar"><button className="button primary" onClick={startNew}><CalendarPlus /> Create signing</button><Link className="button secondary" to="/admin/shows/publish"><BriefcaseBusiness /> Publish Contracts</Link><SortButton value={sort} onChange={setSort} /></div>
       {message && <p className="notice">{message}</p>}
       {open && (
         <form className="admin-form unified-show-form" onSubmit={save}>

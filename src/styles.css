@@ -3104,6 +3104,40 @@ h2 {
   .inventory-form.draggable-template-row > button { grid-column: 3; grid-row: 1 / span 2; }
 }
 
+.publish-workspace { display: grid; gap: 18px; }
+.publish-toolbar { margin: 0; }
+.selection-count { color: var(--green2); font-size: .82rem; font-weight: 800; }
+.publish-select-all { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 800; }
+.publish-select-all input, .publish-opportunity-card > input { width: 18px; height: 18px; accent-color: var(--green2); }
+.publish-opportunity-list { display: grid; gap: 11px; }
+.publish-opportunity-card { display: grid; grid-template-columns: auto auto minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); cursor: pointer; }
+.publish-opportunity-card.selected { border-color: var(--green2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--green2) 20%, transparent); }
+.publish-check { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--green2) 12%, var(--paper)); color: transparent; }
+.publish-opportunity-card.selected .publish-check { background: var(--green2); color: white; }
+.publish-check svg { width: 17px; }
+.publish-opportunity-main, .publish-pay { display: grid; gap: 5px; }
+.publish-opportunity-main small, .publish-pay small { color: var(--muted); }
+.publish-opportunity-main small { display: flex; align-items: center; gap: 6px; }
+.publish-opportunity-main small svg, .publish-pay > svg { width: 16px; }
+.publish-pay { min-width: 150px; text-align: right; justify-items: end; font-weight: 800; }
+.publish-selected-button { justify-self: end; }
+.recent-release-batches { display: grid; gap: 14px; }
+.release-batch-card { border: 1px solid var(--line); border-radius: 15px; background: var(--paper); overflow: hidden; }
+.release-batch-card > header, .release-batch-card > div { padding: 13px 15px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.release-batch-card > header { background: color-mix(in srgb, var(--green2) 8%, var(--paper)); }
+.release-batch-card > div + div { border-top: 1px solid var(--line); }
+.release-batch-card > div > span { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.publish-confirm-modal { max-width: 620px; }
+.publish-confirm-list { width: 100%; max-height: 320px; overflow: auto; display: grid; gap: 8px; margin: 12px 0; text-align: left; }
+.publish-confirm-list > div { display: grid; gap: 3px; padding: 11px; border: 1px solid var(--line); border-radius: 11px; }
+.publish-confirm-list span, .publish-confirm-list small { color: var(--muted); }
+[data-theme="dark"] .publish-opportunity-card.selected { box-shadow: 0 0 0 2px color-mix(in srgb, var(--green2) 38%, transparent); }
+@media (max-width: 650px) {
+  .publish-opportunity-card { grid-template-columns: auto auto minmax(0,1fr); }
+  .publish-pay { grid-column: 3; min-width: 0; text-align: left; justify-items: start; }
+  .publish-selected-button { width: 100%; justify-content: center; }
+}
+
 [data-theme="dark"] .show-search,
 [data-theme="dark"] .drag-handle { background: #26332d; color: #e8f3ee; }
 

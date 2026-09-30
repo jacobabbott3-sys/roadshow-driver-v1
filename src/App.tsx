@@ -6,6 +6,7 @@ import { AdminChecklistsPage } from "./pages/AdminChecklistsPage";
 import { AdminOperationsPage } from "./pages/AdminOperationsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { AdminShowsPage } from "./pages/AdminShowsPage";
+import { AdminPublishContractsPage } from "./pages/AdminPublishContractsPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AdminSigningsPage } from "./pages/AdminSigningsPage";
 import { AdminTemplatesPage } from "./pages/AdminTemplatesPage";
@@ -56,6 +57,7 @@ export default function App() {
             <Route element={<AdminRoute />}>
               <Route path="admin" element={<AdminPage />} />
               <Route path="admin/shows" element={<AdminShowsPage />} />
+              <Route path="admin/shows/publish" element={<AdminPublishContractsPage />} />
               <Route path="admin/signings" element={<AdminSigningsPage />} />
               <Route path="admin/templates" element={<AdminTemplatesPage />} />
               <Route
