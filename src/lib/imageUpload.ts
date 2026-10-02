@@ -1,6 +1,9 @@
 export const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
+export const MAX_RESOURCE_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_LONG_EDGE = 4800;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_PHOTO_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+const PDF_TYPE = "application/pdf";
 
 type PrepareDependencies = {
   dimensions: (file: File) => Promise<{ width: number; height: number }>;
@@ -22,8 +25,35 @@ type UploadDependencies = {
 };
 
 export function validatePhoto(file: File) {
-  if (!ALLOWED_TYPES.has(file.type)) throw new Error("Choose a JPEG, PNG, or WebP photo.");
+  if (!isSupportedPhoto(file)) throw new Error("Choose a JPEG, PNG, or WebP photo.");
   if (file.size > MAX_PHOTO_BYTES) throw new Error("Photos must be 20 MB or smaller.");
+}
+
+export function validateResourceFile(file: File) {
+  const kind = classifyResourceFile(file);
+  if (!kind) throw new Error("Choose an image or PDF file.");
+  if (file.size > MAX_RESOURCE_FILE_BYTES) throw new Error("Resource files must be 20 MB or smaller.");
+}
+
+export function classifyResourceFile(file: File): "image" | "pdf" | null {
+  if (file.type === PDF_TYPE || extensionForAny(file.name) === "pdf") return "pdf";
+  return isSupportedPhoto(file) ? "image" : null;
+}
+
+export function normalizePhotoFile(file: File) {
+  validatePhoto(file);
+  return file.type ? file : withContentType(file, photoContentType(file));
+}
+
+export function normalizeResourceFile(file: File) {
+  validateResourceFile(file);
+  if (file.type) return file;
+  return withContentType(file, classifyResourceFile(file) === "pdf" ? PDF_TYPE : photoContentType(file));
+}
+
+export function resourceFileKindFromPath(path: string | null): "image" | "pdf" | null {
+  if (!path) return null;
+  return extensionForAny(path) === "pdf" ? "pdf" : "image";
 }
 
 export async function preparePhoto(file: File, dependencies: PrepareDependencies = browserPrepareDependencies) {
@@ -53,10 +83,11 @@ export async function uploadContractPhoto(input: {
   };
   input.onProgress?.(5);
   const prepared = await dependencies.prepare(input.file);
+  const uploadFile = normalizePhotoFile(prepared.file);
   input.onProgress?.(30);
-  const path = `${input.userId}/${input.contractId}/${dependencies.randomUUID()}-${normalizedPhotoName(prepared.file.name, prepared.optimized)}`;
+  const path = `${input.userId}/${input.contractId}/${dependencies.randomUUID()}-${normalizedPhotoName(uploadFile.name, prepared.optimized)}`;
   const bucket = dependencies.client.storage.from("roadshow-photos");
-  const { error: uploadError } = await bucket.upload(path, prepared.file, { contentType: prepared.file.type, upsert: false });
+  const { error: uploadError } = await bucket.upload(path, uploadFile, { contentType: uploadFile.type, upsert: false });
   if (uploadError) throw asError(uploadError, "Unable to upload the photo.");
   input.onProgress?.(80);
   const { error: recordError } = await dependencies.client.from("photos").insert({
@@ -81,8 +112,28 @@ export function normalizedPhotoName(value: string, forceJpeg = false) {
 }
 
 function extensionFor(name: string) {
-  const extension = name.split(".").at(-1)?.toLocaleLowerCase();
+  const extension = extensionForAny(name);
   return extension === "jpeg" || extension === "jpg" || extension === "png" || extension === "webp" ? extension : "jpg";
+}
+
+function extensionForAny(name: string) {
+  return name.split(".").at(-1)?.toLocaleLowerCase() || "";
+}
+
+function isSupportedPhoto(file: File) {
+  return ALLOWED_TYPES.has(file.type) || (!file.type && ALLOWED_PHOTO_EXTENSIONS.has(extensionForAny(file.name)));
+}
+
+function photoContentType(file: File) {
+  if (file.type) return file.type;
+  const extension = extensionForAny(file.name);
+  if (extension === "png") return "image/png";
+  if (extension === "webp") return "image/webp";
+  return "image/jpeg";
+}
+
+function withContentType(file: File, type: string) {
+  return new File([file], file.name, { type, lastModified: file.lastModified });
 }
 
 function asError(value: unknown, fallback: string) {

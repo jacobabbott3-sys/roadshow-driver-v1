@@ -37,6 +37,7 @@ export type AdminResource = {
   title: string;
   content: string | null;
   file_path: string | null;
+  file_type: "image" | "pdf" | null;
   position: number;
   published: boolean;
 };
@@ -538,7 +539,7 @@ export async function getFeedback() {
 export async function getAdminResources() {
   const { data, error } = await supabase
     .from("resources")
-    .select("id,kind,title,content,file_path,position,published")
+    .select("id,kind,title,content,file_path,file_type,position,published")
     .order("position")
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -550,6 +551,7 @@ export async function saveResource(resource: Omit<AdminResource, "id"> & { id?: 
     title: resource.title.trim(),
     content: resource.content?.trim() || null,
     file_path: resource.file_path,
+    file_type: resource.file_type,
     position: resource.position,
     published: resource.published,
   };

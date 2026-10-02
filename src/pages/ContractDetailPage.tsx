@@ -349,8 +349,8 @@ export function ContractDetailPage() {
                       {photo ? <ImageViewer src={photo.signed_url} alt={`${slot} view`} /> : <Camera />}
                       <strong>{slot}</strong>
                       <label className="photo-upload-action">
-                        <span>{busy === slot ? `Uploading… ${uploadProgress[slot] || 0}%` : photo ? "Replace photo" : "Tap to upload"}</span>
-                        <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy === slot} onChange={(event) => { const input = event.currentTarget; const selected = input.files?.[0]; if (selected) void upload(selected, slot).finally(() => { input.value = ""; }); }} />
+                        <span>{busy === slot ? `Uploading… ${uploadProgress[slot] || 0}%` : photo ? "Replace photo" : "Choose or take photo"}</span>
+                        <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" disabled={busy === slot} onChange={(event) => { const input = event.currentTarget; const selected = input.files?.[0]; if (selected) void upload(selected, slot).finally(() => { input.value = ""; }); }} />
                         <Upload />
                       </label>
                       {busy === slot && <progress className="photo-upload-progress" max="100" value={uploadProgress[slot] || 0} aria-label={`${slot} upload progress`} />}

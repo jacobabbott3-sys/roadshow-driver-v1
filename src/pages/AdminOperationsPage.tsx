@@ -34,6 +34,7 @@ import {
 } from "../lib/adminData";
 import { supabase } from "../lib/supabase";
 import { matchesListSearch } from "../lib/listControls";
+import { classifyResourceFile, normalizeResourceFile } from "../lib/imageUpload";
 export function AdminOperationsPage() {
   const resources = useAsync(getAdminResources, []),
     feedback = useAsync(getFeedback, []),
@@ -46,6 +47,7 @@ export function AdminOperationsPage() {
       kind: "faq" as "faq" | "handbook" | "link",
       content: "",
       file_path: null as string | null,
+      file_type: null as "image" | "pdf" | null,
       position: 0,
       published: true,
     };
@@ -67,25 +69,26 @@ export function AdminOperationsPage() {
     e.preventDefault();
     setMessage("");
     let file_path = resource.kind !== "handbook" || removeResourceFile ? null : resource.file_path;
+    let file_type = resource.kind !== "handbook" || removeResourceFile ? null : resource.file_type;
     let uploadedPath: string | null = null;
-    if (resourceFile) {
-      uploadedPath = `red-folder/${crypto.randomUUID()}-${resourceFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
-      const { error: uploadError } = await supabase.storage
-        .from("resources")
-        .upload(uploadedPath, resourceFile);
-      if (uploadError) {
-        setMessage(uploadError.message);
-        return;
-      }
-      file_path = uploadedPath;
-    }
     try {
+      if (resourceFile) {
+        const uploadFile = normalizeResourceFile(resourceFile);
+        file_type = classifyResourceFile(uploadFile);
+        uploadedPath = `red-folder/${crypto.randomUUID()}-${uploadFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+        const { error: uploadError } = await supabase.storage
+          .from("resources")
+          .upload(uploadedPath, uploadFile, { contentType: uploadFile.type });
+        if (uploadError) throw uploadError;
+        file_path = uploadedPath;
+      }
       await saveResource({
         id: resource.id || undefined,
         title: resource.title,
         kind: resource.kind,
         content: resource.content,
         file_path,
+        file_type,
         position: resource.position,
         published: resource.published,
       });
@@ -204,14 +207,14 @@ export function AdminOperationsPage() {
             {resource.kind === "handbook" && (
               <>
                 <label>
-                  {resource.file_path ? "Replace picture (optional)" : "Picture (optional)"}
+                  {resource.file_path ? "Replace attachment (optional)" : "Image or PDF (optional)"}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"
                     onChange={(e) => { setResourceFile(e.target.files?.[0] || null); setRemoveResourceFile(false); }}
                   />
                 </label>
-                {resource.file_path && <label className="checkbox-field"><input type="checkbox" checked={removeResourceFile} onChange={(e) => { setRemoveResourceFile(e.target.checked); if (e.target.checked) setResourceFile(null); }} /> Remove current picture</label>}
+                {resource.file_path && <label className="checkbox-field"><input type="checkbox" checked={removeResourceFile} onChange={(e) => { setRemoveResourceFile(e.target.checked); if (e.target.checked) setResourceFile(null); }} /> Remove current attachment</label>}
               </>
             )}
             <label>
@@ -230,9 +233,9 @@ export function AdminOperationsPage() {
               return (
               <div className="simple-row resource-admin-row" key={r.id}>
                 {r.kind === "faq" ? <HelpCircle /> : <Image />}
-                <span><strong>{r.title}</strong><small>{r.published ? "Published" : "Draft"} · Order {r.position}{r.file_path ? " · Picture attached" : ""}</small></span>
+                <span><strong>{r.title}</strong><small>{r.published ? "Published" : "Draft"} · Order {r.position}{r.file_path ? ` · ${r.file_type === "pdf" ? "PDF" : "Picture"} attached` : ""}</small></span>
                 <span className="reorder-actions"><button disabled={index === 0} aria-label={`Move ${r.title} up`} onClick={() => void moveResource(index, -1)}><ArrowUp /></button><button disabled={index === (resources.data?.length || 0) - 1} aria-label={`Move ${r.title} down`} onClick={() => void moveResource(index, 1)}><ArrowDown /></button></span>
-                <button className="icon-text-button" onClick={() => { setResource({ id: r.id, title: r.title, kind: r.kind, content: r.content || "", file_path: r.file_path, position: r.position, published: r.published }); setResourceFile(null); setRemoveResourceFile(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button>
+                <button className="icon-text-button" onClick={() => { setResource({ id: r.id, title: r.title, kind: r.kind, content: r.content || "", file_path: r.file_path, file_type: r.file_type, position: r.position, published: r.published }); setResourceFile(null); setRemoveResourceFile(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button>
                 <button className="icon-text-button delete-action" onClick={() => void removeResource(r.id, r.file_path)}><Trash2 /> Delete</button>
               </div>
               );

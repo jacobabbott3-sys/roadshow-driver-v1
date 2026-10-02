@@ -74,6 +74,7 @@ export type Resource = {
   title: string;
   content: string | null;
   file_path: string | null;
+  file_type: "image" | "pdf" | null;
 };
 export type ChecklistItem = {
   id: string;
@@ -323,7 +324,7 @@ export async function getShowLinks() {
 export async function getResources() {
   const { data, error } = await supabase
     .from("resources")
-    .select("id,kind,title,content,file_path")
+    .select("id,kind,title,content,file_path,file_type")
     .eq("published", true)
     .order("position");
   if (error) throw error;

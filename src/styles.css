@@ -2072,6 +2072,11 @@ h2 {
 .zoomable-image > span svg { width: 14px; }
 .red-folder-grid .zoomable-image { margin-bottom: 12px; }
 .red-folder-grid .zoomable-image img { max-height: 340px; }
+.pdf-resource { display: grid; place-items: center; gap: 10px; margin-bottom: 12px; padding: 24px 16px; border-radius: 10px; background: color-mix(in srgb, var(--green) 7%, var(--paper)); text-align: center; }
+.pdf-resource > svg { width: 42px; height: 42px; color: var(--green2); }
+.pdf-resource-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.pdf-resource-actions .button { display: inline-flex; width: auto; align-items: center; gap: 6px; }
+.pdf-resource-actions .button svg { width: 16px; height: 16px; }
 .photo-slot.has-photo { padding: 10px; cursor: default; }
 .photo-slot .zoomable-image { min-height: 110px; }
 .photo-slot .zoomable-image img { height: 150px; }
