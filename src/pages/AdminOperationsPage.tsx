@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { AdminHeader } from "../components/AdminNav";
+import { ListSearch } from "../components/ListSearch";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
 import {
@@ -32,6 +33,8 @@ import {
   updateToolbagItem,
 } from "../lib/adminData";
 import { supabase } from "../lib/supabase";
+import { matchesListSearch } from "../lib/listControls";
+import { classifyResourceFile, normalizeResourceFile } from "../lib/imageUpload";
 export function AdminOperationsPage() {
   const resources = useAsync(getAdminResources, []),
     feedback = useAsync(getFeedback, []),
@@ -44,6 +47,7 @@ export function AdminOperationsPage() {
       kind: "faq" as "faq" | "handbook" | "link",
       content: "",
       file_path: null as string | null,
+      file_type: null as "image" | "pdf" | null,
       position: 0,
       published: true,
     };
@@ -55,30 +59,36 @@ export function AdminOperationsPage() {
     [openBag, setOpenBag] = useState<string | null>(null),
     [item, setItem] = useState({ name: "", quantity: 1 }),
     [editingItem, setEditingItem] = useState<string | null>(null),
+    [search, setSearch] = useState(""),
     [message, setMessage] = useState("");
+  const visibleResources = resources.data?.filter((entry) => matchesListSearch(search, entry.title, entry.kind, entry.content, entry.published ? "published" : "draft")) || [];
+  const visibleToolbags = toolbags.data?.filter((toolbag) => matchesListSearch(search, toolbag.number, toolbag.driver?.full_name, toolbag.driver?.role, ...toolbag.items.map((entry) => entry.name))) || [];
+  const visibleFeedback = feedback.data?.filter((entry) => matchesListSearch(search, entry.profile?.full_name, entry.category, entry.message, entry.status)) || [];
+  const resultCount = visibleResources.length + visibleToolbags.length + visibleFeedback.length;
   async function submitResource(e: FormEvent) {
     e.preventDefault();
     setMessage("");
     let file_path = resource.kind !== "handbook" || removeResourceFile ? null : resource.file_path;
+    let file_type = resource.kind !== "handbook" || removeResourceFile ? null : resource.file_type;
     let uploadedPath: string | null = null;
-    if (resourceFile) {
-      uploadedPath = `red-folder/${crypto.randomUUID()}-${resourceFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
-      const { error: uploadError } = await supabase.storage
-        .from("resources")
-        .upload(uploadedPath, resourceFile);
-      if (uploadError) {
-        setMessage(uploadError.message);
-        return;
-      }
-      file_path = uploadedPath;
-    }
     try {
+      if (resourceFile) {
+        const uploadFile = normalizeResourceFile(resourceFile);
+        file_type = classifyResourceFile(uploadFile);
+        uploadedPath = `red-folder/${crypto.randomUUID()}-${uploadFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+        const { error: uploadError } = await supabase.storage
+          .from("resources")
+          .upload(uploadedPath, uploadFile, { contentType: uploadFile.type });
+        if (uploadError) throw uploadError;
+        file_path = uploadedPath;
+      }
       await saveResource({
         id: resource.id || undefined,
         title: resource.title,
         kind: resource.kind,
         content: resource.content,
         file_path,
+        file_type,
         position: resource.position,
         published: resource.published,
       });
@@ -153,6 +163,7 @@ export function AdminOperationsPage() {
         backTo="/admin"
       />
       {message && <div className="notice">{message}</div>}
+      <ListSearch value={search} onChange={setSearch} placeholder="Search resources, toolbags, or feedback" label="Search resources and toolbags" resultCount={resultCount} />
       <div className="operations-grid">
         <section className="admin-section">
           <h2>
@@ -196,14 +207,14 @@ export function AdminOperationsPage() {
             {resource.kind === "handbook" && (
               <>
                 <label>
-                  {resource.file_path ? "Replace picture (optional)" : "Picture (optional)"}
+                  {resource.file_path ? "Replace attachment (optional)" : "Image or PDF (optional)"}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"
                     onChange={(e) => { setResourceFile(e.target.files?.[0] || null); setRemoveResourceFile(false); }}
                   />
                 </label>
-                {resource.file_path && <label className="checkbox-field"><input type="checkbox" checked={removeResourceFile} onChange={(e) => { setRemoveResourceFile(e.target.checked); if (e.target.checked) setResourceFile(null); }} /> Remove current picture</label>}
+                {resource.file_path && <label className="checkbox-field"><input type="checkbox" checked={removeResourceFile} onChange={(e) => { setRemoveResourceFile(e.target.checked); if (e.target.checked) setResourceFile(null); }} /> Remove current attachment</label>}
               </>
             )}
             <label>
@@ -217,15 +228,18 @@ export function AdminOperationsPage() {
             {resource.id && <button type="button" className="button secondary" onClick={() => { setResource(blankResource); setResourceFile(null); setRemoveResourceFile(false); }}>Cancel editing</button>}
           </form>
           <PageState loading={resources.loading} error={resources.error}>
-            {resources.data?.map((r, index) => (
+            {!visibleResources.length && search ? <div className="inline-empty">No resources match “{search}”.</div> : visibleResources.map((r) => {
+              const index = resources.data?.findIndex((entry) => entry.id === r.id) ?? -1;
+              return (
               <div className="simple-row resource-admin-row" key={r.id}>
                 {r.kind === "faq" ? <HelpCircle /> : <Image />}
-                <span><strong>{r.title}</strong><small>{r.published ? "Published" : "Draft"} · Order {r.position}{r.file_path ? " · Picture attached" : ""}</small></span>
+                <span><strong>{r.title}</strong><small>{r.published ? "Published" : "Draft"} · Order {r.position}{r.file_path ? ` · ${r.file_type === "pdf" ? "PDF" : "Picture"} attached` : ""}</small></span>
                 <span className="reorder-actions"><button disabled={index === 0} aria-label={`Move ${r.title} up`} onClick={() => void moveResource(index, -1)}><ArrowUp /></button><button disabled={index === (resources.data?.length || 0) - 1} aria-label={`Move ${r.title} down`} onClick={() => void moveResource(index, 1)}><ArrowDown /></button></span>
-                <button className="icon-text-button" onClick={() => { setResource({ id: r.id, title: r.title, kind: r.kind, content: r.content || "", file_path: r.file_path, position: r.position, published: r.published }); setResourceFile(null); setRemoveResourceFile(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button>
+                <button className="icon-text-button" onClick={() => { setResource({ id: r.id, title: r.title, kind: r.kind, content: r.content || "", file_path: r.file_path, file_type: r.file_type, position: r.position, published: r.published }); setResourceFile(null); setRemoveResourceFile(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button>
                 <button className="icon-text-button delete-action" onClick={() => void removeResource(r.id, r.file_path)}><Trash2 /> Delete</button>
               </div>
-            ))}
+              );
+            })}
           </PageState>
         </section>
         <section className="admin-section">
@@ -262,7 +276,7 @@ export function AdminOperationsPage() {
             </button>
           </form>
           <PageState loading={toolbags.loading} error={toolbags.error}>
-            {toolbags.data?.map((t) => (
+            {!visibleToolbags.length && search ? <div className="inline-empty">No toolbags match “{search}”.</div> : visibleToolbags.map((t) => (
               <div className="toolbag-editor" key={t.id}>
                 <button
                   className="simple-row toolbag-toggle"
@@ -384,8 +398,10 @@ export function AdminOperationsPage() {
         <PageState loading={feedback.loading} error={feedback.error}>
           {!feedback.data?.length ? (
             <div className="inline-empty">No feedback submitted yet.</div>
+          ) : !visibleFeedback.length ? (
+            <div className="inline-empty">No feedback matches “{search}”.</div>
           ) : (
-            feedback.data.map((f) => (
+            visibleFeedback.map((f) => (
               <article className="feedback-row" key={f.id}>
                 <MessageSquareText />
                 <div>

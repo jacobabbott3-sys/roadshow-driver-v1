@@ -68,6 +68,16 @@ Run `202608210001_beta_round.sql` to include signings in the shared availability
 
 Run `202608240001_beta_4b.sql` to add the account-synced Extreme Confetti Mode profile setting used by Beta 4B.
 
+Run `202609290001_beta_5a_contract_publishing.sql` for Beta 5A contract publishing batches, first-response ordering, final admin assignments, outside-driver names, and the **New contract batches** notification preference. Apply this migration before deploying the Beta 5A app code.
+
+Run `202609290002_beta_5a_reliability.sql` next for active-account enforcement, final-admin protection, atomic show/signing saves, and safer operational permissions.
+
+Run `202609290003_beta_5a_chat_performance.sql` next for paginated chat summaries, 50-message history pages, and lightweight unread-chat counts.
+
+Run `202609290004_beta_5a_contract_clarity.sql` last for consistent contract wording, fully reversible assignments that preserve availability-response order, and admin publication statuses and filters. These four migrations must be applied to the beta Supabase project in filename order before the `beta` branch deploy is tested. Do not apply them to the production project until Beta 5A is approved for public release.
+
+The complete pre-deploy, migration, multi-account, and mobile test sequence is in [`docs/releases/beta-5a-test-checklist.md`](docs/releases/beta-5a-test-checklist.md).
+
 ## Device notification setup
 
 The app and database are ready for web push, but each Supabase/Vercel environment needs its own keys and webhook setup:
@@ -79,7 +89,7 @@ The app and database are ready for web push, but each Supabase/Vercel environmen
 5. In **Supabase → Database → Webhooks**, create an `INSERT` webhook for `public.notifications`. Send it to `https://YOUR_PROJECT_REF.supabase.co/functions/v1/web-push` with an `x-webhook-secret` header matching the function secret. The old `public.messages` webhook can be removed after the chat migration.
 6. In **Supabase → Integrations → Cron**, schedule `select public.create_due_work_notifications();` once each morning. Choose a UTC time that matches the desired local delivery time.
 
-Users can then turn device notifications on and choose assignment, work-day, and message alerts from **Profile**. Browser permission is requested only when they press the enable button.
+Users can then turn device notifications on and choose new-contract-batch, assignment, work-day, and message alerts from **Profile**. Browser permission is requested only when they press the enable button. Publishing still creates an in-app notification when a user turns off device push for new batches.
 
 ## Fix invitation and password-reset links
 
@@ -99,8 +109,8 @@ Invite users from **Authentication → Users → Add user → Send invitation**.
 
 ## Release labels
 
-Vercel beta-branch deployments automatically show `Beta 4A`; production shows
-`Public 4`. Beta labels may include letters, while public release numbers are always displayed as numbers only. To change either label without editing code, set
+Vercel beta-branch deployments automatically show `Beta 5A`; production remains
+`Public 4` until Beta 5A is promoted. Beta labels may include letters, while public release numbers are always displayed as numbers only. In the Vercel beta environment, set `VITE_RELEASE_VERSION=5A`. Do not change the production value to `5` until promotion. To change either label without editing code, set
 `VITE_RELEASE_CHANNEL` (`beta` or `public`) and `VITE_RELEASE_VERSION` in the
 corresponding Vercel environment, then redeploy.
 

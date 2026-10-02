@@ -3,32 +3,37 @@ import {
   CalendarPlus,
   MapPin,
   Pencil,
-  Search,
   Store,
   Trash2,
   UsersRound,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { AdminHeader } from "../components/AdminNav";
+import { AssignmentDialog } from "../components/AssignmentDialog";
+import { ContractPublicationFilter } from "../components/ContractPublicationFilter";
+import { ListSearch } from "../components/ListSearch";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import {
   adminSignContract,
-  createShow,
   deleteShow,
   getContractTemplates,
-  getShowAvailabilityAdmin,
   getShowsAdmin,
   getTemplates,
-  saveShowContract,
-  updateShow,
-  updateContractAssignments,
-  type AdminAvailabilityPerson,
+  saveShowContractAtomic,
   type AdminShow,
 } from "../lib/adminData";
+import { getPublishedAvailability } from "../lib/availabilityData";
+import {
+  matchesPublicationFilter,
+  publicationStateForShow,
+  publicationStateLabel,
+  type ContractPublicationFilter as PublicationFilter,
+} from "../lib/availabilityModel";
 import { dateRange, statusLabel } from "../lib/driverData";
-import { sortList, type SortMode } from "../lib/listControls";
+import { matchesListSearch, sortList, type SortMode } from "../lib/listControls";
 
 type FormState = {
   name: string;
@@ -105,19 +110,18 @@ function savedDraft() {
 export function AdminShowsPage() {
   const shows = useAsync(getShowsAdmin, []),
     templates = useAsync(getTemplates, []),
-    contractTemplates = useAsync(getContractTemplates, []);
+    contractTemplates = useAsync(getContractTemplates, []),
+    publishedAvailability = useAsync(getPublishedAvailability, []);
   const draft = savedDraft(),
     [form, setForm] = useState<FormState>(draft?.form || blank),
     [open, setOpen] = useState(Boolean(draft)),
     [editing, setEditing] = useState<string | null>(draft?.editing || null),
     [deleting, setDeleting] = useState<AdminShow | null>(null),
     [assigning, setAssigning] = useState<AdminShow | null>(null),
-    [availabilityPeople, setAvailabilityPeople] = useState<AdminAvailabilityPerson[]>([]),
-    [assignmentIds, setAssignmentIds] = useState<string[]>([]),
-    [assignmentLoading, setAssignmentLoading] = useState(false),
     [autofillSource, setAutofillSource] = useState(""),
     [search, setSearch] = useState(""),
     [sort, setSort] = useState<SortMode>("date"),
+    [publicationFilter, setPublicationFilter] = useState<PublicationFilter>("all"),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   useEffect(() => {
@@ -158,33 +162,6 @@ export function AdminShowsPage() {
       template_id: contract?.contract_checklists?.[0]?.template_id || "",
       terms: contract?.terms || "",
     });
-  }
-  async function openAssignments(show: AdminShow) {
-    const contract = show.contracts[0];
-    if (!contract) return;
-    setAssigning(show);
-    setAssignmentLoading(true);
-    try {
-      const people = await getShowAvailabilityAdmin(show.id, contract.id);
-      setAvailabilityPeople(people);
-      setAssignmentIds(people.filter((person) => person.assigned).map((person) => person.id));
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load availability.");
-      setAssigning(null);
-    } finally { setAssignmentLoading(false); }
-  }
-  async function saveAssignments() {
-    const contract = assigning?.contracts[0];
-    if (!contract) return;
-    setAssignmentLoading(true);
-    try {
-      await updateContractAssignments(contract.id, assignmentIds);
-      await shows.refresh();
-      setMessage("Assignments updated.");
-      setAssigning(null);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to save assignments.");
-    } finally { setAssignmentLoading(false); }
   }
   function loadEdit(show: AdminShow) {
     const contract = show.contracts[0];
@@ -276,19 +253,20 @@ export function AdminShowsPage() {
         lodging_check_out: form.lodging_included ? form.lodging_check_out || null : null,
         lodging_notes: form.lodging_included ? form.lodging_notes || null : null,
       };
-      const showId = editing || (await createShow(showInput));
-      if (editing) await updateShow(editing, showInput);
-      const contractId = await saveShowContract({
-        id: form.contract_id || undefined,
-        show_id: showId,
+      const existingContract = shows.data?.find((show) => show.id === editing)?.contracts[0];
+      const contractId = await saveShowContractAtomic({
+        show_id: editing,
+        contract_id: form.contract_id || null,
+        ...showInput,
         driver_ids: form.driver_ids,
+        external_names: existingContract?.contract_external_assignees.map((item) => item.display_name) || [],
         kind: form.kind,
         service_date: form.service_date,
         service_time: form.service_time || null,
         contract_pay: form.contract_pay ? Number(form.contract_pay) : null,
         bonus_pay: form.bonus_pay ? Number(form.bonus_pay) : null,
         terms: form.terms || null,
-        template_id: form.template_id,
+        template_id: form.template_id || null,
       });
       if (form.admin_signature_name.trim())
         await adminSignContract(contractId, form.admin_signature_name.trim());
@@ -323,16 +301,18 @@ export function AdminShowsPage() {
   const matchingTemplates =
     templates.data?.filter((t) => t.kind === form.kind) || [];
   const regularShows = shows.data?.filter((show) => show.event_type !== "signing") || [];
-  const normalizedSearch = search.trim().toLowerCase();
-  const matchingShows = normalizedSearch
-    ? regularShows.filter((show) => [show.name, show.city, show.state, show.address].some((value) => value?.toLowerCase().includes(normalizedSearch)))
-    : regularShows;
+  const matchingShows = regularShows.filter((show) =>
+    matchesListSearch(search, show.name, show.city, show.state, show.address, show.contracts[0]?.service_date, show.starts_on, show.ends_on) &&
+    matchesPublicationFilter(show.id, publishedAvailability.data || [], publicationFilter));
   const filteredShows = sortList(
     matchingShows,
     sort,
     (show) => show.name,
     (show) => show.contracts[0]?.service_date || show.starts_on,
   );
+  const assignmentOpportunity = assigning
+    ? publishedAvailability.data?.flatMap((batch) => batch.opportunities).find((item) => item.shows.some((show) => show.id === assigning.id))
+    : undefined;
   return (
     <main className="page">
       <AdminHeader
@@ -345,9 +325,9 @@ export function AdminShowsPage() {
         <button className="button primary" onClick={startNew}>
           <CalendarPlus /> Create show
         </button>
-        <label className="admin-search show-search"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shows, cities, or addresses" aria-label="Search shows" /></label>
-        <SortButton value={sort} onChange={setSort} />
+        <Link className="button secondary" to="/admin/shows/publish"><BriefcaseBusiness /> Publish Contracts</Link>
       </div>
+      <div className="list-toolbar"><ListSearch value={search} onChange={setSearch} placeholder="Search shows, cities, addresses, or dates" label="Search shows" resultCount={filteredShows.length} /><ContractPublicationFilter value={publicationFilter} onChange={setPublicationFilter} /><SortButton value={sort} onChange={setSort} /></div>
       {message && <div className="notice">{message}</div>}
       {open && (
         <form className="admin-form unified-show-form" onSubmit={save}>
@@ -578,14 +558,15 @@ export function AdminShowsPage() {
         </form>
       )}
       <PageState
-        loading={shows.loading || templates.loading || contractTemplates.loading}
-        error={shows.error || templates.error || contractTemplates.error}
+        loading={shows.loading || templates.loading || contractTemplates.loading || publishedAvailability.loading}
+        error={shows.error || templates.error || contractTemplates.error || publishedAvailability.error}
         empty={!regularShows.length}
       >
         <div className="admin-show-list">
-          {!filteredShows.length && <div className="inline-empty">No shows match “{search}”.</div>}
+          {!filteredShows.length && <div className="inline-empty">No contracts match the current search and publication filter.</div>}
           {filteredShows.map((show) => {
             const contract = show.contracts[0];
+            const publicationState = publicationStateForShow(show.id, publishedAvailability.data || []);
             return (
               <article className="admin-show-card" key={show.id}>
                 <div className="admin-show-head">
@@ -601,7 +582,7 @@ export function AdminShowsPage() {
                     </p>
                   </div>
                   <div className="show-card-actions">
-                    <button onClick={() => void openAssignments(show)} disabled={!contract}>
+                    <button onClick={() => setAssigning(show)} disabled={!contract}>
                       <UsersRound /> Assign user(s)
                     </button>
                     <button onClick={() => loadEdit(show)}>
@@ -619,6 +600,7 @@ export function AdminShowsPage() {
                   <div className="contract-summary">
                     <BriefcaseBusiness />
                     <span>
+                      <small className={`contract-publication-status ${publicationState}`}>{publicationStateLabel(publicationState)}</small>
                       <strong>{statusLabel(contract.kind)} contract</strong>
                       <small>
                         {formatWorkDate(contract.service_date)}{contract.service_time ? ` at ${formatTime(contract.service_time)}` : ""} ·{" "}
@@ -644,7 +626,15 @@ export function AdminShowsPage() {
           })}
         </div>
       </PageState>
-      {assigning && <div className="modal-backdrop"><section className="assignment-modal" role="dialog" aria-modal="true"><div className="section-row"><div><p className="eyebrow">TEAM AVAILABILITY</p><h2>Assign user(s) · {assigning.name}</h2><p>Select the lead first. Availability responses are shown beside every active user.</p></div><button className="text-button" onClick={() => setAssigning(null)}>Close</button></div>{assignmentLoading && !availabilityPeople.length ? <p className="muted">Loading availability…</p> : <div className="assignment-availability-list">{availabilityPeople.map((person) => { const index = assignmentIds.indexOf(person.id); return <label key={person.id}><input type="checkbox" checked={index >= 0} onChange={(event) => setAssignmentIds(event.target.checked ? [...assignmentIds, person.id] : assignmentIds.filter((id) => id !== person.id))} /><span><strong>{person.full_name || "Unnamed user"}</strong><small>{person.role === "admin" ? "Admin" : "Driver"}{index === 0 ? " · Lead" : index > 0 ? " · Trainee" : ""}</small></span><em className={`availability-response ${person.availability_status || "pending"}`}>{person.availability_status === "available" ? "Available" : person.availability_status === "unavailable" ? "Unavailable" : person.availability_status === "assigned" ? "Assigned" : "No response"}</em></label>; })}</div>}<button className="button primary" disabled={assignmentLoading} onClick={() => void saveAssignments()}>{assignmentLoading ? "Saving…" : "Save assignments"}</button></section></div>}
+      {assigning && <AssignmentDialog
+        releaseItemId={assignmentOpportunity?.batch_id ? assignmentOpportunity.id : null}
+        showIds={assignmentOpportunity?.shows.map((show) => show.id) || [assigning.id]}
+        title={assignmentOpportunity ? assignmentOpportunity.shows.map((show) => show.artist || show.name).join(" & ") : assigning.name}
+        initialAssigneeIds={[...new Set([...(assigning.contracts[0]?.driver_id ? [assigning.contracts[0].driver_id] : []), ...(assigning.contracts[0]?.contract_drivers.map((item) => item.driver_id) || [])])]}
+        initialExternalNames={assigning.contracts[0]?.contract_external_assignees.sort((left, right) => left.position - right.position).map((item) => item.display_name) || []}
+        onClose={() => setAssigning(null)}
+        onSaved={async () => { await Promise.all([shows.refresh(), publishedAvailability.refresh()]); setMessage("Assignments updated."); setAssigning(null); }}
+      />}
       {deleting && (
         <div className="modal-backdrop" role="presentation">
           <section

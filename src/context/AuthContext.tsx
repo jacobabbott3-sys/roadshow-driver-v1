@@ -51,7 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select("id,full_name,avatar_url,phone,role,is_active,theme_preference,color_scheme,extreme_confetti")
       .eq("id", session.user.id)
       .single();
-    if (profileError) setError("We could not load your profile. Please try again.");
+    if (profileError) {
+      setProfile(null);
+      setError("We could not load your profile. Please try again.");
+    }
     else setProfile(data as Profile);
   }, [session?.user]);
 

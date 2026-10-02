@@ -1,37 +1,42 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { LoadingScreen } from "./components/LoadingScreen";
 import { AdminRoute, ProtectedRoute } from "./components/ProtectedRoute";
-import { AdminChecklistReviewPage } from "./pages/AdminChecklistReviewPage";
-import { AdminChecklistsPage } from "./pages/AdminChecklistsPage";
-import { AdminOperationsPage } from "./pages/AdminOperationsPage";
-import { AdminPage } from "./pages/AdminPage";
-import { AdminShowsPage } from "./pages/AdminShowsPage";
-import { AdminUsersPage } from "./pages/AdminUsersPage";
-import { AdminSigningsPage } from "./pages/AdminSigningsPage";
-import { AdminTemplatesPage } from "./pages/AdminTemplatesPage";
-import { AvailabilityPage } from "./pages/AvailabilityPage";
-import { ContractDetailPage } from "./pages/ContractDetailPage";
-import { ContractsPage } from "./pages/ContractsPage";
-import { FaqPage } from "./pages/FaqPage";
-import { FeedbackPage } from "./pages/FeedbackPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
-import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
-import { ChatPage } from "./pages/ChatPage";
-import { DirectoryPage } from "./pages/DirectoryPage";
-import { NotificationsPage } from "./pages/NotificationsPage";
-import { ProfilePage } from "./pages/ProfilePage";
-import { RedFolderPage } from "./pages/RedFolderPage";
-import { ResourcesPage } from "./pages/ResourcesPage";
-import { ToolbagPage } from "./pages/ToolbagPage";
 import { UpdatePasswordPage } from "./pages/UpdatePasswordPage";
 import { AuthConfirmPage } from "./pages/AuthConfirmPage";
-import { SigningGroupPage } from "./pages/SigningGroupPage";
+
+const HomePage = lazy(() => import("./pages/HomePage").then((module) => ({ default: module.HomePage })));
+const ContractsPage = lazy(() => import("./pages/ContractsPage").then((module) => ({ default: module.ContractsPage })));
+const ContractDetailPage = lazy(() => import("./pages/ContractDetailPage").then((module) => ({ default: module.ContractDetailPage })));
+const SigningGroupPage = lazy(() => import("./pages/SigningGroupPage").then((module) => ({ default: module.SigningGroupPage })));
+const AvailabilityPage = lazy(() => import("./pages/AvailabilityPage").then((module) => ({ default: module.AvailabilityPage })));
+const ResourcesPage = lazy(() => import("./pages/ResourcesPage").then((module) => ({ default: module.ResourcesPage })));
+const ToolbagPage = lazy(() => import("./pages/ToolbagPage").then((module) => ({ default: module.ToolbagPage })));
+const RedFolderPage = lazy(() => import("./pages/RedFolderPage").then((module) => ({ default: module.RedFolderPage })));
+const FaqPage = lazy(() => import("./pages/FaqPage").then((module) => ({ default: module.FaqPage })));
+const FeedbackPage = lazy(() => import("./pages/FeedbackPage").then((module) => ({ default: module.FeedbackPage })));
+const DirectoryPage = lazy(() => import("./pages/DirectoryPage").then((module) => ({ default: module.DirectoryPage })));
+const ChatPage = lazy(() => import("./pages/ChatPage").then((module) => ({ default: module.ChatPage })));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
+const ProfilePage = lazy(() => import("./pages/ProfilePage").then((module) => ({ default: module.ProfilePage })));
+const AdminPage = lazy(() => import("./pages/AdminPage").then((module) => ({ default: module.AdminPage })));
+const AdminShowsPage = lazy(() => import("./pages/AdminShowsPage").then((module) => ({ default: module.AdminShowsPage })));
+const AdminPublishContractsPage = lazy(() => import("./pages/AdminPublishContractsPage").then((module) => ({ default: module.AdminPublishContractsPage })));
+const AdminSigningsPage = lazy(() => import("./pages/AdminSigningsPage").then((module) => ({ default: module.AdminSigningsPage })));
+const AdminTemplatesPage = lazy(() => import("./pages/AdminTemplatesPage").then((module) => ({ default: module.AdminTemplatesPage })));
+const AdminChecklistsPage = lazy(() => import("./pages/AdminChecklistsPage").then((module) => ({ default: module.AdminChecklistsPage })));
+const AdminChecklistReviewPage = lazy(() => import("./pages/AdminChecklistReviewPage").then((module) => ({ default: module.AdminChecklistReviewPage })));
+const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage").then((module) => ({ default: module.AdminUsersPage })));
+const AdminOperationsPage = lazy(() => import("./pages/AdminOperationsPage").then((module) => ({ default: module.AdminOperationsPage })));
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <Suspense fallback={<LoadingScreen label="Opening screen…" />}>
+        <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/auth/confirm" element={<AuthConfirmPage />} />
@@ -56,6 +61,7 @@ export default function App() {
             <Route element={<AdminRoute />}>
               <Route path="admin" element={<AdminPage />} />
               <Route path="admin/shows" element={<AdminShowsPage />} />
+              <Route path="admin/shows/publish" element={<AdminPublishContractsPage />} />
               <Route path="admin/signings" element={<AdminSigningsPage />} />
               <Route path="admin/templates" element={<AdminTemplatesPage />} />
               <Route
@@ -76,7 +82,8 @@ export default function App() {
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

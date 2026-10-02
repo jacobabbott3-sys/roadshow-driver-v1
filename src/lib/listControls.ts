@@ -1,9 +1,17 @@
 export type SortMode = "date" | "alpha";
 
+export function normalizeListText(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase()
+    .trim();
+}
+
 export function matchesListSearch(query: string, ...values: Array<string | null | undefined>) {
-  const normalized = query.trim().toLocaleLowerCase();
+  const normalized = normalizeListText(query);
   if (!normalized) return true;
-  return values.some((value) => value?.toLocaleLowerCase().includes(normalized));
+  return values.some((value) => value ? normalizeListText(value).includes(normalized) : false);
 }
 
 export function sortList<T>(

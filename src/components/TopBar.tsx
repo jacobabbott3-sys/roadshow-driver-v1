@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
-import { getChatThreads, getNotifications, isThreadUnread } from "../lib/communications";
+import { getNotifications, getUnreadChatCount } from "../lib/communications";
 import { supabase } from "../lib/supabase";
 
 export function TopBar() {
   const { user, profile, updateAppearance } = useAuth();
   const location = useLocation();
-  const chats = useAsync(getChatThreads, [user?.id, location.pathname]);
+  const chats = useAsync(getUnreadChatCount, [user?.id, location.pathname]);
   const notifications = useAsync(() => getNotifications(user!.id), [user?.id, location.pathname]);
   const refreshChats = chats.refresh;
   const refreshNotifications = notifications.refresh;
@@ -50,7 +50,7 @@ export function TopBar() {
     };
   }, [refreshChats, refreshNotifications]);
 
-  const unreadChats = chats.data?.filter((thread) => isThreadUnread(thread, user!.id)).length || 0;
+  const unreadChats = chats.data || 0;
   const unreadNotifications = notifications.data?.filter((item) => !item.read_at).length || 0;
 
   async function toggleTheme() {

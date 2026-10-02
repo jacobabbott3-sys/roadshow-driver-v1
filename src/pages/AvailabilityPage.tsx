@@ -1,34 +1,54 @@
 import { CalendarDays, Check, CircleDollarSign, Clock3, PenLine, UsersRound, X } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { PageState } from "../components/PageState";
+import { ListSearch } from "../components/ListSearch";
 import { SortButton } from "../components/SortButton";
-import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
-import { AvailabilityRow, dateRange, getAvailability, setAvailabilityMany } from "../lib/driverData";
-import { sortList, type SortMode } from "../lib/listControls";
-
-type AvailabilityGroup = { id: string; rows: AvailabilityRow[] };
+import { getPublishedAvailability, setReleaseResponse } from "../lib/availabilityData";
+import {
+  availabilityOpportunityDate,
+  availabilityOpportunityTitle,
+  filterOpportunities,
+  sortOpportunities,
+} from "../lib/availabilityModel";
+import type { SortMode } from "../lib/listControls";
+import type { AvailabilityBatch, AvailabilityOpportunity, AvailabilityShow } from "../types";
 
 export function AvailabilityPage() {
-  const { user } = useAuth();
-  const availability = useAsync(() => getAvailability(user!.id), [user?.id]);
+  const availability = useAsync(getPublishedAvailability, []);
+  const [searchParams] = useSearchParams();
+  const targetBatch = searchParams.get("batch");
+  const targetRef = useRef<HTMLElement>(null);
   const [saving, setSaving] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortMode>("date");
-  const groups = groupAvailability(availability.data || []);
-  const visibleGroups = sortList(groups, sort, availabilityGroupTitle, availabilityGroupDate);
 
-  async function choose(group: AvailabilityGroup, status: "available" | "unavailable") {
-    const signings = group.rows.filter((row) => row.show.event_type === "signing");
-    if (signings.length > 1) {
-      const answer = window.confirm(
-        `${status === "available" ? "Mark yourself available" : "Mark yourself unavailable"} for all ${signings.length} linked signings? Linked signings must be accepted or declined together.`,
+  const batches = useMemo(() => (availability.data || []).map((batch) => ({
+    ...batch,
+    opportunities: sortOpportunities(filterOpportunities(batch.opportunities, query), sort),
+  })).filter((batch) => batch.opportunities.length), [availability.data, query, sort]);
+  const resultCount = batches.reduce((total, batch) => total + batch.opportunities.length, 0);
+
+  useEffect(() => {
+    if (targetBatch && targetRef.current?.scrollIntoView) targetRef.current.scrollIntoView({ block: "center" });
+  }, [targetBatch, availability.loading]);
+
+  async function choose(opportunity: AvailabilityOpportunity, status: "available" | "unavailable") {
+    if (opportunity.shows.length > 1) {
+      const accepted = window.confirm(
+        `${status === "available" ? "Mark yourself available" : "Mark yourself unavailable"} for all ${opportunity.shows.length} linked signings? This response applies to the whole group.`,
       );
-      if (!answer) return;
+      if (!accepted) return;
     }
-    setSaving(group.id);
+    setSaving(opportunity.id);
+    setActionError("");
     try {
-      await setAvailabilityMany(group.rows.map((row) => row.show_id), user!.id, status);
+      await setReleaseResponse(opportunity.id, status);
+      await availability.refresh();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Unable to save your response.");
       await availability.refresh();
     } finally {
       setSaving("");
@@ -38,120 +58,130 @@ export function AvailabilityPage() {
   return (
     <main className="page">
       <header className="page-header">
-        <div><p className="eyebrow">PLAN AHEAD</p><h1>Availability</h1><p>Open shows and signings accept availability. Assigned work shows the confirmed team.</p></div>
+        <div><p className="eyebrow">PLAN AHEAD</p><h1>Availability</h1><p>Published contract batches appear here. Your administrator always makes the final assignment.</p></div>
       </header>
-      <PageState loading={availability.loading} error={availability.error} empty={!groups.length}>
-        <div className="list-toolbar list-toolbar-sort-only"><SortButton value={sort} onChange={setSort} /></div>
-        <div className="availability-list">
-          {visibleGroups.map((group) => {
-            const first = group.rows[0];
-            const signing = first.show.event_type === "signing";
-            const linked = signing && group.rows.length > 1;
-            const title = availabilityGroupTitle(group);
-            const status = commonStatus(group.rows);
-            const assignees = uniqueAssignees(group.rows);
-            const detailPath = linked ? `/signing-groups/${first.show_id}` : undefined;
-            const setupDate = signing ? earliestSigningSetup(group.rows) : first.service_date;
-
-            return (
-              <article className="availability-card" key={group.id}>
-                <div className="calendar-box">
-                  {signing ? <PenLine /> : <CalendarDays />}
-                  <strong>{setupDate ? new Date(signing ? setupDate : `${setupDate}T12:00:00`).getDate() : "—"}</strong>
-                </div>
-                <div className="availability-details">
-                  {detailPath ? <h2><Link className="availability-title-link" to={detailPath}>{title}</Link></h2> : <h2>{title}</h2>}
-                  <p>{signing ? `${group.rows.length} linked signings · ${signingDateRange(group.rows)}` : `${dateRange(first.show)} · ${first.show.city}${first.show.state ? `, ${first.show.state}` : ""}`}</p>
-                  <div className="availability-contract-meta">
-                    <span><Clock3 /> {signing ? `First setup: ${formatDateTime(setupDate)}` : `${first.contract_kind ? `${capitalize(first.contract_kind)}: ` : "Work date: "}${formatWorkDate(first.service_date, first.service_time)}`}</span>
-                    {!signing && <span><CircleDollarSign /> Pay: {money(first.contract_pay)}{first.bonus_pay != null ? ` · Potential bonus: ${money(first.bonus_pay)}` : ""}</span>}
-                  </div>
-                </div>
-                {assignees.length ? (
-                  <div className="assigned-team"><span className="status status-approved"><UsersRound /> Assigned</span><strong>{assignees.join(", ")}</strong></div>
-                ) : (
-                  <div className="availability-actions">
-                    <button className={status === "available" ? "selected yes" : "yes"} disabled={saving === group.id} onClick={() => void choose(group, "available")}><Check /> Available</button>
-                    <button className={status === "unavailable" ? "selected no" : "no"} disabled={saving === group.id} onClick={() => void choose(group, "unavailable")}><X /> Unavailable</button>
-                  </div>
-                )}
-              </article>
-            );
-          })}
+      {actionError && <p className="error" role="alert">{actionError} The contract may have closed; the list has been refreshed.</p>}
+      <PageState loading={availability.loading} error={availability.error} empty={!availability.data?.length}>
+        <div className="list-toolbar availability-toolbar">
+          <ListSearch value={query} onChange={setQuery} placeholder="Search shows, artists, venues, or cities" label="Search availability" resultCount={resultCount} />
+          <SortButton value={sort} onChange={setSort} />
         </div>
+        {!batches.length ? (
+          <section className="empty-state compact"><h2>No matching contracts</h2><p>Try a different search.</p></section>
+        ) : (
+          <div className="availability-batches">
+            {batches.map((batch, index) => {
+              const targeted = batch.id === targetBatch;
+              const key = batch.id || "assigned-work";
+              return (
+                <section
+                  className={`availability-batch${targeted ? " targeted" : ""}`}
+                  data-testid={`availability-batch-${key}`}
+                  key={key}
+                  ref={targeted ? targetRef : undefined}
+                >
+                  <header className="availability-batch-header">
+                    <div>
+                      <p className="eyebrow">{batch.id === null ? "CONFIRMED" : `BATCH ${batches.filter((item) => item.id !== null).length - index}`}</p>
+                      <h2>{batchHeading(batch, index)}</h2>
+                    </div>
+                    <small>{batch.id === null ? "Direct and confirmed assignments" : formatReleasedAt(batch.released_at)}</small>
+                  </header>
+                  <div className="availability-list">
+                    {batch.opportunities.map((opportunity) => (
+                      <AvailabilityCard key={opportunity.id} opportunity={opportunity} saving={saving === opportunity.id} onChoose={choose} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
       </PageState>
     </main>
   );
 }
 
-function availabilityGroupTitle(group: AvailabilityGroup) {
-  const first = group.rows[0];
-  return first.show.event_type === "signing"
-    ? group.rows.map((row) => row.show.artist || row.show.name).join(" & ")
-    : first.show.name;
+function AvailabilityCard({ opportunity, saving, onChoose }: {
+  opportunity: AvailabilityOpportunity;
+  saving: boolean;
+  onChoose: (opportunity: AvailabilityOpportunity, status: "available" | "unavailable") => Promise<void>;
+}) {
+  const first = opportunity.shows[0];
+  const linked = opportunity.shows.length > 1;
+  const signing = opportunity.shows.some((show) => show.event_type === "signing");
+  const title = availabilityOpportunityTitle(opportunity);
+  const date = availabilityOpportunityDate(opportunity);
+  const detailPath = linked ? `/signing-groups/${first.id}` : `/contracts/${first.contract_id}`;
+  const pay = sumMoney(opportunity.shows, "contract_pay");
+  const bonus = sumMoney(opportunity.shows, "bonus_pay");
+
+  return (
+    <article className={`availability-card availability-card-${opportunity.status}`} data-testid={`availability-opportunity-${opportunity.id}`}>
+      <div className="calendar-box">
+        {signing ? <PenLine aria-hidden="true" /> : <CalendarDays aria-hidden="true" />}
+        <strong>{date ? localDate(date).getDate() : "—"}</strong>
+      </div>
+      <div className="availability-details">
+        <div className="availability-title-row">
+          <h3><Link className="availability-title-link" to={detailPath}>{title}</Link></h3>
+          {linked && <span className="status">{opportunity.shows.length} linked signings</span>}
+        </div>
+        <p>{locationLine(first)} · {dateRange(opportunity.shows)}</p>
+        <div className="availability-contract-meta">
+          <span><Clock3 aria-hidden="true" /> {workLabel(first, date)}</span>
+          <span><CircleDollarSign aria-hidden="true" /> Pay: {money(pay)}</span>
+          {bonus !== null && <span>Potential bonus: {money(bonus)}</span>}
+        </div>
+      </div>
+      {opportunity.status === "assigned" || opportunity.assignees.length ? (
+        <div className="assigned-team">
+          <span className="status status-approved"><UsersRound aria-hidden="true" /> Assigned</span>
+          <strong>{opportunity.assignees.map((person) => person.full_name).join(", ") || "Team confirmed"}</strong>
+        </div>
+      ) : opportunity.status === "withdrawn" ? (
+        <div className="assigned-team"><span className="status">Closed</span><small>This contract is no longer accepting responses.</small></div>
+      ) : (
+        <div className="availability-actions" aria-label={`Availability response for ${title}`}>
+          <button className={opportunity.response_status === "available" ? "selected yes" : "yes"} disabled={saving} onClick={() => void onChoose(opportunity, "available")}><Check aria-hidden="true" /> Available</button>
+          <button className={opportunity.response_status === "unavailable" ? "selected no" : "no"} disabled={saving} onClick={() => void onChoose(opportunity, "unavailable")}><X aria-hidden="true" /> Unavailable</button>
+        </div>
+      )}
+    </article>
+  );
 }
 
-function groupAvailability(rows: AvailabilityRow[]) {
-  const byId = new Map(rows.map((row) => [row.show_id, row]));
-  const seen = new Set<string>();
-  const groups: AvailabilityGroup[] = [];
-  for (const row of rows) {
-    if (seen.has(row.show_id)) continue;
-    if (row.show.event_type !== "signing") {
-      seen.add(row.show_id);
-      groups.push({ id: row.show_id, rows: [row] });
-      continue;
-    }
-    const queue = [row.show_id];
-    const linkedRows: AvailabilityRow[] = [];
-    while (queue.length) {
-      const id = queue.shift()!;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      const current = byId.get(id);
-      if (!current || current.show.event_type !== "signing") continue;
-      linkedRows.push(current);
-      current.linked_show_ids.forEach((linkedId) => { if (!seen.has(linkedId) && byId.has(linkedId)) queue.push(linkedId); });
-    }
-    linkedRows.sort((a, b) => (a.show.signing_at || a.show.starts_on).localeCompare(b.show.signing_at || b.show.starts_on));
-    groups.push({ id: linkedRows[0]?.show_id || row.show_id, rows: linkedRows.length ? linkedRows : [row] });
-  }
-  return groups.sort((a, b) => availabilityGroupDate(a).localeCompare(availabilityGroupDate(b)));
+function batchHeading(batch: AvailabilityBatch, index: number) {
+  if (batch.id === null) return "Assigned work";
+  return index === 0 ? "Latest release" : `Released ${new Date(batch.released_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 
-function availabilityGroupDate(group: AvailabilityGroup) {
-  const first = group.rows[0];
-  return first.show.event_type === "signing"
-    ? earliestSigningSetup(group.rows) || first.show.starts_on
-    : first.service_date || first.show.starts_on;
+function formatReleasedAt(value: string) {
+  return new Date(value).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function commonStatus(rows: AvailabilityRow[]) {
-  const statuses = new Set(rows.map((row) => row.status));
-  return statuses.size === 1 ? rows[0].status : "pending";
+function locationLine(show: AvailabilityShow) {
+  return [show.venue_name, show.city, show.state].filter(Boolean).join(", ") || "Location to come";
 }
-function uniqueAssignees(rows: AvailabilityRow[]) {
-  return [...new Set(rows.flatMap((row) => row.assignees.map((person) => person.full_name || "Team member")))];
-}
-function earliestSigningSetup(rows: AvailabilityRow[]) {
-  return rows.map((row) => row.show.setup_at || row.show.signing_at).filter(Boolean).sort()[0] || null;
-}
-function signingDateRange(rows: AvailabilityRow[]) {
-  const dates = rows.map((row) => row.show.signing_at || row.show.starts_on).filter(Boolean).sort();
-  if (!dates.length) return "Not scheduled";
-  const first = new Date(dates[0]).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const last = new Date(dates.at(-1)!).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+function dateRange(shows: AvailabilityShow[]) {
+  const values = shows.map((show) => show.signing_at || show.service_date || show.starts_on).filter(Boolean).sort();
+  if (!values.length) return "Date to come";
+  const first = localDate(values[0]).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const last = localDate(values.at(-1)!).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   return first === last ? first : `${first}–${last}`;
 }
-function money(value: number | null) { return value == null ? "Not set" : value.toLocaleString(undefined, { style: "currency", currency: "USD" }); }
-function capitalize(value: string) { return value.charAt(0).toUpperCase() + value.slice(1); }
-function formatWorkDate(date: string | null, time: string | null) {
-  if (!date) return "Not scheduled";
-  const formatted = new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-  if (!time) return formatted;
-  const formattedTime = new Date(`2000-01-01T${time}`).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  return `${formatted} at ${formattedTime}`;
+
+function workLabel(show: AvailabilityShow, date: string) {
+  const label = show.event_type === "signing" ? "First setup" : `${capitalize(show.contract_kind)} work`;
+  return `${label}: ${date ? localDate(date).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: hasTime(date) ? "numeric" : undefined, minute: hasTime(date) ? "2-digit" : undefined }) : "Not scheduled"}`;
 }
-function formatDateTime(value: string | null) {
-  return value ? new Date(value).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Not scheduled";
+
+function localDate(value: string) { return new Date(value.includes("T") ? value : `${value}T12:00:00`); }
+function hasTime(value: string) { return value.includes("T"); }
+function capitalize(value: string) { return value.charAt(0).toUpperCase() + value.slice(1); }
+function money(value: number | null) { return value == null ? "Not set" : value.toLocaleString(undefined, { style: "currency", currency: "USD" }); }
+function sumMoney(shows: AvailabilityShow[], key: "contract_pay" | "bonus_pay") {
+  const values = shows.map((show) => show[key]).filter((value): value is number => value !== null);
+  return values.length ? values.reduce((total, value) => total + value, 0) : null;
 }

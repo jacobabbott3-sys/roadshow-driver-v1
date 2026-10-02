@@ -36,14 +36,16 @@ Deno.serve(async (request) => {
   const supabase = createClient(supabaseUrl, serviceKey);
   const { data: preferences } = await supabase
     .from("notification_preferences")
-    .select("device_notifications,assignment_alerts,work_day_alerts,message_alerts")
+    .select("device_notifications,availability_release_alerts,assignment_alerts,work_day_alerts,message_alerts")
     .eq("user_id", record.recipient_id)
     .maybeSingle();
 
   const categoryEnabled =
     payload.table === "messages" || record.kind === "message"
       ? preferences?.message_alerts
-      : record.kind === "assignment"
+      : record.kind === "availability_release"
+        ? preferences?.availability_release_alerts
+        : record.kind === "assignment"
         ? preferences?.assignment_alerts
         : record.kind === "work_day"
           ? preferences?.work_day_alerts

@@ -1,27 +1,34 @@
 import { Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
 import { useState } from "react";
 import { AdminHeader } from "../components/AdminNav";
+import { MutationNotice } from "../components/MutationNotice";
+import { ListSearch } from "../components/ListSearch";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
+import { useMutationFeedback } from "../hooks/useMutationFeedback";
 import { getUsers, updateUser } from "../lib/adminData";
+import { matchesListSearch } from "../lib/listControls";
 
 export function AdminUsersPage() {
   const query = useAsync(getUsers, []);
   const [busy, setBusy] = useState("");
   const [search, setSearch] = useState("");
+  const mutation = useMutationFeedback();
   async function change(
     id: string,
     role: "driver" | "admin",
     active: boolean,
   ) {
     setBusy(id);
-    await updateUser(id, role, active);
-    await query.refresh();
-    setBusy("");
+    try {
+      await mutation.run(async () => {
+        await updateUser(id, role, active);
+        await query.refresh();
+      }, { successMessage: "User access updated." });
+    } catch { /* MutationNotice presents the failure and retry. */ }
+    finally { setBusy(""); }
   }
-  const users = query.data?.filter((user) =>
-    `${user.full_name}`.toLowerCase().includes(search.toLowerCase()),
-  );
+  const users = query.data?.filter((user) => matchesListSearch(search, user.full_name, user.role, user.phone, user.is_active ? "active" : "inactive"));
   return (
     <main className="page">
       <AdminHeader
@@ -30,18 +37,13 @@ export function AdminUsersPage() {
         description="Manage driver access and roles. Passwords remain private."
         backTo="/admin"
       />
-      <input
-        className="admin-search"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search users…"
-      />
+      <ListSearch value={search} onChange={setSearch} placeholder="Search names, roles, or phone numbers" label="Search users" resultCount={users?.length || 0} />
       <PageState
         loading={query.loading}
         error={query.error}
-        empty={!users?.length}
+        empty={!query.data?.length}
       >
-        <div className="user-grid">
+        {!users?.length ? <div className="inline-empty">No users match “{search}”.</div> : <div className="user-grid">
           {users?.map((user) => (
             <article className="user-card" key={user.id}>
               <div className="profile-avatar">
@@ -91,12 +93,13 @@ export function AdminUsersPage() {
               )}
             </article>
           ))}
-        </div>
+        </div>}
       </PageState>
       <div className="notice secure-note">
         <ShieldCheck /> Admins can trigger password recovery from Supabase
         Authentication, but cannot view or retrieve anyone’s password.
       </div>
+      <MutationNotice state={mutation.state} message={mutation.message} onRetry={() => void mutation.retry().catch(() => undefined)} onDismiss={mutation.clear} />
     </main>
   );
 }

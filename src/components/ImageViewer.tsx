@@ -31,7 +31,7 @@ export function ImageViewer({ src, alt, className = "" }: { src: string; alt: st
 
   function reset() { setScale(1); setOffset({ x: 0, y: 0 }); }
   function changeScale(next: number) {
-    const clamped = Math.min(5, Math.max(1, next));
+    const clamped = Math.min(10, Math.max(1, next));
     setScale(clamped);
     if (clamped === 1) setOffset({ x: 0, y: 0 });
   }
@@ -63,7 +63,7 @@ export function ImageViewer({ src, alt, className = "" }: { src: string; alt: st
           <div className="image-viewer-toolbar">
             <button onClick={() => changeScale(scale - 0.5)} disabled={scale <= 1} aria-label="Zoom out"><Minus /></button>
             <strong>{Math.round(scale * 100)}%</strong>
-            <button onClick={() => changeScale(scale + 0.5)} disabled={scale >= 5} aria-label="Zoom in"><Plus /></button>
+            <button onClick={() => changeScale(scale + 0.5)} disabled={scale >= 10} aria-label="Zoom in"><Plus /></button>
             <button onClick={reset} aria-label="Reset view"><RotateCcw /></button>
             <button className="viewer-close" onClick={() => setOpen(false)} aria-label="Close image"><X /></button>
           </div>

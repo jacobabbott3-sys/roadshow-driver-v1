@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import { getChecklist, type Contract, type Show } from "./driverData";
 import type { Profile } from "../types";
 import { release } from "./release";
+import { localDateKey } from "./calendarDate";
 export type DashboardStats = {
   shows: number;
   unsigned: number;
@@ -36,6 +37,7 @@ export type AdminResource = {
   title: string;
   content: string | null;
   file_path: string | null;
+  file_type: "image" | "pdf" | null;
   position: number;
   published: boolean;
 };
@@ -53,7 +55,7 @@ export type AdminFeedback = {
   profile: { full_name: string } | null;
 };
 export async function getDashboardStats() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey();
   let showsQuery = supabase
       .from("shows")
       .select("*", { count: "exact", head: true })
@@ -94,6 +96,8 @@ export async function getDashboardStats() {
       .select("*", { count: "exact", head: true })
       .eq("status", "new"),
   ]);
+  const failedQuery = [shows, signings, unsigned, reviews, drivers, feedback].find((result) => result.error);
+  if (failedQuery?.error) throw failedQuery.error;
   return {
     shows: shows.count || 0,
     unsigned: unsigned.count || 0,
@@ -121,6 +125,7 @@ export type AdminContract = {
     driver: { full_name: string; role: "driver" | "admin" } | null;
   }[];
   contract_checklists: { template_id: string }[];
+  contract_external_assignees: { id: string; display_name: string; position: number }[];
 };
 export type AdminShow = Show & {
   contracts: AdminContract[];
@@ -133,7 +138,7 @@ export async function getShowsAdmin() {
   const { data, error } = await supabase
     .from("shows")
     .select(
-      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id))",
+      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id),contract_external_assignees(id,display_name,position))",
     )
     .order("starts_on", { ascending: true });
   if (error) throw error;
@@ -172,6 +177,60 @@ export async function getUsers() {
     .order("full_name");
   if (error) throw error;
   return data as Profile[];
+}
+export type ShowContractSavePayload = {
+  show_id: string | null;
+  contract_id: string | null;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  city: string;
+  state: string | null;
+  address: string | null;
+  bin_count: number | null;
+  lodging_included: boolean;
+  per_diem: number | null;
+  lodging_name: string | null;
+  lodging_address: string | null;
+  lodging_phone: string | null;
+  lodging_confirmation: string | null;
+  lodging_check_in: string | null;
+  lodging_check_out: string | null;
+  lodging_notes: string | null;
+  kind: "setup" | "teardown";
+  service_date: string;
+  service_time: string | null;
+  contract_pay: number | null;
+  bonus_pay: number | null;
+  terms: string | null;
+  template_id: string | null;
+  driver_ids: string[];
+  external_names: string[];
+};
+export type SigningSavePayload = {
+  show_id: string | null;
+  contract_id: string | null;
+  artist: string;
+  signing_at: string;
+  setup_at: string;
+  venue_name: string;
+  city: string;
+  state: string | null;
+  address: string | null;
+  template_id: string | null;
+  linked_show_ids: string[];
+  driver_ids: string[];
+  external_names: string[];
+};
+export async function saveShowContractAtomic(payload: ShowContractSavePayload) {
+  const { data, error } = await supabase.rpc("admin_save_show_contract", { target_payload: payload });
+  if (error) throw error;
+  return data as string;
+}
+export async function saveSigningAtomic(payload: SigningSavePayload) {
+  const { data, error } = await supabase.rpc("admin_save_signing", { target_payload: payload });
+  if (error) throw error;
+  return data as string;
 }
 export async function saveShowContract(input: {
   id?: string;
@@ -480,7 +539,7 @@ export async function getFeedback() {
 export async function getAdminResources() {
   const { data, error } = await supabase
     .from("resources")
-    .select("id,kind,title,content,file_path,position,published")
+    .select("id,kind,title,content,file_path,file_type,position,published")
     .order("position")
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -492,6 +551,7 @@ export async function saveResource(resource: Omit<AdminResource, "id"> & { id?: 
     title: resource.title.trim(),
     content: resource.content?.trim() || null,
     file_path: resource.file_path,
+    file_type: resource.file_type,
     position: resource.position,
     published: resource.published,
   };
