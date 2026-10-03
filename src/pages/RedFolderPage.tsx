@@ -1,5 +1,5 @@
-import { BookOpen, Download, ExternalLink, FileText } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { BookOpen, Download, FileText } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
 import { getResources } from "../lib/driverData";
@@ -10,11 +10,15 @@ import { ListSearch } from "../components/ListSearch";
 import { matchesListSearch } from "../lib/listControls";
 import { resourceFileKindFromPath } from "../lib/imageUpload";
 
+const PdfViewer = lazy(() => import("../components/PdfViewer").then((module) => ({ default: module.PdfViewer })));
+
 export function RedFolderPage() {
   const resources = useAsync(getResources, []);
   const [urls, setUrls] = useState<Record<string, { view: string; download: string }>>({});
   const [fileError, setFileError] = useState("");
   const [search, setSearch] = useState("");
+  const [pdf, setPdf] = useState<{ title: string; filePath: string } | null>(null);
+  const closePdf = useCallback(() => setPdf(null), []);
   const items = useMemo(
     () =>
       resources.data?.filter((resource) => resource.kind === "handbook") || [],
@@ -74,7 +78,7 @@ export function RedFolderPage() {
                   <FileText />
                   <strong>PDF document</strong>
                   <div className="pdf-resource-actions">
-                    <a className="button primary" href={urls[item.id].view} target="_blank" rel="noreferrer"><ExternalLink /> View PDF</a>
+                    <button type="button" className="button primary" onClick={() => setPdf({ title: item.title, filePath: item.file_path! })}><FileText /> View PDF</button>
                     <a className="button secondary" href={urls[item.id].download}><Download /> Download PDF</a>
                   </div>
                 </div>
@@ -86,6 +90,9 @@ export function RedFolderPage() {
           ))}
         </div>}
       </PageState>
+      {pdf && <Suspense fallback={<div className="notice" role="status">Opening PDF…</div>}>
+        <PdfViewer title={pdf.title} filePath={pdf.filePath} onClose={closePdf} />
+      </Suspense>}
     </main>
   );
 }
