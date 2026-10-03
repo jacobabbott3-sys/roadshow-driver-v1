@@ -1,0 +1,27 @@
+{
+  "name": "Roadshow Driver",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:5.2.1-24-bookworm",
+  "remoteUser": "node",
+  "postCreateCommand": "npm install --global npm@11.5.2 && npm ci",
+  "remoteEnv": {
+    "VITE_RELEASE_CHANNEL": "beta",
+    "VITE_RELEASE_VERSION": "5A"
+  },
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": {
+      "label": "Roadshow Driver (keep private)",
+      "onAutoForward": "notify"
+    }
+  },
+  "otherPortsAttributes": { "onAutoForward": "ignore" },
+  "customizations": {
+    "vscode": { "extensions": ["dbaeumer.vscode-eslint"] },
+    "codespaces": { "openFiles": ["docs/development-workflow.md"] }
+  },
+  "secrets": {
+    "VITE_SUPABASE_URL": { "description": "Beta Supabase project URL; never use production for development." },
+    "VITE_SUPABASE_ANON_KEY": { "description": "Beta anonymous browser client key; never a service-role key." },
+    "VITE_VAPID_PUBLIC_KEY": { "description": "Optional beta public VAPID key; never the private key." }
+  }
+}
