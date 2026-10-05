@@ -150,6 +150,18 @@ production database changes retain manual approval.
 
 ## Vercel, Auth links, and public promotion
 
+The stable beta address is `https://beta.roadshowdriver.com`. On October 5, 2026,
+the domain was added to the existing Vercel project, connected to **Preview**
+with Git branch **beta**, and verified to load the **Beta 5A** sign-in page over
+HTTPS. It follows beta deployments rather than individual feature previews.
+The existing root/www production domain configuration was left unchanged.
+No `/beta` redirect has been configured.
+
+For Auth links, verify `https://beta.roadshowdriver.com/**` in the intended
+Supabase project's redirect allowlist and test password resets/invitations on
+this hostname. This domain setup did not verify or change Supabase URL settings;
+keep the production Site URL unchanged until a separately approved change.
+
 Keep existing GitHub/Vercel relationships: feature PRs → previews, `beta` → shared
 testing, `main` → production. Confirm actual project branch/environment settings
 in Vercel; do not infer them from source. Beta uses `VITE_RELEASE_CHANNEL=beta`
