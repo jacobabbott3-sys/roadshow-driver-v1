@@ -22,6 +22,7 @@ name their source and update the affected product/architecture/workflow document
 | Codespaces for hands-on work; Codex cloud for delegated PRs | Browser portability while retaining normal review; cloud design |
 | Retain Vercel/Supabase; initial migrations are manual | Avoid first-season infrastructure disruption and unreconciled replay; both approved designs |
 | Temporary development ports stay private; stable URLs test Auth links | Access control and predictable invitation/reset destinations; cloud design |
+| Use `beta.roadshowdriver.com` for the stable beta deployment | Jacob approved the beta subdomain on October 5, 2026; Vercel Preview domain tracks `beta`, avoiding app changes for a `/beta` base path |
 | Mobile is monitoring/review/emergency text edits | Desktop browser remains the normal engineering/security workspace; cloud design |
 
 Deferred approaches: automatic assignment, bidding/waitlists/deadlines, external
