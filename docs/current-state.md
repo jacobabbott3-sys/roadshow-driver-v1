@@ -1,17 +1,37 @@
 # Current release and development state
 
-Updated October 2, 2026. Baseline source: `beta` at
+Updated October 5, 2026. Baseline source: `beta` at
 `016c4c15c7878c569ec768caf5eb38109cacba3c`. This is a repository-status record,
 not a claim that the matching database/deployment has been verified.
 
 | Item | State |
 | --- | --- |
 | Shared testing release | Beta 5A |
-| Public release | Public 4; do not change until promotion is approved |
+| Public release | Public 4 live; Public 5 approved by Jacob on October 5, preparation pending promotion |
 | Latest baseline commits | `016c4c1` cloud design; `505cfbf` photo/PDF fixes; `5c1fc6d` contract clarity |
 | Backend/hosting | Supabase + Vercel retained |
-| Database/deployment evidence | Applied beta/production SQL and actual deployment settings unverified in this task |
-| Cloud rollout | Repository setup in review; fresh Codespace/cloud-trial/second-browser acceptance pending |
+| Database/deployment evidence | Applied beta/production SQL and backups unverified; Supabase dashboard sign-in blocked release verification |
+| Cloud rollout | PR #6 published with passing CI/preview checks before release preparation; fresh Codespace/cloud-trial/second-browser acceptance pending |
+
+## Public 5 promotion preparation
+
+Jacob authorized publishing beta as Public 5 on October 5. The public build
+default is now `5`; beta remains `5A`. A production `VITE_RELEASE_VERSION`
+override must also be set to `5` before the release deployment.
+
+At inspection, `main` (`9bd5775`, prior PR #5) and `beta` (`016c4c1`) have
+identical source trees, including all five Beta 5A migrations. PR #6 adds the
+in-app PDF viewer and cloud setup without changing SQL. This does not prove that
+the actual production database matches the committed migrations.
+
+Promotion remains pending production schema/backup verification, release
+checks, PR #6 integration into beta, and the approved beta-to-main release PR.
+Live mobile/RLS/Auth acceptance has not been recorded as passed. The production
+version/environment and deployment have not yet been changed by this release task.
+
+Release-preparation checks: clean `npm ci` with Node 24.19.0/npm 11.5.2;
+44 unit tests and 40 UI tests passed; build passed; lint has zero errors and
+the same three baseline warnings. The release assertion now expects Public 5.
 
 ## Beta 5A committed behavior
 
