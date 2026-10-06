@@ -74,6 +74,15 @@ may enter the client. Cron creates due-work notifications. Setup is environment
 specific and remains a deliberate dashboard/deployment action; CI does not
 deploy the function, set secrets, or apply SQL.
 
+The global `create_due_work_notifications()` function is reserved for the
+scheduled backend job. Its permission-hardening migration revokes execution from
+`PUBLIC`, `anon`, and `authenticated`, retaining the existing `postgres` owner
+and `service_role` grants. It does not change the function body, cron schedule,
+push webhook, or the frontend's separate `ensure_my_due_notifications()` RPC.
+Use effective-privilege catalog checks after approved application; source tests
+alone do not establish live grants. See [current state](current-state.md) for
+application status.
+
 ## Hosting and development
 
 Vercel stays connected to GitHub: feature/PR previews, shared `beta`, public
