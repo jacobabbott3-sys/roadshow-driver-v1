@@ -165,7 +165,8 @@ keep the production Site URL unchanged until a separately approved change.
 Keep existing GitHub/Vercel relationships: feature PRs → previews, `beta` → shared
 testing, `main` → production. Confirm actual project branch/environment settings
 in Vercel; do not infer them from source. Beta uses `VITE_RELEASE_CHANNEL=beta`
-and `VITE_RELEASE_VERSION=5A`; production remains `public`/`4`.
+and `VITE_RELEASE_VERSION=5A`; production is `public`/`5`. Vercel currently has no release-label overrides;
+branch-aware build defaults provide these labels.
 
 Keep production's stable Supabase Site URL and explicit stable production/beta
 redirect allowlist. Invitations/password resets are tested on stable Vercel beta
@@ -178,6 +179,12 @@ immediately before matching app deployment, then merge approved `beta` into
 `main` through a PR. At that approved promotion, set production's numeric release
 to Public 5, verify deployment and Auth/data workflows, and update current-state
 and release notes. Setup/PDF-viewer work alone does not authorize promotion.
+
+For Public 5 on October 5, 2026, Jacob explicitly waived fresh database/storage
+backups and approved release. PR #7 promoted beta to main; the public domain was
+verified as Public 5 and beta remained Beta 5A. This release required no SQL or
+data mutations. The waiver applies to this release only; live account/device
+and cloud-rollout acceptance remain unverified.
 
 ## Recovery and mobile limits
 
