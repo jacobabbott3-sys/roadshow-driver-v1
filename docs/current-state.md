@@ -10,22 +10,23 @@ not a claim that the matching database/deployment has been verified.
 | Public release | Public 4 live; Public 5 approved by Jacob on October 5, preparation pending promotion |
 | Latest baseline commits | `016c4c1` cloud design; `505cfbf` photo/PDF fixes; `5c1fc6d` contract clarity |
 | Backend/hosting | Supabase + Vercel retained |
-| Database/deployment evidence | Production schema checks passed 27/27 on October 5; fresh database/storage backup remains unverified |
+| Database/deployment evidence | Production schema checks passed 27/27 on October 5; fresh backups explicitly waived by Jacob for Public 5 |
 | Cloud rollout | PR #6 published with passing CI/preview checks before release preparation; fresh Codespace/cloud-trial/second-browser acceptance pending |
 
 ## Public 5 promotion preparation
 
 Jacob authorized publishing beta as Public 5 on October 5. The public build
-default is now `5`; beta remains `5A`. A production `VITE_RELEASE_VERSION`
-override must also be set to `5` before the release deployment.
+default is now `5`; beta remains `5A`. Vercel has no release-label overrides; `main` builds Public 5 and `beta`
+builds Beta 5A using the verified branch defaults.
 
 At inspection, `main` (`9bd5775`, prior PR #5) and `beta` (`016c4c1`) have
 identical source trees, including all five Beta 5A migrations. PR #6 adds the
 in-app PDF viewer and cloud setup without changing SQL. This does not prove that
 the actual production database matches the committed migrations.
 
-Promotion remains pending fresh production database/storage backup verification,
-PR #6 integration into beta, and the approved beta-to-main release PR.
+Jacob explicitly waived fresh database/storage backups for this frontend-only
+release on October 5. PR #6 is merged into beta (`443f4f1`); the approved
+beta-to-main Public 5 promotion is tracked in PR #7.
 Live mobile/RLS/Auth acceptance has not been recorded as passed. The production
 version/environment and deployment have not yet been changed by this release task.
 
@@ -41,8 +42,9 @@ photo/resource buckets, and expected photo policy presence/active-user checks.
 These checks show the required schema artifacts are present, not full live RLS
 or device acceptance. No migration or application-data mutation was executed.
 The Free plan has no scheduled backups. A fresh recoverable database/storage
-backup has not been established, so the repository's promotion gate remains
-open. PR #6's latest three GitHub checks passed before integration.
+backup has not been established; Jacob explicitly waived this prerequisite for
+Public 5. This exception does not change the backup requirement for future
+releases. PR #6's three GitHub checks passed before integration.
 
 ## Beta 5A committed behavior
 
@@ -56,7 +58,8 @@ cross-device photo upload/shared viewing/PDF attachments. See [product](product.
 
 On an existing environment, verify actual applied state first and apply only
 reviewed missing files. These are code dependencies, not an instruction to rerun
-all files. All five remote applied states are currently unverified:
+all files. Required artifacts from all five files passed read-only production
+schema checks; migration-ledger history and full live acceptance remain unverified:
 
 1. `202609290001_beta_5a_contract_publishing.sql`
 2. `202609290002_beta_5a_reliability.sql`
