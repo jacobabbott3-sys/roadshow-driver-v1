@@ -7,13 +7,13 @@ not a claim that the matching database/deployment has been verified.
 | Item | State |
 | --- | --- |
 | Shared testing release | Beta 5A |
-| Public release | Public 4 live; Public 5 approved by Jacob on October 5, preparation pending promotion |
+| Public release | Public 5 live; approved and verified October 5 |
 | Latest baseline commits | `016c4c1` cloud design; `505cfbf` photo/PDF fixes; `5c1fc6d` contract clarity |
 | Backend/hosting | Supabase + Vercel retained |
 | Database/deployment evidence | Production schema checks passed 27/27 on October 5; fresh backups explicitly waived by Jacob for Public 5 |
-| Cloud rollout | PR #6 published with passing CI/preview checks before release preparation; fresh Codespace/cloud-trial/second-browser acceptance pending |
+| Cloud rollout | PR #6 merged with passing CI/preview checks; fresh Codespace/cloud-trial/second-browser acceptance pending |
 
-## Public 5 promotion preparation
+## Public 5 release
 
 Jacob authorized publishing beta as Public 5 on October 5. The public build
 default is now `5`; beta remains `5A`. Vercel has no release-label overrides; `main` builds Public 5 and `beta`
@@ -26,9 +26,11 @@ the actual production database matches the committed migrations.
 
 Jacob explicitly waived fresh database/storage backups for this frontend-only
 release on October 5. PR #6 is merged into beta (`443f4f1`); the approved
-beta-to-main Public 5 promotion is tracked in PR #7.
-Live mobile/RLS/Auth acceptance has not been recorded as passed. The production
-version/environment and deployment have not yet been changed by this release task.
+beta-to-main Public 5 promotion merged in PR #7 (`590049f`).
+The public domain redirects to `https://www.roadshowdriver.com/login`, verified
+with title **Roadshow Driver · Public 5**. The stable beta hostname remains
+**Roadshow Driver · Beta 5A**.
+Live mobile/RLS/Auth acceptance has not been recorded as passed. Production was deployed from main; no environment-variable edits were required.
 
 Release-preparation checks: clean `npm ci` with Node 24.19.0/npm 11.5.2;
 44 unit tests and 40 UI tests passed; build passed; lint has zero errors and
@@ -104,8 +106,9 @@ fresh Codespace/private preview; run fresh Codex documentation and application
 trials; complete another-desktop acceptance with the laptop off. Jacob selected
 an in-app PDF viewer as the first application change. It is implemented on
 `chore/cloud-development` with page/zoom/close/download controls and renewed
-private links; merge/deployment and live mobile/security acceptance are pending.
-Public Beta 5A promotion remains a separate gate.
+private links; merged and deployed in Public 5. Live mobile/security acceptance
+remains pending.
+Public 5 promotion completed through PR #7 on October 5.
 
 Viewer follow-up: internal PDF table-of-contents links are not yet wired to the
 single-page reader. Use the previous/next-page controls; this is a deferred minor
