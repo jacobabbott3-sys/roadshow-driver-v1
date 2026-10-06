@@ -10,7 +10,7 @@ not a claim that the matching database/deployment has been verified.
 | Public release | Public 4 live; Public 5 approved by Jacob on October 5, preparation pending promotion |
 | Latest baseline commits | `016c4c1` cloud design; `505cfbf` photo/PDF fixes; `5c1fc6d` contract clarity |
 | Backend/hosting | Supabase + Vercel retained |
-| Database/deployment evidence | Applied beta/production SQL and backups unverified; Supabase dashboard sign-in blocked release verification |
+| Database/deployment evidence | Production schema checks passed 27/27 on October 5; fresh database/storage backup remains unverified |
 | Cloud rollout | PR #6 published with passing CI/preview checks before release preparation; fresh Codespace/cloud-trial/second-browser acceptance pending |
 
 ## Public 5 promotion preparation
@@ -24,14 +24,25 @@ identical source trees, including all five Beta 5A migrations. PR #6 adds the
 in-app PDF viewer and cloud setup without changing SQL. This does not prove that
 the actual production database matches the committed migrations.
 
-Promotion remains pending production schema/backup verification, release
-checks, PR #6 integration into beta, and the approved beta-to-main release PR.
+Promotion remains pending fresh production database/storage backup verification,
+PR #6 integration into beta, and the approved beta-to-main release PR.
 Live mobile/RLS/Auth acceptance has not been recorded as passed. The production
 version/environment and deployment have not yet been changed by this release task.
 
 Release-preparation checks: clean `npm ci` with Node 24.19.0/npm 11.5.2;
 44 unit tests and 40 UI tests passed; build passed; lint has zero errors and
 the same three baseline warnings. The release assertion now expects Public 5.
+
+Supabase dashboard sign-in succeeded on October 5. In Roadshow's production
+project (`myraoovepjwhkafzdppq`), read-only catalog comparisons passed all 27
+checks: 21 expected function bodies (whitespace-normalized hashes and security
+definer), five release tables, PDF resource column, two chat indexes, private
+photo/resource buckets, and expected photo policy presence/active-user checks.
+These checks show the required schema artifacts are present, not full live RLS
+or device acceptance. No migration or application-data mutation was executed.
+The Free plan has no scheduled backups. A fresh recoverable database/storage
+backup has not been established, so the repository's promotion gate remains
+open. PR #6's latest three GitHub checks passed before integration.
 
 ## Beta 5A committed behavior
 
