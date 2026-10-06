@@ -1,82 +1,70 @@
 # Roadshow Driver
 
-Mobile-first operations app for roadshow drivers and administrators, built with React, Vite, TypeScript, and Supabase.
+Mobile-first roadshow operations for drivers and administrators, built with
+React, Vite, TypeScript, Supabase, and Vercel. GitHub is the durable source of
+truth; development does not require Jacob's laptop or its Codex thread.
 
-## Local setup
+## Start here
 
-1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env` and add the Supabase project URL and anonymous key.
-3. Apply the SQL files in `supabase/migrations` in filename order using the Supabase SQL editor or CLI.
-4. Run `npm run dev`.
+- [Repository instructions](AGENTS.md): operating rules and routed context.
+- [Product behavior](docs/product.md) and [architecture](docs/architecture.md).
+- [Durable decisions](docs/project-decisions.md).
+- [Current release state](docs/current-state.md): **Beta 5A**, **Public 4**.
+- [Development workflow](docs/development-workflow.md): Codespaces, Codex cloud,
+  secrets, PRs, manual database changes, deployment, and recovery.
+- [Beta 5A checklist](docs/releases/beta-5a-test-checklist.md) and
+  [cloud rollout evidence](docs/releases/cloud-development-verification.md).
 
-New accounts receive the `driver` role. Promote the initial administrator from the Supabase SQL editor:
+## Development
+
+Use Node 24 from `.nvmrc` and npm 11.5.2 from `package.json`. For browser-based
+hands-on development, create a GitHub Codespace from the updated `beta` branch,
+create a feature branch, and follow the workflow above. Its Vite port stays
+private. Codex cloud tasks use the same repository context and return PRs into
+`beta`; `main` stays public. Mobile is for monitoring, review, app testing, and
+small emergency text edits, not normal coding or migrations.
+
+For a local checkout, run `npm ci` and supply beta Supabase client values through
+an ignored `.env.local` using `.env.example` as a names-only guide. Codespaces
+secrets are inherited environment variables; do not commit their values. Start
+with `npm run dev` (in Codespaces use
+`npm run dev -- --host 0.0.0.0 --port 5173 --strictPort`). Tests/build work without
+a live backend; connected preview needs the beta URL and anonymous key.
+
+```sh
+npm test
+npm run test:ui
+npm run build
+npm run lint
+```
+
+CI runs these checks without database/deploy credentials. The three existing
+lint warnings are listed in current-state; new warnings/errors are not accepted.
+
+## Database safety
+
+Migrations initially run manually through the intended Supabase SQL editor from
+a desktop browser. For an existing environment, verify actual schema and applied
+state before applying **only reviewed missing migrations** in filename order.
+Do not blindly replay history; dashboard SQL may be absent from CLI migration
+records. New empty databases need an intentional review of the full historical
+sequence. See the workflow for backups, storage recovery, and failure handling.
+
+Beta 5A depends on the four September 29 migrations **and**
+`202610010001_beta_5a_photo_resource_uploads.sql`, in that order. See the release
+checklist for exact filenames, live RLS/photo/PDF checks, and promotion gates.
+Do not apply these to production until public release is approved.
+
+New accounts receive `driver`. Promote the initial admin deliberately through
+the intended Supabase SQL editor:
 
 ```sql
 update public.profiles set role = 'admin' where id = '<auth-user-id>';
 ```
 
-The browser only receives the public anonymous key. Never add the Supabase service-role key to a `VITE_` variable. Passwords remain in Supabase Auth and are never stored or exposed in application tables.
-
-## Current scope
-
-- Supabase authentication and password recovery
-- Driver/admin profiles and protected routing
-- Responsive sidebar and mobile bottom navigation
-- Home shell and route placeholders
-- Core schema, relationships, indexes, and row-level security
-- Private storage buckets prepared for contract files, checklist photos, and resources
-- Driver contracts and contract detail
-- Interactive sectioned checklists
-- Private required-photo uploads
-- Contract acknowledgement/signing
-- Upcoming-show availability
-- Published resources, FAQs, and feedback
-- Driver profile editing
-- Admin dashboard and operational counts
-- Show creation and driver contract assignment
-- Checklist template builder and submission review
-- User role and activation management
-- Resource publishing, feedback review, and toolbag assignment
-
-If Phase 1 is already deployed, run only `202608170002_driver_experience.sql` before deploying the Phase 2 application code.
-
-For the admin workspace, run `202608170003_admin_workspace.sql` after the Phase 2 migration. Create a checklist template before creating contracts; the newest active template matching the contract type is attached automatically.
-
-Run `202608170004_admin_editing.sql` to enable editable checklist templates, explicit setup/teardown checklist assignments for each show, and published contract terms. Show checklist changes are also applied to existing matching contracts.
-
-Run `202608180001_contract_workflow_corrections.sql` to merge show and contract configuration, add a separate setup/teardown work date, and enable reliable assigned-driver checklist completion.
-
-Run `202608180002_single_contract_per_show.sql` to consolidate any legacy duplicate contracts and enforce one contract per show. The migration keeps the most progressed or assigned contract for each show.
-
-Run `202608180003_beta_collaboration.sql` for the beta features: multiple drivers, messages and notifications, dual signatures, toolbag templates and quantities, and Red Folder image uploads.
-
-Run `202608180004_notification_review_fixes.sql` to add checklist submission alerts, live message/notification badges, notification preferences, and secure device push subscriptions.
-
-Run `202608180005_item_level_checklist_review.sql` to enable full item-by-item admin review, correction notes, driver resubmission of denied items, and persistent checklist review history.
-
-Run `202608190001_operations_expansion.sql` for account-synced appearance settings, color schemes, group chat, reusable contract templates, signings, the team directory, public assignment visibility, per diem and lodging details, and setup times.
-
-If an earlier beta database already installed the contract-email queue, run `202608190002_remove_contract_email.sql` to remove it safely.
-
-Run `202608190003_beta_v3b.sql` for beta v3b availability pay/work-date details and safe checklist-template editing that preserves completed checklist history.
-
-Run `202608190004_beta_test_show.sql` to add the admin-only, resettable Beta Test Show sandbox. Each admin can create one Test Show from the beta Admin overview; resetting it clears test workflow progress without touching real shows.
-
-Run `202608190005_checklist_review_fix.sql` to correct item-level checklist review saves and final approvals by removing ambiguous database variable names.
-
-Run `202608210001_beta_round.sql` to include signings in the shared availability and assignment summaries used by the linked-signing experience.
-
-Run `202608240001_beta_4b.sql` to add the account-synced Extreme Confetti Mode profile setting used by Beta 4B.
-
-Run `202609290001_beta_5a_contract_publishing.sql` for Beta 5A contract publishing batches, first-response ordering, final admin assignments, outside-driver names, and the **New contract batches** notification preference. Apply this migration before deploying the Beta 5A app code.
-
-Run `202609290002_beta_5a_reliability.sql` next for active-account enforcement, final-admin protection, atomic show/signing saves, and safer operational permissions.
-
-Run `202609290003_beta_5a_chat_performance.sql` next for paginated chat summaries, 50-message history pages, and lightweight unread-chat counts.
-
-Run `202609290004_beta_5a_contract_clarity.sql` last for consistent contract wording, fully reversible assignments that preserve availability-response order, and admin publication statuses and filters. These four migrations must be applied to the beta Supabase project in filename order before the `beta` branch deploy is tested. Do not apply them to the production project until Beta 5A is approved for public release.
-
-The complete pre-deploy, migration, multi-account, and mobile test sequence is in [`docs/releases/beta-5a-test-checklist.md`](docs/releases/beta-5a-test-checklist.md).
+Passwords stay in Supabase Auth. Browser variables may contain only client-safe
+values; never supply a service-role key, database password, or private VAPID key
+as a `VITE_` variable, commit credentials, or archive raw conversations.
 
 ## Device notification setup
 
