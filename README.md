@@ -9,7 +9,7 @@ truth; development does not require Jacob's laptop or its Codex thread.
 - [Repository instructions](AGENTS.md): operating rules and routed context.
 - [Product behavior](docs/product.md) and [architecture](docs/architecture.md).
 - [Durable decisions](docs/project-decisions.md).
-- [Current release state](docs/current-state.md): **Beta 5A**, **Public 4**.
+- [Current release state](docs/current-state.md): **Beta 5A**, **Public 5**.
 - [Development workflow](docs/development-workflow.md): Codespaces, Codex cloud,
   secrets, PRs, manual database changes, deployment, and recovery.
 - [Beta 5A checklist](docs/releases/beta-5a-test-checklist.md) and
@@ -98,7 +98,7 @@ Invite users from **Authentication → Users → Add user → Send invitation**.
 ## Release labels
 
 Vercel beta-branch deployments automatically show `Beta 5A`; production remains
-`Public 4` until Beta 5A is promoted. Beta labels may include letters, while public release numbers are always displayed as numbers only. In the Vercel beta environment, set `VITE_RELEASE_VERSION=5A`. Do not change the production value to `5` until promotion. To change either label without editing code, set
+`Public 5` after the approved October 5 promotion. Beta labels may include letters, while public release numbers are always displayed as numbers only. In the Vercel beta environment, set `VITE_RELEASE_VERSION=5A`. Public 5 is now deployed from `main`. To change either label without editing code, set
 `VITE_RELEASE_CHANNEL` (`beta` or `public`) and `VITE_RELEASE_VERSION` in the
 corresponding Vercel environment, then redeploy.
 
