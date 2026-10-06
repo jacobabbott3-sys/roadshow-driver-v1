@@ -20,7 +20,7 @@ cloud workspaces are disposable. Do not depend on laptop chat history.
   signatures, checklists, chat access, or notifications.
 - Work from current `beta` on a short-lived feature branch; open a PR into
   `beta`. Never push directly to `main`. Public promotion is a separately
-  approved `beta` → `main` PR. Current labels: **Beta 5A**, **Public 4**.
+  approved `beta` → `main` PR. Current labels: **Beta 5A**, **Public 5**.
 - Keep Supabase Auth/database/private storage/Edge Functions and Vercel.
   Authorization belongs in database policies/RPCs as well as route guards.
   Do not loosen RLS, make buckets public, or bypass Auth for previews.
