@@ -14,10 +14,16 @@ Use this checklist for the existing `beta` branch and beta Supabase environment.
 
 Apply these files to the beta Supabase project in this exact order before deploying the matching app code:
 
+First confirm the intended project and actual applied schema/policy state.
+Apply only reviewed missing files; do not replay already-applied SQL. Dashboard
+application may not appear in CLI migration history. Record uncertain state and
+reconcile it before continuing. See [manual migration workflow](../development-workflow.md#manual-supabase-migrations).
+
 1. `202609290001_beta_5a_contract_publishing.sql`
 2. `202609290002_beta_5a_reliability.sql`
 3. `202609290003_beta_5a_chat_performance.sql`
 4. `202609290004_beta_5a_contract_clarity.sql`
+5. `202610010001_beta_5a_photo_resource_uploads.sql`
 
 Then verify:
 
@@ -49,6 +55,29 @@ Then verify:
 - [ ] Test a recoverable failed save by temporarily disconnecting the network; confirm entered data/selections remain available for retry.
 - [ ] Upload a supported photo near the size limit and a photo wider than 4800 pixels; confirm the upload is readable, text remains legible at high zoom, and oversized dimensions are reduced.
 
+## Photo sharing and PDF resources
+
+- [ ] On desktop, select JPEG/PNG/WebP through the file picker; on mobile select
+  or take a supported photo. Test supported files with missing MIME metadata.
+  Confirm unsupported formats and files above 20 MiB have clear errors.
+- [ ] Disconnect during upload/save and retry; confirm progress and recoverable
+  form state. Force a photo metadata insert failure and verify uploaded-object
+  cleanup, with no orphaned photo record or duplicate successful save.
+- [ ] With a lead, assigned co-driver, and admin, view the same contract photos
+  and verify zoom/pan and text clarity. With an unrelated or inactive account,
+  verify direct API/storage requests are denied, not just hidden UI actions.
+- [ ] Publish image and PDF Red Folder resources; confirm existing images still
+  display correctly. Verify PDF **View PDF** opens inside the app with page
+  controls, zoom, close, and download. Test every page of a multipage document on
+  desktop, iPhone Safari, and Android Chromium; no automatic new-tab navigation.
+- [ ] Retry a failed/expired PDF link and confirm a new signed link is requested.
+  Verify download remains available for a document the renderer cannot display.
+  Test denied-resource access and failed attachment loading without exposing
+  private backend details or making storage public.
+- [ ] Confirm view/download links expire as intended, private buckets remain
+  private, and resource behavior follows existing active-account/publication
+  policies. Record any policy limitations found before promotion.
+
 ## Mobile and appearance checks
 
 - [ ] On iPhone Safari, test sign-in persistence, navigation, Publish Contracts, availability response, chat, checklist completion, photo zoom/pan, dark mode, and device-notification permission.
@@ -61,4 +90,6 @@ Then verify:
 - [ ] Run `npm test`, `npm run test:ui`, `npm run lint`, and `npm run build` from a clean checkout.
 - [ ] Resolve every new error or warning. The three known pre-existing lint warnings must not increase.
 - [ ] Record migration completion and test results before merging `beta` into `main`.
-- [ ] Apply the same four migrations to production immediately before the approved public app deployment, with fresh production database and storage backups.
+- [ ] Verify all five required migration states in production; apply only reviewed
+  missing migrations immediately before the approved public app deployment, with
+  fresh production database and storage backups. Never rerun already-applied SQL.

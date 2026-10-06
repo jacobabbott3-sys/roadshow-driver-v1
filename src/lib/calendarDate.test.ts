@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { after, before } from "node:test";
 import { compareDateOnly, localDateKey, parseDateOnly } from "./calendarDate.ts";
+
+// These timestamp fixtures exercise Mountain-time midnight, independent of
+// the machine running the tests. Node runs each test file in its own process.
+const originalTimezone = process.env.TZ;
+before(() => { process.env.TZ = "America/Denver"; });
+after(() => {
+  if (originalTimezone === undefined) delete process.env.TZ;
+  else process.env.TZ = originalTimezone;
+});
 
 test("localDateKey keeps an 8 PM Mountain evening on the local day", () => {
   assert.equal(localDateKey(new Date("2026-09-30T02:00:00Z")), "2026-09-29");

@@ -2077,6 +2077,24 @@ h2 {
 .pdf-resource-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .pdf-resource-actions .button { display: inline-flex; width: auto; align-items: center; gap: 6px; }
 .pdf-resource-actions .button svg { width: 16px; height: 16px; }
+.pdf-viewer { position: fixed; inset: 0; z-index: 9999; display: grid; grid-template-rows: auto auto minmax(0, 1fr); background: var(--paper); color: var(--ink); }
+.pdf-viewer-header { display: flex; align-items: center; gap: 12px; padding: max(12px, env(safe-area-inset-top)) 16px 12px; border-bottom: 1px solid var(--line); }
+.pdf-viewer-header h2 { margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 1rem; }
+.pdf-viewer-header .button { display: inline-flex; align-items: center; gap: 6px; width: auto; }
+.pdf-viewer-close, .pdf-viewer-controls button { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); }
+.pdf-viewer-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 8px; }
+.pdf-viewer-controls button:disabled { opacity: 0.4; }
+.pdf-viewer-controls span { font-size: 0.85rem; }
+.pdf-viewer-stage { overflow: auto; overscroll-behavior: contain; padding: 16px 16px max(16px, env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--ink) 10%, var(--paper)); }
+.pdf-viewer-stage .react-pdf__Document { width: max-content; min-width: 100%; }
+.pdf-viewer-stage .react-pdf__Page { width: max-content; margin: 0 auto; }
+.pdf-viewer-stage .react-pdf__Page canvas { max-width: none; }
+.pdf-viewer-error { max-width: 520px; margin: 24px auto; text-align: center; }
+@media (max-width: 600px) {
+  .pdf-viewer-header { flex-wrap: wrap; gap: 8px; }
+  .pdf-viewer-header h2 { flex-basis: calc(100% - 60px); }
+  .pdf-viewer-header .button { order: 3; padding: 8px 12px; }
+}
 .photo-slot.has-photo { padding: 10px; cursor: default; }
 .photo-slot .zoomable-image { min-height: 110px; }
 .photo-slot .zoomable-image img { height: 150px; }

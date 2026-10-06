@@ -1,7 +1,8 @@
 node_modules
 dist
 .env
-.env.local
+.env.*
+!.env.example
 .DS_Store
 *.log
 *.tsbuildinfo
@@ -10,3 +11,4 @@ vite.config.d.ts
 work
 outputs
 supabase/.temp
+/public/pdfjs-assets/
