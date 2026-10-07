@@ -75,6 +75,37 @@ and the [Beta 5A checklist](releases/beta-5a-test-checklist.md).
 
 ## Verification baseline and known issues
 
+### October 6 notification-permission hardening, prepared for review
+
+The additive `20261006152001_restrict_due_work_notification_execution.sql`
+migration removes browser/public execution of the global due-work notification
+writer. It is prepared for review and **has not been applied to a live database**.
+The source baseline for this patch is beta
+`5c49d1487df9c1a746457d9a54e6f315a697e732`.
+
+Read-only production catalog checks on October 6 found explicit execution grants
+to `PUBLIC`, `anon`, `authenticated`, and `service_role`; the function is owned by
+`postgres` and uses `SECURITY DEFINER`. The active `roadshow-daily-work-alerts`
+cron job calls it as `postgres` at `0 14 * * *`; October 4–6 executions succeeded.
+The proposed revoke preserves that scheduler and the existing service-role grant.
+The frontend calls a different, user-scoped RPC, `ensure_my_due_notifications()`.
+
+The SQL assertions in `supabase/verification/due_work_notification_permissions.sql`
+are read-only catalog checks and require no pgTAP installation. They do not invoke
+notification writers. Local preparation passed 46 unit tests, 40 UI tests,
+production build, and lint with zero errors and the same three existing warnings
+using Node 24.19.0/npm 11.5.2. An isolated PGlite 0.5.8 test with synthetic rows
+reproduced unauthorized execution before the revoke, then verified denied client
+calls, preserved postgres/service-role calls, deduplication, and the unchanged
+personal-notification RPC. This is focused PostgreSQL behavior coverage, not live
+Supabase Auth/RLS, pg_cron, webhook, or device acceptance. Live application,
+post-application grant checks, and the next normal scheduler result remain
+separate review/approval and verification steps. Do not change global/default
+function grants, replay historical migrations, or use production notifications
+as test fixtures.
+
+### Existing application baseline
+
 Node 24.19.0 / npm 11.5.2 in the cloud checkout: baseline UI tests 35/35 and
 production build pass. The initial UTC unit run failed two Mountain-time fixture
 tests; making their timezone explicit allows all 44 unit tests to pass without
