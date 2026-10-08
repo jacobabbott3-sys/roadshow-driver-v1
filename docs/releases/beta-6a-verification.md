@@ -96,13 +96,15 @@ were still strengthened. Review does not establish live deployment safety.
   fail closed after these migrations until a compatible frontend is rolled out.
   A beta-only migration rollout is unsafe. See [rollout checklist](beta-6a-test-checklist.md).
 
-## Publication hold
+## Publication boundary and later authorization
 
 Read-only Vercel project listing found `roadshow-driver-v1`; project-settings
 read returned **403 forbidden**: the connected identity lacks access to the
 project scope. Vercel CLI is unavailable. No alternate identity, credential or
 setting was used. Automatic preview behavior could not be freshly verified.
-Feature pushes/draft PRs therefore remain held. Before any publication, verify
-settings with authorized access and obtain Jacob's specific approval if an
-automatic preview can use the shared live backend. Do not edit settings to avoid
-this boundary. Live rollout remains a separate approval.
+Publication was held at local completion. Jacob subsequently approved pushing
+this feature branch and creating a draft PR into beta on October 7 (Denver),
+including any automatic Vercel preview that may use the shared live backend.
+The settings read remains unverified; this approval covers that preview risk,
+not live migrations, merges, public deployment, data mutations or settings edits.
+Live rollout remains a separate approval.

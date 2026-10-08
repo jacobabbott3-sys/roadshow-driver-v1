@@ -1,9 +1,10 @@
 # Draft PR prepared locally
 
 Target: existing `beta`; source: `feat/beta-6a-agreement-reconstruction`.
-**Not pushed or created:** automatic Vercel preview behavior remains unverified
-because the authorized settings read returned 403. Publication requires the
-specific preview approval described in the verification record.
+Jacob approved publishing the feature branch and opening a draft PR on
+October 7 (Denver), including automatic Vercel previews that may use shared
+Supabase. Project-settings verification remains blocked by 403. This authorization
+does not cover live SQL, merging or public release.
 
 Title: **Beta 6A: immutable agreement versions, reviewed revisions and private receipts**
 
@@ -52,6 +53,6 @@ record are included. No Mac files/commits recovered or old results counted.
 **Remaining limits:** single-session PGlite cannot prove simultaneous-request
 race/deadlock behavior. Hosted Auth/storage/webhook/Edge deployment, actual devices
 and another desktop browser remain pending in a disposable authorized environment.
-Vercel automatic-preview settings could not be read (403); hold publication until
-verified and specifically approved. Historical PDFs are document-path references;
+Vercel automatic-preview settings could not be read (403); Jacob specifically
+approved branch/draft-PR publication including any automatic preview on October 7. Historical PDFs are document-path references;
 no claim is made that existing mutable storage content has been archived.

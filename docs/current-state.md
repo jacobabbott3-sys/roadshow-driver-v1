@@ -166,3 +166,11 @@ is held. [Verification](releases/beta-6a-verification.md),
 [Mac reconciliation](releases/beta-6a-reconstruction.md) contain the exact scope,
 review findings and limits. Historical October 5/6 evidence above is not new
 Beta 6A acceptance.
+
+### Publication authorization
+
+On October 7 (Denver), Jacob approved pushing the reconstructed feature branch
+and opening a draft PR into beta, including any automatic Vercel preview using
+the shared Supabase backend. This supersedes the preparation-time publication
+hold above. Project-settings read remains blocked by403; no live migrations,
+merging, public release, settings or data changes are authorized.
