@@ -83,6 +83,17 @@ begin
 end $$;
 create trigger agreement_period_guard before update or delete on public.agreement_assignment_periods for each row execute function roadshow_private.guard_assignment_period();
 
+-- UNION deduplicates cycles; a linked signing is the complete connected unit.
+create function roadshow_private.linked_show_set(target_show uuid) returns table(id uuid)
+language sql stable security definer set search_path='' as $$
+ with recursive connected(id) as (
+  select target_show where target_show is not null
+  union
+  select case when l.show_id=c.id then l.linked_show_id else l.show_id end
+  from connected c join public.show_links l on l.show_id=c.id or l.linked_show_id=c.id
+ ) select id from connected
+$$;
+
 create function public.agreement_content(target_contract uuid) returns jsonb
 language sql stable security definer set search_path='' as $$
  select jsonb_build_object(
@@ -92,8 +103,10 @@ language sql stable security definer set search_path='' as $$
    'venue_name',s.venue_name,'starts_on',s.starts_on,'ends_on',s.ends_on,'city',s.city,'state',s.state,
    'address',s.address,'bin_count',s.bin_count,'signing_at',s.signing_at,'setup_at',s.setup_at,
    'per_diem',s.per_diem,'meals_included',s.meals_included,'lodging_included',s.lodging_included),
+  'linked_work',coalesce((select jsonb_agg(jsonb_build_object('id',ls.id,'name',ls.name,'artist',ls.artist,'venue_name',ls.venue_name,'city',ls.city,'state',ls.state,'address',ls.address,'starts_on',ls.starts_on,'ends_on',ls.ends_on,'signing_at',ls.signing_at,'setup_at',ls.setup_at) order by ls.id)
+   from public.shows ls where ls.id<>s.id and ls.id in(select id from roadshow_private.linked_show_set(s.id))),'[]'::jsonb),
   'linked_show_ids',coalesce((select jsonb_agg(other_id order by other_id) from
-   (select case when l.show_id=s.id then l.linked_show_id else l.show_id end other_id from public.show_links l where l.show_id=s.id or l.linked_show_id=s.id) linked),'[]'::jsonb),
+   (select id other_id from roadshow_private.linked_show_set(s.id) where id<>s.id) linked),'[]'::jsonb),
   'checklist',coalesce((select jsonb_agg(jsonb_build_object('id',sec.id,'title',sec.title,'position',sec.position,
    'items',coalesce((select jsonb_agg(jsonb_build_object('id',i.id,'title',i.title,'instructions',i.instructions,
    'required',i.required,'photo_required',i.photo_required,'position',i.position) order by i.position,i.id)
@@ -113,7 +126,7 @@ begin
   return new;
  end if;
  if tg_op='DELETE' then
-  if exists(select 1 from public.agreement_versions where contract_id=old.id) then raise exception 'Agreement evidence prevents contract deletion'; end if;
+  if old.signed_at is not null or old.admin_signed_at is not null or exists(select 1 from public.agreement_versions where contract_id=old.id) then raise exception 'Agreement evidence prevents contract deletion'; end if;
   return old;
  end if;
  if not roadshow_private.in_agreement_change() then
@@ -135,7 +148,7 @@ create trigger agreement_contract_guard before insert or update or delete on pub
 create function roadshow_private.guard_agreement_show() returns trigger
 language plpgsql security definer set search_path='' as $$
 begin
- if not roadshow_private.in_agreement_change() and exists(select 1 from public.contracts c where c.show_id=old.id and (c.current_agreement_id is not null or c.signed_at is not null or c.admin_signed_at is not null))
+ if not roadshow_private.in_agreement_change() and exists(select 1 from public.contracts c where c.show_id in(select id from roadshow_private.linked_show_set(old.id)) and (c.current_agreement_id is not null or c.signed_at is not null or c.admin_signed_at is not null))
   and (to_jsonb(new)-array['lodging_name','lodging_address','lodging_phone','lodging_confirmation','lodging_check_in','lodging_check_out','lodging_notes','details_unlock_at'])
    is distinct from (to_jsonb(old)-array['lodging_name','lodging_address','lodging_phone','lodging_confirmation','lodging_check_in','lodging_check_out','lodging_notes','details_unlock_at']) then
   raise exception 'Agreement work changes require review and confirmation';

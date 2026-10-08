@@ -36,6 +36,7 @@ try {
   const contract='10000000-0000-0000-0000-000000000001';
   await actor(admin);
   await deny('update public.contracts set signed_at=now(),signature_name=\'Forged\' where id=$1',[contract]);
+  await deny("delete from public.contracts where id='10000000-0000-0000-0000-000000000004'",[],/agreement|evidence/i);
   await q("insert into public.shows(id,name,starts_on,ends_on,city) values('20000000-0000-0000-0000-000000000002','Insert probe','2026-11-01','2026-11-01','Denver')");
   await deny("insert into public.contracts(show_id,kind,service_date,signed_at,signature_name) values('20000000-0000-0000-0000-000000000002','teardown','2026-11-03',now(),'Forged')");
   await db.exec('reset role');
@@ -113,9 +114,9 @@ try {
         ok(notices.length,1,'removed recipient sees in-app notice');
         ok(notices[0].contract_id,null,'notice does not link private current contract');
         await actor(other);
-        ok((await q("select * from public.notifications where kind='agreement_removed'")).length,0,'other recipient cannot read removal');
+        ok((await q("select * from public.notifications where kind='agreement_removed' and recipient_id=$1",[driver])).length,0,'other recipient cannot read removal');
         await actor(admin);
-        ok((await q("select * from public.notifications where kind='agreement_removed'")).length,0,'admin cannot read another recipient notice');
+        ok((await q("select * from public.notifications where kind='agreement_removed' and recipient_id=$1",[driver])).length,0,'admin cannot read another recipient notice');
         await actor(driver);
       }
       ok((await q('select public.get_my_agreement_history() history'))[0].history.length,1,'removed signer retains own receipt');
@@ -124,6 +125,9 @@ try {
       const [returnPreview]=await q("select public.preview_agreement_change('assign',$1::jsonb) result",[JSON.stringify(payload)]);
       await q("select public.commit_agreement_change('assign',$1::jsonb,$2)",[JSON.stringify(payload),returnPreview.result.token]);
       ok((await q('select public.get_contract_agreement($1) result',[contract]))[0].result.signatures.length,0,'return does not reactivate historical acceptance');
+      await actor(driver);
+      ok((await q('select count(*)::int count from public.agreement_assignment_periods where contract_id=$1 and driver_id=$2',[contract,driver]))[0].count,2,'return creates a new assignment period');
+      await actor(admin);
       const edit={show_id:payload.show_ids[0],contract_id:contract,name:'  Synthetic Show  ',starts_on:'2026-11-01',ends_on:'2026-11-03',city:' Denver ',state:null,address:null,bin_count:null,lodging_included:false,per_diem:'0',kind:'setup',service_date:'2026-11-01',service_time:null,contract_pay:'0',bonus_pay:null,terms:'Updated full terms\nLine two',template_id:'30000000-0000-0000-0000-000000000001',driver_ids:[driver],external_names:null};
       await q("update public.checklist_templates set active=false where id='30000000-0000-0000-0000-000000000001'");
       const [edited]=await q("select public.preview_agreement_change('show',$1::jsonb) result",[JSON.stringify(edit)]);
@@ -155,6 +159,86 @@ try {
       const [legacyChanged]=await q("select public.get_contract_agreement('10000000-0000-0000-0000-000000000004') result");
       ok(legacyChanged.result.signatures.length,0,'legacy replacement never carries acceptance');
       ok(legacyChanged.result.legacy_evidence.signature_name,'Unknown legacy signer','legacy replacement retains original evidence');
+      if (Number(migrationLimit)>=6) {
+        await actor(driver);
+        await deny('select public.submit_my_checklist($1)',[contract],/current.*acceptance|accept.*current/i);
+        await actor(admin);
+        await deny("update public.checklist_responses set completed=false where id='70000000-0000-0000-0000-000000000001'",[],/RPC/i);
+        await deny("update public.checklist_responses set review_status='approved',reviewed_by=$1,reviewed_at=now() where id='70000000-0000-0000-0000-000000000001'",[admin],/review|RPC|permission/i);
+        await deny("insert into public.contracts(show_id,kind,service_date,status) values('20000000-0000-0000-0000-000000000005','teardown','2026-11-01','approved')",[],/acceptance/i);
+        await deny("update public.contracts set status='approved' where id=$1",[contract],/acceptance/i);
+        await deny('select public.admin_set_bonus_result($1,true)',[contract],/acceptance/i);
+        await actor(driver);
+        await q("select public.set_my_checklist_item('60000000-0000-0000-0000-000000000001','50000000-0000-0000-0000-000000000001',true)"); checks++;
+        const [freshReview]=await q('select public.get_contract_agreement($1) result',[contract]);
+        await q("select public.accept_contract_agreement($1,$2,'driver','Synthetic Driver')",[contract,freshReview.result.version.id]);
+        await q('select public.submit_my_checklist($1)',[contract]); checks++;
+        await actor(admin);
+        await q("select public.admin_review_checklist_item($1,'50000000-0000-0000-0000-000000000001','approved',null)",[contract]);
+        await q('select public.admin_finalize_checklist_review($1)',[contract]); checks++;
+        ok((await q('select status from public.contracts where id=$1',[contract]))[0].status,'approved','current driver acceptance permits final review');
+      }
+      if (Number(migrationLimit)>=4) {
+        await actor(driver);
+        const legacyNotice=await q("select * from public.notifications where kind='agreement_removed' and recipient_id=$1",[driver]);
+  ok(legacyNotice.length,2,'legacy-only lead receives distinct removal notice');
+  await actor(admin);
+  const [viewNow]=await q('select public.get_contract_agreement($1) result',[contract]);
+  await q("select public.accept_contract_agreement($1,$2,'admin','Synthetic Admin')",[contract,viewNow.result.version.id]);
+  await actor(driver);
+  await q("select public.accept_contract_agreement($1,$2,'driver','Synthetic Driver')",[contract,viewNow.result.version.id]);
+  await actor(admin);
+  const payment={...edit,contract_pay:'400',driver_ids:[driver,other]};
+  const [paymentPreview]=await q("select public.preview_agreement_change('show',$1::jsonb) result",[JSON.stringify(payment)]);
+  const beforeNotices=(await q("select * from public.notifications where kind='agreement_revision'")).length;
+  await q("select public.commit_agreement_change('show',$1::jsonb,$2)",[JSON.stringify(payment),paymentPreview.result.token]);
+  ok((await q("select * from public.notifications where kind='agreement_revision'")).length,beforeNotices+1,'admin sees only own revision notice');
+  await actor(driver);
+  ok((await q("select * from public.notifications where kind='agreement_revision'")).length,1,'retained driver sees revision notice');
+  await actor(other);
+  ok((await q("select * from public.notifications where kind='agreement_revision'")).length,0,'unsigned trainee sees no private revision notice');
+
+      }
+      await db.exec('reset role');
+      await db.transaction(async tx=>{
+        await tx.query('select roadshow_private.begin_agreement_change()');
+        await tx.query("insert into public.shows(id,name,starts_on,ends_on,city,event_type) values('20000000-0000-0000-0000-000000000010','Linked B','2026-11-01','2026-11-01','Denver','signing'),('20000000-0000-0000-0000-000000000011','Linked C','2026-11-01','2026-11-01','Denver','signing')");
+        await tx.query("insert into public.show_links(show_id,linked_show_id) values('20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000010'),('20000000-0000-0000-0000-000000000010','20000000-0000-0000-0000-000000000011')");
+        await tx.query('select roadshow_private.end_agreement_change()');
+      });
+      const [linkedContent]=await q('select public.agreement_content($1) content',[contract]);
+      ok(linkedContent.content.linked_work.map(w=>w.name),['Linked B','Linked C'],'transitive linked work included');
+      await actor(admin);
+      await deny("update public.shows set name='Silent C edit' where id='20000000-0000-0000-0000-000000000011'",[],/review/i);
+      await deny("delete from public.show_links where show_id='20000000-0000-0000-0000-000000000010'",[],/review/i);
+      await q("insert into public.contracts(id,show_id,kind,service_date) values('10000000-0000-0000-0000-000000000011','20000000-0000-0000-0000-000000000011','setup','2026-11-01')");
+      const linkedEdit={artist:'Linked C changed',signing_at:'2026-11-01T12:00:00Z',setup_at:'2026-11-01T10:00:00Z',city:'Denver',venue_name:'Synthetic venue',linked_show_ids:['20000000-0000-0000-0000-000000000010'],show_id:'20000000-0000-0000-0000-000000000011',contract_id:'10000000-0000-0000-0000-000000000011',template_id:null,driver_ids:[],external_names:null};
+      const [linkedPreview]=await q("select public.preview_agreement_change('signing',$1::jsonb) result",[JSON.stringify(linkedEdit)]);
+      ok(linkedPreview.result.consequences.some(c=>c.contract_id===contract),true,'transitive edit includes original accepted contract consequence');
+      await q("select public.commit_agreement_change('signing',$1::jsonb,$2)",[JSON.stringify(linkedEdit),linkedPreview.result.token]);
+      ok((await q('select public.get_contract_agreement($1) result',[contract]))[0].result.version.content.linked_work.at(-1).name,'Linked C changed signing','transitive change issues updated immutable copy');
+      const [beforeUnassign]=await q('select public.get_contract_agreement($1) result',[contract]);
+      await q("select public.accept_contract_agreement($1,$2,'admin','Synthetic Admin')",[contract,beforeUnassign.result.version.id]);
+      await actor(driver);
+      await q("select public.accept_contract_agreement($1,$2,'driver','Synthetic Driver')",[contract,beforeUnassign.result.version.id]);
+      await db.exec('reset role');
+      await q("insert into public.availability_release_batches(id,released_by) values('80000000-0000-0000-0000-000000000001',$1)",[admin]);
+      await q("insert into public.availability_release_items(id,batch_id,status) values('81000000-0000-0000-0000-000000000001','80000000-0000-0000-0000-000000000001','assigned')");
+      await q("insert into public.availability_release_item_shows(release_item_id,show_id) values('81000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001')");
+      await q("insert into public.availability_release_responses(release_item_id,profile_id,status,responded_at,available_at) values('81000000-0000-0000-0000-000000000001',$1,'available','2026-10-01T12:00:00Z','2026-10-01T12:00:00Z'),('81000000-0000-0000-0000-000000000001',$2,'available','2026-10-01T13:00:00Z','2026-10-01T13:00:00Z')",[driver,other]);
+      await actor(admin);
+      const responseOrder=await q("select id,profile_id,responded_at,available_at from public.availability_release_responses order by available_at,id");
+      const unassign={release_item_id:'81000000-0000-0000-0000-000000000001',show_ids:payload.show_ids,driver_ids:[],external_names:[]};
+      const [unassignPreview]=await q("select public.preview_agreement_change('assign',$1::jsonb) result",[JSON.stringify(unassign)]);
+      ok(unassignPreview.result.consequences.some(c=>c.contract_id===contract),true,'full unassignment of accepting signer requires review');
+      await q("select public.commit_agreement_change('assign',$1::jsonb,$2)",[JSON.stringify(unassign),unassignPreview.result.token]);
+      ok((await q('select public.get_contract_agreement($1) result',[contract]))[0].result.signatures.length,0,'full unassignment reopens both signatures');
+      ok((await q("select status from public.availability_release_items where id=$1",[unassign.release_item_id]))[0].status,'open','full unassignment reopens publication');
+      ok(await q("select id,profile_id,responded_at,available_at from public.availability_release_responses order by available_at,id"),responseOrder,'full unassignment preserves response identities and order');
+      await actor(driver);
+      ok((await q('select * from public.agreement_assignment_periods where contract_id=$1 and driver_id=$2 and ended_at is null',[contract,driver])).length,0,'full unassignment closes accepting assignment period');
+      ok((await q('select public.get_my_agreement_history() result'))[0].result.some(receipt=>receipt.version.id===beforeUnassign.result.version.id),true,'fully unassigned signer keeps exact receipt');
+      await deny('select public.get_contract_agreement($1)',[contract],/access|assigned/i);
     }
   }
   console.log(`Agreement stage ${migrationLimit}: ${checks} PostgreSQL checks passed (synthetic, single-session PGlite).`);

@@ -356,7 +356,7 @@ begin
  if not public.is_admin() then raise exception 'Admin access required'; end if;
  perform pg_catalog.pg_advisory_xact_lock(61007,1);
  if operation in ('show','signing') and nullif(payload->>'show_id','') is null then
-  if operation='signing' and exists(select 1 from public.contracts c where c.show_id in(select value::uuid from jsonb_array_elements_text(coalesce(nullif(payload->'linked_show_ids','null'::jsonb),'[]'))) and (c.current_agreement_id is not null or c.signed_at is not null or c.admin_signed_at is not null)) then raise exception 'Create without links, then review linked agreement changes'; end if;
+  if operation='signing' and exists(select 1 from public.contracts c where c.show_id in(select linked.id from jsonb_array_elements_text(coalesce(nullif(payload->'linked_show_ids','null'::jsonb),'[]')) seed(value) cross join lateral roadshow_private.linked_show_set(seed.value::uuid) linked) and (c.current_agreement_id is not null or c.signed_at is not null or c.admin_signed_at is not null)) then raise exception 'Create without links, then review linked agreement changes'; end if;
   perform roadshow_private.begin_agreement_change();
   result:=roadshow_private.mutate_agreement(operation,roadshow_private.normalize_agreement_payload(payload));
   perform roadshow_private.end_agreement_change(); return result;
@@ -403,7 +403,7 @@ begin
   if exists(select 1 from public.contracts c where c.id=any(cids) and (c.current_agreement_id is not null or c.signed_at is not null or c.admin_signed_at is not null)) then raise exception 'Issued agreement changes require review'; end if;
  elsif tg_table_name='show_links' then
   sids:=array[new.show_id,old.show_id,new.linked_show_id,old.linked_show_id];
-  if exists(select 1 from public.contracts c where c.show_id=any(sids) and (c.current_agreement_id is not null or c.signed_at is not null or c.admin_signed_at is not null)) then raise exception 'Linked agreement changes require review'; end if;
+  if exists(select 1 from public.contracts c where c.show_id in(select linked.id from unnest(sids) seed(id) cross join lateral roadshow_private.linked_show_set(seed.id) linked) and (c.current_agreement_id is not null or c.signed_at is not null or c.admin_signed_at is not null)) then raise exception 'Linked agreement changes require review'; end if;
  else
   if tg_table_name='checklist_templates' then tids:=array[new.id,old.id];
   elsif tg_table_name='checklist_sections' then tids:=array[new.template_id,old.template_id];
@@ -433,8 +433,10 @@ language sql stable security definer set search_path='' as $$
    'venue_name',s.venue_name,'starts_on',s.starts_on,'ends_on',s.ends_on,'city',s.city,'state',s.state,
    'address',s.address,'bin_count',s.bin_count,'signing_at',s.signing_at,'setup_at',s.setup_at,
    'per_diem',s.per_diem,'meals_included',s.meals_included,'lodging_included',s.lodging_included),
+  'linked_work',coalesce((select jsonb_agg(jsonb_build_object('id',ls.id,'name',ls.name,'artist',ls.artist,'venue_name',ls.venue_name,'city',ls.city,'state',ls.state,'address',ls.address,'starts_on',ls.starts_on,'ends_on',ls.ends_on,'signing_at',ls.signing_at,'setup_at',ls.setup_at) order by ls.id)
+   from public.shows ls where ls.id<>s.id and ls.id in(select id from roadshow_private.linked_show_set(s.id))),'[]'::jsonb),
   'linked_show_ids',coalesce((select jsonb_agg(other_id order by other_id) from
-   (select case when l.show_id=s.id then l.linked_show_id else l.show_id end other_id from public.show_links l where l.show_id=s.id or l.linked_show_id=s.id) linked),'[]'::jsonb),
+   (select id other_id from roadshow_private.linked_show_set(s.id) where id<>s.id) linked),'[]'::jsonb),
   'checklist',coalesce((select jsonb_agg(jsonb_build_object('id',sec.id,'title',sec.title,'position',sec.position,
    'items',coalesce((select jsonb_agg(jsonb_build_object('id',i.id,'title',i.title,'instructions',i.instructions,
    'required',i.required,'photo_required',i.photo_required,'position',i.position) order by i.position,i.id)
