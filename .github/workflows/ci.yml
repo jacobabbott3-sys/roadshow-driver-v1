@@ -37,6 +37,8 @@ jobs:
         run: npm test
       - name: UI tests
         run: npm run test:ui
+      - name: Disposable PostgreSQL authorization tests
+        run: npm run test:sql
       - name: Production build
         run: npm run build
       - name: Lint

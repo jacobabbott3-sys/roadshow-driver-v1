@@ -38,3 +38,25 @@ do not import or invent raw transcript history.
 References: [cloud design](superpowers/specs/2026-10-01-cloud-development-design.md),
 [contract design](superpowers/specs/2026-09-29-contract-publishing-reliability-design.md),
 `supabase/migrations/`, and Git history.
+
+## October 7, 2026 — reconstructed Beta 6A agreements
+
+- Immutable reviewed content and authenticated/server-timed acceptance bind both
+  driver/admin to one version; real assignment periods prevent returning signers
+  from inheriting old acceptance. Old receipts remain recipient-scoped.
+- All hotel details and stay dates remain operational without fresh signatures
+  (Jacob's explicit choice). Accepted schedule/work identity, entitlements,
+  pay/terms, linked unit and issued checklist requirements remain versioned.
+- Unknown legacy signer identity is never inferred. Legacy roster edits
+  conservatively reopen acceptance; original recorded names/times are preserved
+  without manufactured historical text.
+- No general evidence-reset exception. Confirmed edits preserve response/source
+  IDs; removed checklist requirements are archived rather than destructively
+  deleting response evidence. Removal/revision notices remain in-app only.
+- Initial creation remains atomic through existing RPCs; attaching initial work
+  to an issued linked unit must be done as a reviewed subsequent edit.
+- This cloud branch reconstructs approved requirements; unavailable Mac commits
+  are recorded for later reconciliation, not recreated or claimed recovered.
+- Publication is held while automatic Vercel preview settings cannot be verified
+  (403). Shared backend/live rollout and public compatibility need separate
+  review/authorization. No earlier release backup waiver extends to this SQL work.

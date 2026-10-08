@@ -40,6 +40,7 @@ export type Contract = {
   bonus_pay: number | null;
   document_path: string | null;
   terms: string | null;
+  current_agreement_id?: string | null;
   signed_at: string | null;
   signature_name: string | null;
   admin_signed_at: string | null;
@@ -111,7 +112,7 @@ export async function getContracts() {
   const { data, error } = await supabase
     .from("contracts")
     .select(
-      "id,kind,service_date,service_time,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(*)",
+      "id,kind,service_date,service_time,status,contract_pay,bonus_pay,document_path,terms,current_agreement_id,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(*)",
     )
     .order("service_date");
   if (error) throw error;
@@ -130,13 +131,13 @@ export async function getContractChecklistStatuses(contracts: Contract[]) {
   const templateIds = [...new Set((assignments || []).map((assignment) => assignment.template_id).filter(Boolean))];
   const checklistIds = (assignments || []).map((assignment) => assignment.id);
   const sectionsResult = templateIds.length
-    ? await supabase.from("checklist_sections").select("id,template_id,title,position").in("template_id", templateIds).order("position")
+    ? await supabase.from("checklist_sections").select("id,template_id,title,position").in("template_id", templateIds).eq("archived",false).order("position")
     : { data: [], error: null };
   if (sectionsResult.error) throw sectionsResult.error;
   const sectionIds = (sectionsResult.data || []).map((section) => section.id);
   const [itemsResult, responsesResult] = await Promise.all([
     sectionIds.length
-      ? supabase.from("checklist_items").select("id,section_id,position").in("section_id", sectionIds).order("position")
+      ? supabase.from("checklist_items").select("id,section_id,position").in("section_id", sectionIds).eq("archived",false).order("position")
       : Promise.resolve({ data: [] as { id: string; section_id: string; position: number }[], error: null }),
     checklistIds.length
       ? supabase.from("checklist_responses").select("contract_checklist_id,item_id,completed").in("contract_checklist_id", checklistIds)
@@ -168,7 +169,7 @@ export async function getContract(id: string) {
   const { data, error } = await supabase
     .from("contracts")
     .select(
-      "id,kind,service_date,service_time,status,contract_pay,bonus_pay,document_path,terms,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(*)",
+      "id,kind,service_date,service_time,status,contract_pay,bonus_pay,document_path,terms,current_agreement_id,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(*)",
     )
     .eq("id", id)
     .single();
@@ -188,7 +189,7 @@ export async function getChecklist(contractId: string) {
   const { data: sections, error: sectionError } = await supabase
     .from("checklist_sections")
     .select(
-      "id,title,position,items:checklist_items(id,title,instructions,required,photo_required,position)",
+      "id,title,position,archived,items:checklist_items(id,title,instructions,required,photo_required,position,archived)",
     )
     .eq("template_id", cc.template_id)
     .order("position");
@@ -203,9 +204,9 @@ export async function getChecklist(contractId: string) {
   const byItem = new Map((responses || []).map((r) => [r.item_id, r]));
   return {
     id: cc.id,
-    sections: (sections || []).map((s) => ({
+    sections: (sections || []).filter(s=>!s.archived).map((s) => ({
       ...s,
-      items: (s.items || [])
+      items: (s.items || []).filter(i=>!i.archived)
         .sort((a, b) => a.position - b.position)
         .map((i) => ({ ...i, response: byItem.get(i.id) || null })),
     })) as ChecklistSection[],

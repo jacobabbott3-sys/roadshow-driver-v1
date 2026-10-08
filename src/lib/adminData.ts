@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getContractAcceptanceGate, reviewAdminAcceptance, saveConfirmedAgreementChange } from './agreementData';
 import { getChecklist, type Contract, type Show } from "./driverData";
 import type { Profile } from "../types";
 import { release } from "./release";
@@ -223,11 +224,13 @@ export type SigningSavePayload = {
   external_names: string[];
 };
 export async function saveShowContractAtomic(payload: ShowContractSavePayload) {
+  if (payload.show_id) return saveConfirmedAgreementChange('show',payload);
   const { data, error } = await supabase.rpc("admin_save_show_contract", { target_payload: payload });
   if (error) throw error;
   return data as string;
 }
 export async function saveSigningAtomic(payload: SigningSavePayload) {
+  if (payload.show_id) return saveConfirmedAgreementChange('signing',payload);
   const { data, error } = await supabase.rpc("admin_save_signing", { target_payload: payload });
   if (error) throw error;
   return data as string;
@@ -367,14 +370,7 @@ export async function updateLinkedSigningAssignments(showIds: string[], driverId
   for (const contract of data || []) await updateContractAssignments(contract.id, driverIds);
 }
 export async function adminSignContract(id: string, name: string) {
-  const { error } = await supabase
-    .from("contracts")
-    .update({
-      admin_signature_name: name,
-      admin_signed_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-  if (error) throw error;
+  await reviewAdminAcceptance(id,name);
 }
 export async function updateUser(
   id: string,
@@ -423,7 +419,7 @@ export async function getReviewHistory() {
   ).filter((review) => release.channel === "beta" || !(review.show as unknown as Show).is_test) as unknown as ReviewHistoryRow[];
 }
 export async function getChecklistReview(contractId: string) {
-  const [{ data, error }, checklist] = await Promise.all([
+  const [{ data, error }, checklist, driverAccepted] = await Promise.all([
     supabase
       .from("contracts")
       .select(
@@ -432,6 +428,7 @@ export async function getChecklistReview(contractId: string) {
       .eq("id", contractId)
       .single(),
     getChecklist(contractId),
+    getContractAcceptanceGate(contractId),
   ]);
   if (error) throw error;
   if (release.channel !== "beta" && (data as unknown as { show: Show }).show.is_test) throw new Error("This test checklist is only available in beta.");
@@ -448,6 +445,7 @@ export async function getChecklistReview(contractId: string) {
       }[];
     },
     checklist,
+    driverAccepted,
   };
 }
 export async function reviewChecklistItem(
@@ -483,12 +481,11 @@ export async function getTemplates() {
   const { data, error } = await supabase
     .from("checklist_templates")
     .select(
-      "id,name,kind,version,active,sections:checklist_sections(id,title,position,items:checklist_items(id,title,photo_required,required,position))",
+      "id,name,kind,version,active,sections:checklist_sections(id,title,position,archived,items:checklist_items(id,title,instructions,photo_required,required,position,archived))",
     )
-    .eq("active", true)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data || [];
+  return (data || []).map(template=>({...template,sections:template.sections.filter(section=>!section.archived).map(section=>({...section,items:section.items.filter(item=>!item.archived)}))}));
 }
 export async function createTemplate(
   name: string,
@@ -637,21 +634,10 @@ export async function assignShowChecklist(
   }
 }
 export async function updateTemplate(
-  id: string,
-  name: string,
-  kind: "setup" | "teardown",
-  sections: {
-    title: string;
-    items: { title: string; photo_required: boolean }[];
-  }[],
+  id: string, name: string, kind: "setup" | "teardown",
+  sections: {id?: string;title: string;items: {id?:string;title: string;photo_required: boolean;required?:boolean;instructions?:string|null}[]}[],
 ) {
-  const { error } = await supabase.rpc("admin_replace_checklist_template", {
-    target_template: id,
-    new_name: name,
-    new_kind: kind,
-    new_sections: sections,
-  });
-  if (error) throw error;
+  await saveConfirmedAgreementChange('template',{template_id:id,name,kind,sections});
 }
 export async function addToolbagItem(
   toolbagId: string,
