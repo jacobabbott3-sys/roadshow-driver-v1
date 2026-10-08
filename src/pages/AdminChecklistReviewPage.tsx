@@ -40,7 +40,8 @@ export function AdminChecklistReviewPage() {
     (item) => item.response?.review_status === "denied",
   ).length;
   const pending = items.length - approved - denied;
-  const canReview = ["submitted", "under_review"].includes(
+  const driverAccepted=review.data?.driverAccepted === true;
+  const canReview = driverAccepted && ["submitted", "under_review"].includes(
     contract?.status || "",
   );
   const reviewApproved = [
@@ -145,7 +146,8 @@ export function AdminChecklistReviewPage() {
               </div>
             </section>
 
-            {message && <p className="notice">{message}</p>}
+            {!driverAccepted && contract && <p className="notice">Current driver agreement acceptance is required before review or final decisions.</p>}
+      {message && <p className="notice">{message}</p>}
 
             {!items.length ? (
               <section className="admin-section inline-empty">
@@ -303,7 +305,7 @@ export function AdminChecklistReviewPage() {
                 </div>
                 <button
                   className={`button ${denied ? "danger" : "primary"}`}
-                  disabled={pending > 0 || busy === "finish"}
+                  disabled={!driverAccepted || pending > 0 || busy === "finish"}
                   onClick={() => void finishReview()}
                 >
                   {denied ? <RotateCcw /> : <CheckCircle2 />}
@@ -343,7 +345,7 @@ export function AdminChecklistReviewPage() {
               {reviewApproved && contract.bonus_pay != null && (
                 <section className="finish-review-panel bonus-decision">
                   <div><p className="eyebrow">BONUS RESULT</p><h2>Potential bonus: ${contract.bonus_pay.toLocaleString()}</h2><p>Record whether the approved contract earned its potential bonus.</p></div>
-                  <div><button className="button danger" disabled={busy === "bonus"} onClick={() => void setBonus(false)}><X /> Not earned</button><button className="button primary" disabled={busy === "bonus"} onClick={() => void setBonus(true)}><Check /> Bonus earned</button></div>
+                  <div><button className="button danger" disabled={!driverAccepted || busy === "bonus"} onClick={() => void setBonus(false)}><X /> Not earned</button><button className="button primary" disabled={!driverAccepted || busy === "bonus"} onClick={() => void setBonus(true)}><Check /> Bonus earned</button></div>
                 </section>
               )}
               </>

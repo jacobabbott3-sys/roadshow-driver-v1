@@ -299,7 +299,7 @@ export function AdminShowsPage() {
     }
   }
   const matchingTemplates =
-    templates.data?.filter((t) => t.kind === form.kind) || [];
+    templates.data?.filter((t) => t.kind === form.kind && (t.active || t.id === form.template_id)) || [];
   const regularShows = shows.data?.filter((show) => show.event_type !== "signing") || [];
   const matchingShows = regularShows.filter((show) =>
     matchesListSearch(search, show.name, show.city, show.state, show.address, show.contracts[0]?.service_date, show.starts_on, show.ends_on) &&

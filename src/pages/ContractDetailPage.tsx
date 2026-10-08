@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { getContractAcceptanceGate } from "../lib/agreementData";
+import { AgreementSigning } from "../components/AgreementSigning";
 import { PageState } from "../components/PageState";
 import { ImageViewer } from "../components/ImageViewer";
 import { BackButton } from "../components/BackButton";
@@ -35,18 +37,18 @@ type Tab = "info" | "checklist" | "photos" | "sign";
 export function ContractDetailPage() {
   const { id = "" } = useParams(),
     [searchParams] = useSearchParams(),
-    { user } = useAuth(),
+    { user,profile } = useAuth(),
     contract = useAsync(() => getContract(id), [id]),
+    acceptance = useAsync(()=>getContractAcceptanceGate(id),[id,contract.data?.signed_at]),
     checklist = useAsync(() => getChecklist(id), [id]),
     photos = useAsync(() => getContractPhotos(id), [id]),
     linkedSignings = useAsync(
       () => contract.data?.show.id ? getLinkedSigningContracts(contract.data.show.id) : Promise.resolve([]),
       [contract.data?.show.id],
     );
-  const [tab, setTab] = useState<Tab>("info"),
+  const [tab, setTab] = useState<Tab>(searchParams.get("review") === "admin" ? "sign" : "info"),
     [busy, setBusy] = useState(""),
     [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}),
-    [signature, setSignature] = useState(""),
     [message, setMessage] = useState("");
   const items = useMemo(
       () => checklist.data?.sections.flatMap((s) => s.items) || [],
@@ -92,20 +94,6 @@ export function ContractDetailPage() {
       await checklist.refresh();
     } finally {
       setBusy("");
-    }
-  }
-  async function sign() {
-    if (!signature.trim()) return;
-    setBusy("sign");
-    const { error } = await supabase.rpc("sign_my_contract", {
-      contract_id: id,
-      signer_name: signature.trim(),
-    });
-    setBusy("");
-    if (error) setMessage(error.message);
-    else {
-      setMessage("Contract signed successfully.");
-      await contract.refresh();
     }
   }
   async function submitForReview() {
@@ -166,6 +154,7 @@ export function ContractDetailPage() {
                   {isSigning ? "Signing" : statusLabel(contract.data.status)}
                 </span>
                 <h1>{contract.data.show.name}</h1>
+                {(!contract.data.current_agreement_id || !contract.data.signed_at || !contract.data.admin_signed_at) && <p className="notice">Current agreement acceptance pending. Previous checklist progress is preserved.</p>}
                 <p>
                   <MapPin />
                   {contract.data.show.venue_name || contract.data.show.city}
@@ -310,7 +299,7 @@ export function ContractDetailPage() {
                           className="button primary"
                           disabled={
                             !requiredComplete ||
-                            !contract.data.signed_at ||
+                            !acceptance.data ||
                             busy === "submit"
                           }
                           onClick={() => void submitForReview()}
@@ -323,9 +312,9 @@ export function ContractDetailPage() {
                         {!requiredComplete && (
                           <small>Complete every required item first.</small>
                         )}
-                        {requiredComplete && !contract.data.signed_at && (
+                        {requiredComplete && !acceptance.data && (
                           <small>
-                            The lead driver must sign the contract before the
+                            An assigned driver must accept the current agreement before the
                             checklist can be submitted.
                           </small>
                         )}
@@ -359,81 +348,7 @@ export function ContractDetailPage() {
                 </div>
               </section>
             )}
-            {tab === "sign" && (
-              <section className="detail-panel sign-panel">
-                <FileSignature />
-                <h2>
-                  {contract.data.signed_at
-                    ? "Contract signed"
-                    : "Review and sign contract"}
-                </h2>
-                <div className="contract-terms">
-                  <p className="eyebrow">PUBLISHED TERMS</p>
-                  {contract.data.terms ? (
-                    <p>{contract.data.terms}</p>
-                  ) : (
-                    <p className="muted">
-                      Contract terms have not been published yet. Contact your
-                      administrator before signing.
-                    </p>
-                  )}
-                </div>
-                <div className="signature-status-grid">
-                  <div className={contract.data.signed_at ? "complete" : ""}>
-                    <span>Driver signature</span>
-                    <strong>
-                      {contract.data.signature_name || "Waiting for driver"}
-                    </strong>
-                  </div>
-                  <div
-                    className={contract.data.admin_signed_at ? "complete" : ""}
-                  >
-                    <span>Admin signature</span>
-                    <strong>
-                      {contract.data.admin_signature_name ||
-                        "Waiting for administrator"}
-                    </strong>
-                  </div>
-                </div>
-                {contract.data.signed_at ? (
-                  <>
-                    <p>
-                      Signed by <strong>{contract.data.signature_name}</strong>
-                    </p>
-                    <p className="success">
-                      <Check /> Signed{" "}
-                      {new Date(contract.data.signed_at).toLocaleString()}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="muted">
-                      Typing your full legal name records your acknowledgement
-                      of the published terms above.
-                    </p>
-                    <label>
-                      Full legal name
-                      <input
-                        value={signature}
-                        onChange={(e) => setSignature(e.target.value)}
-                        placeholder="Your full name"
-                      />
-                    </label>
-                    <button
-                      className="button primary"
-                      disabled={
-                        !signature.trim() ||
-                        busy === "sign" ||
-                        !contract.data.terms
-                      }
-                      onClick={() => void sign()}
-                    >
-                      {busy === "sign" ? "Signing…" : "Accept terms and sign"}
-                    </button>
-                  </>
-                )}
-              </section>
-            )}
+            {tab === "sign" && <AgreementSigning contractId={id} acceptanceRole={profile?.role === "admin" && searchParams.get("review") === "admin" ? "admin" : "driver"} onSigned={contract.refresh} />}
           </>
         )}
       </PageState>

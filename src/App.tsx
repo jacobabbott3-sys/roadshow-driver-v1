@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { AgreementConfirmationHost } from './components/AgreementConfirmation';
 import { LoadingScreen } from "./components/LoadingScreen";
 import { AdminRoute, ProtectedRoute } from "./components/ProtectedRoute";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
@@ -10,6 +11,7 @@ import { AuthConfirmPage } from "./pages/AuthConfirmPage";
 
 const HomePage = lazy(() => import("./pages/HomePage").then((module) => ({ default: module.HomePage })));
 const ContractsPage = lazy(() => import("./pages/ContractsPage").then((module) => ({ default: module.ContractsPage })));
+const AgreementHistoryPage = lazy(() => import('./pages/AgreementHistoryPage').then(module=>({default:module.AgreementHistoryPage})));
 const ContractDetailPage = lazy(() => import("./pages/ContractDetailPage").then((module) => ({ default: module.ContractDetailPage })));
 const SigningGroupPage = lazy(() => import("./pages/SigningGroupPage").then((module) => ({ default: module.SigningGroupPage })));
 const AvailabilityPage = lazy(() => import("./pages/AvailabilityPage").then((module) => ({ default: module.AvailabilityPage })));
@@ -35,6 +37,7 @@ const AdminOperationsPage = lazy(() => import("./pages/AdminOperationsPage").the
 export default function App() {
   return (
     <BrowserRouter>
+      <AgreementConfirmationHost />
       <Suspense fallback={<LoadingScreen label="Opening screen…" />}>
         <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -45,6 +48,7 @@ export default function App() {
           <Route element={<AppShell />}>
             <Route index element={<HomePage />} />
             <Route path="contracts" element={<ContractsPage />} />
+            <Route path="agreements" element={<AgreementHistoryPage />} />
             <Route path="contracts/:id" element={<ContractDetailPage />} />
             <Route path="signing-groups/:showId" element={<SigningGroupPage />} />
             <Route path="availability" element={<AvailabilityPage />} />
