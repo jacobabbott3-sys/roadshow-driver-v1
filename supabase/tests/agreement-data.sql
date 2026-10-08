@@ -14,3 +14,11 @@ insert into public.contracts(id,show_id,driver_id,kind,service_date,contract_pay
 insert into public.contract_drivers(contract_id,driver_id,is_trainee) values
  ('10000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002',false),
  ('10000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001',true);
+insert into public.checklist_templates(id,name,kind) values('30000000-0000-0000-0000-000000000001','Synthetic checklist','setup');
+insert into public.checklist_sections(id,template_id,title,position) values('40000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001','Load',0);
+insert into public.checklist_items(id,section_id,title,instructions,required,photo_required,position) values('50000000-0000-0000-0000-000000000001','40000000-0000-0000-0000-000000000001','Check supplies','Exact instruction',true,false,0);
+insert into public.contract_checklists(id,contract_id,template_id) values('60000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000001');
+insert into public.checklist_responses(id,contract_checklist_id,item_id,completed) values('70000000-0000-0000-0000-000000000001','60000000-0000-0000-0000-000000000001','50000000-0000-0000-0000-000000000001',true);
+insert into public.shows(id,name,starts_on,ends_on,city) values('20000000-0000-0000-0000-000000000003','Legacy synthetic','2026-11-01','2026-11-01','Denver');
+insert into public.contracts(id,show_id,kind,service_date,signed_at,signature_name)
+ values('10000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000003','setup','2026-11-01',now(),'Unknown legacy signer');
