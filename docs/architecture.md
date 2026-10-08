@@ -99,3 +99,27 @@ deployment is introduced. See [workflow](development-workflow.md).
 
 Sources: source modules above, `supabase/migrations/`, `supabase/functions/web-push/index.ts`,
 `supabase/tests/`, `vite.config.ts`, and `vercel.json`.
+
+## Prepared agreement-version boundary
+
+Five unapplied October 7 migrations add immutable versions/signatures, assignment
+periods, original legacy evidence and private transactional preview tickets.
+Restricted foreign keys/triggers, safe search paths, revoked public execution and
+recipient-scoped RLS protect evidence. Owner-only transaction context is keyed to
+backend PID/transaction ID; browser-settable GUCs do not grant mutation authority.
+Current pointers belong to their contract. Complete connected linked-work identity
+uses a cycle-safe recursive set. Snapshot content contains source checklist IDs;
+confirmed template edits retain matched IDs/flags/responses and archive removals.
+
+Preview runs the canonical mutation inside a rolled-back subtransaction and
+binds exact normalized state, actor, payload and expiry to a private token.
+Commit serializes under shared advisory/row locks, rejects stale state, issues
+new immutable copies and stores an idempotent result. Signing and operational
+RPCs share the locking discipline. Guarded RPCs enforce current driver acceptance
+for submission/final decisions and protect direct contract/response write bypasses.
+The Edge handler excludes agreement notice kinds before creating push clients.
+
+`npm run test:sql` uses pinned in-memory PGlite and synthetic roles/RLS only; it
+is neither live Supabase nor multi-session concurrency evidence. SQL and Edge/UI
+rollout must be coordinated with separately approved public compatibility because
+beta/public share one backend. See the [rollout proposal](releases/beta-6a-test-checklist.md).

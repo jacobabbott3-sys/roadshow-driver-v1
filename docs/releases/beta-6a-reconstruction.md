@@ -31,4 +31,6 @@ check-in/check-out dates as operational edits without fresh signatures.
 Baseline Node 24.19.0/npm 11.5.2: unit 46/46; UI 40/40; build passed; lint zero
 errors / three known warnings. Production-only registry audit zero findings.
 See [dependency audit](beta-6a-dependency-audit.md) for before/after versions.
-Implementation stages and further verification will be recorded as they finish.
+Fresh implementation, stage/whole-branch reviews and final limits are recorded
+in [verification](beta-6a-verification.md). The unavailable Mac implementation
+was not used as code or validation.

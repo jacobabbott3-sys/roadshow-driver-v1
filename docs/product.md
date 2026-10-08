@@ -89,3 +89,23 @@ the [Beta 5A checklist](releases/beta-5a-test-checklist.md).
 
 Sources: `src/App.tsx`, `src/components/AppShell.tsx`, `src/pages/`, `src/lib/`,
 current migrations, and the [contract design](superpowers/specs/2026-09-29-contract-publishing-reliability-design.md).
+
+## Prepared Beta 6A agreement behavior
+
+Driver/admin acceptance refers to one immutable reviewed version: full text,
+base pay, potential bonus, per diem, work/schedule and linked unit, issued checklist
+IDs/instructions/required/photo flags. Changed accepted content reopens both
+signatures after an explicit before/after confirmation. Signing supports both
+orders and any eligible assigned active account, including an assigned admin.
+Removing/replacing the accepting driver reopens; nonsigner roster changes retain
+acceptance; returning signers need a new assignment-period acceptance.
+
+Earlier receipts remain private to their actual signer after removal and do not
+restore current work/team access. Legacy names/times remain evidence with an
+explicit missing historical copy label. Checklist progress survives pending
+revisions; pending acceptance is shown separately from checklist state. Drafts
+remain editable through allowed RPCs; new submissions and final decisions require
+current driver acceptance. Removal/revision notices are in-app only. All hotel
+fields, stay dates, details-unlock timing and admin notes remain operational.
+This is prepared local behavior, not a claim of deployment; see the
+[Beta 6A checklist](releases/beta-6a-test-checklist.md).
