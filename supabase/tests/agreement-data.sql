@@ -22,3 +22,10 @@ insert into public.checklist_responses(id,contract_checklist_id,item_id,complete
 insert into public.shows(id,name,starts_on,ends_on,city) values('20000000-0000-0000-0000-000000000003','Legacy synthetic','2026-11-01','2026-11-01','Denver');
 insert into public.contracts(id,show_id,kind,service_date,signed_at,signature_name)
  values('10000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000003','setup','2026-11-01',now(),'Unknown legacy signer');
+insert into public.shows(id,name,starts_on,ends_on,city) values('20000000-0000-0000-0000-000000000004','Legacy roster synthetic','2026-11-01','2026-11-01','Denver');
+insert into public.contracts(id,show_id,driver_id,kind,service_date,signed_at,signature_name)
+ values('10000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000002','setup','2026-11-01',now(),'Unknown legacy signer');
+insert into public.shows(id,name,starts_on,ends_on,city) values('20000000-0000-0000-0000-000000000005','Unissued synthetic','2026-11-01','2026-11-01','Denver');
+insert into public.contracts(id,show_id,kind,service_date) values('10000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000005','setup','2026-11-01');
+insert into public.checklist_templates(id,name,kind) values('30000000-0000-0000-0000-000000000009','Unissued checklist','setup');
+insert into public.checklist_sections(id,template_id,title,position) values('40000000-0000-0000-0000-000000000009','30000000-0000-0000-0000-000000000009','Unissued section',0);
