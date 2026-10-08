@@ -174,3 +174,11 @@ and opening a draft PR into beta, including any automatic Vercel preview using
 the shared Supabase backend. This supersedes the preparation-time publication
 hold above. Project-settings read remains blocked by403; no live migrations,
 merging, public release, settings or data changes are authorized.
+
+### October 8 queued-read follow-up
+
+A separate local review branch prepares an activity recheck after agreement-read
+locks and six native concurrency regressions. See the
+[fix record](releases/beta-6a-read-revocation-fix.md). The shared hosted agreement
+schema remains absent, and deployed `web-push` lacks the new in-app-only exclusion.
+This follow-up does not authorize publication or change deployed versions.

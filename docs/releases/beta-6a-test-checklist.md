@@ -1,6 +1,9 @@
 # Beta 6A review and proposed rollout checklist
 
 **Local preparation only. Nothing here authorizes live SQL, publication or deployment.**
+The [queued-read revocation fix](beta-6a-read-revocation-fix.md) records the
+October 8 local follow-up and native concurrency regressions; it does not clear
+the hosted prerequisites below.
 Public 5/main and deployed Beta 5A are unchanged. Prepared beta builds default to
 6A; existing public fallback remains 5. This is reconstructed work, not recovered
 Mac commits. See [verification](beta-6a-verification.md) and [reconciliation](beta-6a-reconstruction.md).

@@ -210,6 +210,13 @@ uses `AGREEMENT_STAGE`; see [evidence](releases/beta-6a-verification.md).
 Do not equate single-session success with concurrency or hosted Auth/storage
 acceptance. Never replace unavailable isolated tests with the shared live backend.
 
+Run `npm run test:sql:concurrency` with Python 3 and Docker for the native
+multi-session queued-read regressions. The command creates a disposable,
+network-isolated PostgreSQL container with synthetic fixtures, exposes no ports,
+and removes its container/volume after testing. CI runs the same command; missing
+Docker is a failed prerequisite, not a skipped pass. See the
+[revocation fix record](releases/beta-6a-read-revocation-fix.md) for scope and limits.
+
 Before publishing this reconstruction branch, verify automatic Vercel previews
 and obtain specific approval when they can use shared live Supabase. Keep the
 prepared patch and draft PR local when verification is blocked; do not change

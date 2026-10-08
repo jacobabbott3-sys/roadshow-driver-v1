@@ -115,7 +115,11 @@ Preview runs the canonical mutation inside a rolled-back subtransaction and
 binds exact normalized state, actor, payload and expiry to a private token.
 Commit serializes under shared advisory/row locks, rejects stale state, issues
 new immutable copies and stores an idempotent result. Signing and operational
-RPCs share the locking discipline. Guarded RPCs enforce current driver acceptance
+RPCs share the locking discipline.
+Agreement review rechecks account activity after both advisory and contract-row
+locks before returning or initially issuing evidence, so account deactivation
+committed during either wait denies the queued read.
+Guarded RPCs enforce current driver acceptance
 for submission/final decisions and protect direct contract/response write bypasses.
 The Edge handler excludes agreement notice kinds before creating push clients.
 

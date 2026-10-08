@@ -63,6 +63,9 @@ begin
  if not public.is_active_user() then raise exception 'An active account is required'; end if;
  perform pg_catalog.pg_advisory_xact_lock(61007,1);
  select * into c from public.contracts where id=target_contract for update;
+ -- Either lock can wait while an administrator deactivates this account.
+ -- Recheck before issuing or returning evidence, including the lead-driver path.
+ if not public.is_active_user() then raise exception 'An active account is required'; end if;
  if c.id is null or (public.is_admin() or c.driver_id=auth.uid() or public.is_contract_driver(c.id)) is not true then raise exception 'Assigned contract access required'; end if;
  if c.current_agreement_id is null then
   perform roadshow_private.begin_agreement_change();
