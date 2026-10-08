@@ -43,9 +43,10 @@ try {
   const [period] = await q('insert into public.agreement_assignment_periods(contract_id,driver_id) values($1,$2) returning id',[contract,other]);
   await deny("insert into public.agreement_signatures(version_id,signer_id,signer_role,assignment_period_id,signer_name) values($1,$2,'driver',$3,'Wrong account')",[v.id,driver,period.id],/binding|acceptance/i);
   await q("insert into public.contracts(id,show_id,kind,service_date) values('10000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000002','setup','2026-11-01')");
-  await q('select roadshow_private.begin_agreement_change()');
-  await deny("update public.contracts set current_agreement_id=$1 where id='10000000-0000-0000-0000-000000000002'",[v.id],/foreign key/i);
-  await q('select roadshow_private.end_agreement_change()');
+  await assert.rejects(() => db.transaction(async tx => {
+    await tx.query('select roadshow_private.begin_agreement_change()');
+    await tx.query("update public.contracts set current_agreement_id=$1 where id='10000000-0000-0000-0000-000000000002'",[v.id]);
+  }),/foreign key/i); checks++;
   await actor(other);
   ok((await q('select * from public.agreement_versions')).length,0,'unrelated version privacy');
   await deny('select public.agreement_content($1)',[contract]);
