@@ -73,7 +73,8 @@ Commands: `npm test`, `npm run test:ui`, `npm run test:native`, `npm run build`,
 | Simulator launch | Blocked: no installed runtime; Apple download reports iOS 27.2 unavailable |
 | Device signing/install | User configured Personal Team and Developer Mode; Device Hub confirms Roadshow Driver 5.0 installed on Hoid (iPhone 17 Pro, iOS 27.2) |
 | First device launch | Jacob confirmed the Roadshow login screen appears on the iPhone |
-| Device login/remember-me/background/resume/logout | Pending; mocked persistence tests pass |
+| Device login/background/resume | Jacob confirmed his normal account loads and stays signed in after leaving/returning |
+| Process termination/remember-me-off/logout | Pending device checks; mocked persistence tests pass |
 | Camera/photo picker/HEIC/denial/cancellation | Pending device check; JPEG/PNG/WebP validation retained; HEIC requires system conversion or clear rejection |
 | Private PDF/scanned PDF/expired links/download | Pending device check; existing renderer and its tests retained |
 | Keyboard/notch/rotation/navigation | Native CSS prepared; device verification pending |
@@ -87,6 +88,8 @@ three moderate findings through the new Capacitor CLI toolchain. No forced
 upgrade/downgrade was applied: npm's suggested Capacitor downgrade loses the
 Xcode 27 support this build requires. Reconcile advisories separately before
 broader distribution; this build is limited to personal-device testing.
+Xcode also reports 11 upstream InAppBrowser plugin warnings (capture ownership
+and imported-type conformances); they did not block the build or installation.
 
 ## Independent review
 
