@@ -207,3 +207,11 @@ account/live data. This is an explicit exception to starting application work
 from beta; no merge/push or production deployment accompanies it. Use the
 [personal build workflow](ios-personal-build.md), keep signing user-controlled,
 and never create production fixtures for automated acceptance.
+
+For the isolated personal iPhone glass shell, include `src/native/*.test.ts` in
+unit checks, run UI/pipeline tests, build/lint, guarded `ios:sync`, then unsigned
+Xcode compilation before user-owned signing/install. Pure Swift state assertions
+can execute with `xcrun swiftc ios/App/App/NativeShell/ShellState.swift
+ ios/App/AppTests/ShellStateTests.swift -o <ignored-output>` and the resulting
+executable on macOS. Keep actual device acceptance separate from those results.
+Never stage Personal Team signing settings together with native source changes.

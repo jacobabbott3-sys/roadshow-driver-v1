@@ -114,3 +114,79 @@ evidence; and deferred audit upgrades that would disrupt Public 5/Xcode 27 suppo
 Consequences are manual progress tracking, device validation still required,
 temporary duplicate disk use, possible media follow-up, and unresolved dependency
 advisories. No offline support or closed-app remote push is implied.
+
+## Native glass presentation (October 10, 2026)
+
+The personal build now contains one retained Capacitor web view with native
+SwiftUI navigation: Home, Contracts, Resources, Profile and an Admin tab for a
+verified active administrator. Chat, Notifications, Back and Quick Access use
+allowlisted React routes. iOS 26+ uses system Liquid Glass; older supported iOS
+uses system material. Reduce Transparency supplies opaque surfaces.
+
+Appearance (System/Light/Dark) and tab haptics are saved only on this iPhone.
+Profile opens the native sheet; account confetti remains a separate preference.
+Native content uses system typography, neutral grouped cards and green accents.
+The public website's design and account appearance controls are unchanged.
+Native controls hide for web dialogs, when the app pauses, and until account
+verification completes after resume. Unread badges share one subscription owner
+with the web fallback. A failed/timed-out bridge restores web navigation.
+
+The container measures occupied control/safe-area bounds. Its bottom controls
+collapse for the keyboard, and native editable controls use at least 16px text.
+This implements the prevention for automatic focus zoom; actual focus/blur scale
+and keyboard behavior still require iPhone confirmation.
+
+Source verification: 50 unit tests, 75 UI tests, 2 native build-pipeline tests,
+19 executable Swift state/contrast assertions plus WebKit delegate forwarding tests, web build, guarded native sync and unsigned
+iOS device compilation passed. Lint has zero errors and the existing 3 warnings.
+The Swift state tests execute Foundation code on macOS; they do not establish
+UIKit/SwiftUI rendering or substitute for an iOS runtime. Simulator runtime
+remains unavailable. Final review and phone installation/visual acceptance are
+recorded below when complete.
+
+Device acceptance for this presentation is pending: glass over scrolling,
+Quick Access/Appearance dismissal, haptics, 4/5-tab large text, VoiceOver, reduced
+motion/transparency, light/dark, route/back and draft retention, keyboard focus
+and blur, modal/PDF/image access, safe areas/rotation and auth lifecycle. Earlier
+login/background/resume and photo-upload results apply to the prior build only.
+Checklist permissions and error behavior remain unchanged at Jacob's request.
+No push, local reminders, widgets, Dynamic Island or offline support were added.
+
+Rollback: rebuild the source at `9f7a044` in a separate isolated checkout using
+the documented guarded public configuration and the existing user-owned signing;
+install over the same bundle ID. Preserve the working checkout/signing and app
+data. There is no backend rollback.
+
+
+The independent glass review found three important issues. The single fix pass
+added active-scene recovery after Control Center, true router Back retaining
+query/state and respecting POP/REPLACE, and native invalidation before Capacitor
+reloads a terminated web-content process. Regression tests failed before the
+fixes and pass now. Unhandled navigation delegate callbacks still forward to
+Capacitor. A separate dark accent contrast assertion also failed before the
+adaptive green fix and now meets 4.5:1 on grouped backgrounds. No review minors
+were deferred. Live translucent contrast and actual device behavior remain
+acceptance checks.
+
+
+Implementation rulings (and their costs):
+
+- reuse the already isolated personal-iPhone clone and local branch per approved plan; preserve signing diff in ignored scratch and exclude it from commits. Cost: source and signing edits share one project file, requiring selective staging.
+- use ignored work/ios-glass ledger as in prior task because cloud skill helper files are not available as local executables; linked writing-good-tests resource also unavailable. Cost: manual bookkeeping.
+- execute Foundation-only Swift state tests on macOS instead of adding an unavailable iOS simulator test target — exercises the real state gate now — UIKit/SwiftUI behavior still requires device acceptance.
+- add a per-connection token and showAppearance method to the protocol — prevent stale resume messages and support Profile entry — extra local protocol surface, no data/API changes.
+- share one unread hook through the shell context — avoids duplicate native/web subscriptions — fallback depends on the provider. Supplemental owner test was added after extraction; it caught duplicate initial reads, reproduced RED and now passes after removing the redundant first refresh.
+- retain user-owned signing outside commits and outside review — no new signing scope was requested — installation still depends on existing user setup.
+- actual glass, keyboard, large text, VoiceOver, haptics, live contrast and device behavior remain acceptance checks, not inferred from builds; reviewer declined to judge them — real UIKit cannot be established by mocks — additional phone testing may uncover layout work.
+- keep checklist permissions, live backend behavior and production records excluded — explicit user scope — existing checklist error wording remains.
+
+First glass install: Xcode confirmed running on Hoid, and Device Hub showed
+native glass, five administrator tabs, Profile navigation and the retained login.
+Jacob reported focus without a software keyboard while Device Hub screen sharing
+was active. Stopping screen sharing and retapping Full name restored the keyboard
+(Jacob confirmed). Keep that preview disconnected for normal keyboard testing.
+The first device view also exposed low-contrast filled green surfaces; native CSS
+now separates the bright text accent from dark filled surfaces. Jacob requested
+a further presentation revision: compact combined top menu, standard iOS tab-bar
+interaction, consistent buttons, local color choices and layered Liquid Glass icon.
+These replace the initial fixed-green/custom-tab visual choices.

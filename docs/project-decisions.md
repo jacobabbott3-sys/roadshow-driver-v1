@@ -44,3 +44,11 @@ and real account/live data, replacing the initial beta-only packaging proposal.
 Use Capacitor bundled assets, no native remote push/offline sync, and accept
 seven-day rebuild/reinstall. Apple security/signing/legal steps stay user-owned;
 no paid enrollment, TestFlight or web/backend release is authorized.
+
+### 2026-10-10 — Personal iPhone native glass
+
+Approved native SwiftUI glass over a single retained Capacitor web view, backed
+by existing React auth/routing and Public 5 live services. Native appearance and
+haptics are device-local; the accent is green. Retain iOS 15 minimum with guarded
+material fallback. Use one unread-data owner and explicit modal/inset ownership.
+No backend changes or paid capabilities accompany this presentation phase.

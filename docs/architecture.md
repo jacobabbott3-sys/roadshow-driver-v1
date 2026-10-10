@@ -103,3 +103,22 @@ remains blocked on network failure. Private photo/PDF
 services retain their authorization; ordinary web builds are unchanged.
 See [personal build instructions](ios-personal-build.md) for signing and pending
 physical-device acceptance. This is not a public deployment or backend change.
+
+### Personal iPhone native presentation
+
+The isolated personal build retains one Capacitor bridge/web view under
+`NativeShellContainer`. React remains authoritative for auth, role, route and
+unread counts. `RoadshowShell` accepts only versioned state with a connection ID
+and increasing sequence; native actions map to fixed routes in React. No account
+identifiers, credentials or business content enter presentation messages.
+Scene deactivation clears native state. React's existing profile refresh signals
+a new connection only after verification completes after foreground or active-scene recovery; failed connections retain
+web navigation. Dialog owners share a modal set, and the native container reports
+measured insets. `useUnreadBadges` is the single polling/realtime owner.
+Device appearance/haptics persist in UserDefaults with a web first-paint cache;
+account appearance application is skipped only inside the native app.
+
+Native document-navigation/process-termination callbacks invalidate chrome before
+forwarding to Capacitor; all other optional delegate selectors forward unchanged.
+React native Back traverses actual owned history entries, preserving query/hash/
+state and handling POP/REPLACE, with a parent fallback for cold routes.
