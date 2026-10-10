@@ -72,7 +72,7 @@ Commands: `npm test`, `npm run test:ui`, `npm run test:native`, `npm run build`,
 | iOS device compilation | Passed unsigned against iOS 27.2 SDK again after the final review fix |
 | Simulator launch | Blocked: no installed runtime; Apple download reports iOS 27.2 unavailable |
 | Device signing/install | User configured Personal Team and Developer Mode; Device Hub confirms Roadshow Driver 5.0 installed on Hoid (iPhone 17 Pro, iOS 27.2) |
-| First device launch | Xcode finished install/run attempt; on-phone launch/trust confirmation pending |
+| First device launch | Jacob confirmed the Roadshow login screen appears on the iPhone |
 | Device login/remember-me/background/resume/logout | Pending; mocked persistence tests pass |
 | Camera/photo picker/HEIC/denial/cancellation | Pending device check; JPEG/PNG/WebP validation retained; HEIC requires system conversion or clear rejection |
 | Private PDF/scanned PDF/expired links/download | Pending device check; existing renderer and its tests retained |
