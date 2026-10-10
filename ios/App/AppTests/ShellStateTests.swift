@@ -27,6 +27,12 @@ import Foundation
   assert(gate.state == nil)
   var malformed=state();malformed.tabs=["admin"];assert(!malformed.isValid)
   malformed=state();malformed.unreadChats = -1;assert(!malformed.isValid)
-  print("ShellState: 17 assertions passed")
+  func luminance(_ rgb:(Double,Double,Double))->Double {
+   func linear(_ n:Double)->Double {n<=0.04045 ? n/12.92 : pow((n+0.055)/1.055,2.4)}
+   return 0.2126*linear(rgb.0)+0.7152*linear(rgb.1)+0.0722*linear(rgb.2)
+  }
+  assert(1.05/(luminance(ShellPalette.light)+0.05)>=4.5)
+  assert((luminance(ShellPalette.dark)+0.05)/(luminance((0.11,0.11,0.12))+0.05)>=4.5)
+  print("ShellState: 19 assertions passed, including light/dark accent contrast")
  }
 }

@@ -11,6 +11,8 @@ it('refreshes on native scene resume and cleans up listeners',async()=>{
  expect(mocks.start).toHaveBeenCalledOnce();
  act(()=>document.dispatchEvent(new Event('pause')));expect(mocks.stop).toHaveBeenCalledOnce();
  act(()=>document.dispatchEvent(new Event('resume')));
+ expect(mocks.profile).toHaveBeenCalledOnce();
+ act(()=>document.dispatchEvent(new Event('roadshow:native-active')));
  await waitFor(()=>expect(mocks.profile).toHaveBeenCalledOnce());
  expect(mocks.start).toHaveBeenCalledTimes(2);
  view.unmount();const count=mocks.start.mock.calls.length;
@@ -21,3 +23,5 @@ it('leaves web session lifecycle unchanged',()=>{
  act(()=>document.dispatchEvent(new Event('resume')));view.unmount();
  expect(mocks.start).not.toHaveBeenCalled();expect(mocks.stop).not.toHaveBeenCalled();expect(mocks.profile).not.toHaveBeenCalled();
 });
+
+it('reverifies after temporary inactivity without requiring a background transition',async()=>{render(<NativeLifecycle/>);act(()=>document.dispatchEvent(new Event('roadshow:native-active')));await waitFor(()=>expect(mocks.profile).toHaveBeenCalledOnce());});

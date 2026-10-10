@@ -14,6 +14,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
 
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        (window?.rootViewController as? NativeShellContainer)?.activateShell()
+    }
+
     func sceneWillResignActive(_ scene: UIScene) {
         (window?.rootViewController as? NativeShellContainer)?.suspendShell()
     }

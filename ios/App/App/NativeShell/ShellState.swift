@@ -32,3 +32,8 @@ struct ShellAppearance:Codable {
  var mode:String="system";var haptics:Bool=true
  var isValid:Bool {["system","light","dark"].contains(mode)}
 }
+
+enum ShellPalette {
+ static let light=(0.12,0.48,0.32)
+ static let dark=(0.41,0.84,0.60)
+}

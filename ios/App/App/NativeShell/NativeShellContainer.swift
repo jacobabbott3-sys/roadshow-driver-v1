@@ -19,9 +19,12 @@ final class NativeShellContainer:UIViewController {
   }
   store.layoutChanged = { [weak self] in self?.applyAppearance();self?.view.setNeedsLayout() }
   observers.append(NotificationCenter.default.addObserver(forName:UIResponder.keyboardWillChangeFrameNotification,object:nil,queue:.main){[weak self] note in
-   guard let self,let frame=note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else{return}
-   let local=self.view.convert(frame,from:nil)
-   self.store.keyboardVisible=local.minY < self.view.bounds.maxY-40;self.view.setNeedsLayout()
+   guard let frame=note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else{return}
+   Task { @MainActor [weak self] in
+    guard let self else{return}
+    let local=self.view.convert(frame,from:nil)
+    self.store.keyboardVisible=local.minY < self.view.bounds.maxY-40;self.view.setNeedsLayout()
+   }
   })
   observers.append(NotificationCenter.default.addObserver(forName:UIContentSizeCategory.didChangeNotification,object:nil,queue:.main){[weak self] _ in self?.view.setNeedsLayout()})
   applyAppearance()
@@ -50,6 +53,10 @@ final class NativeShellContainer:UIViewController {
  }
  private func applyAppearance() {
   overrideUserInterfaceStyle = store.appearance.mode == "dark" ? .dark : store.appearance.mode == "light" ? .light : .unspecified
+ }
+ func activateShell() {
+  guard bridgeController.webView?.isLoading == false else{return}
+  bridgeController.bridge?.triggerDocumentJSEvent(eventName:"roadshow:native-active")
  }
  func suspendShell() {store.suspend()}
  deinit {observers.forEach(NotificationCenter.default.removeObserver)}

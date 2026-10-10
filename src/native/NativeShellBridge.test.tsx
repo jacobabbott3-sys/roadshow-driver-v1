@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 const m=vi.hoisted(()=>({native:true,auth:{user:{id:'u'},profile:{id:'u',role:'admin',is_active:true},loading:false,nativeProfileVerified:true},listeners:{} as Record<string,(v:unknown)=>void>,connect:vi.fn(),setState:vi.fn().mockResolvedValue(undefined),disconnect:vi.fn().mockResolvedValue(undefined)}));
 vi.mock('../lib/nativePlatform',()=>({isNativeApp:()=>m.native}));
@@ -28,7 +28,7 @@ it('sends hidden cleared state for unverified/inactive auth and hides chrome for
 it('restores fallback on native suspend and waits for fresh profile before reconnecting',async()=>{
  render(<App/>);await waitFor(()=>expect(screen.getByText('ready')).toBeTruthy());
  act(()=>{m.listeners.readiness({ready:false});document.dispatchEvent(new Event('resume'));});expect(screen.getByText('fallback')).toBeTruthy();expect(m.connect).toHaveBeenCalledTimes(1);
- act(()=>document.dispatchEvent(new Event('roadshow:profile-refreshed')));await waitFor(()=>expect(m.connect).toHaveBeenCalledTimes(2));
+ act(()=>document.dispatchEvent(new Event('roadshow:native-active')));act(()=>document.dispatchEvent(new Event('roadshow:profile-refreshed')));await waitFor(()=>expect(m.connect).toHaveBeenCalledTimes(2));
 });
 it('leaves web untouched and falls back on rejected handshake',async()=>{
  m.native=false;const v=render(<App/>);expect(m.connect).not.toHaveBeenCalled();v.unmount();m.native=true;m.connect.mockRejectedValue(new Error('missing plugin'));render(<App/>);await waitFor(()=>expect(m.connect).toHaveBeenCalledOnce());expect(screen.getByText('fallback')).toBeTruthy();
@@ -45,3 +45,15 @@ it('times out a stalled handshake and ignores its late response',async()=>{
  vi.useFakeTimers();let resolve!:(v:unknown)=>void;let connection='';m.connect.mockImplementation((v)=>{connection=v.connection;return new Promise(r=>{resolve=r;});});
  const view=render(<App/>);await act(async()=>{});await act(async()=>vi.advanceTimersByTimeAsync(3100));expect(screen.getByText('fallback')).toBeTruthy();await act(async()=>resolve({version:1,connection,appearance:{mode:'system',haptics:true}}));expect(screen.getByText('fallback')).toBeTruthy();view.unmount();vi.useRealTimers();
 });
+it('recovers from inactive to active without a foreground/resume event',async()=>{
+ render(<App/>);await waitFor(()=>expect(screen.getByText('ready')).toBeTruthy());
+ act(()=>{m.listeners.readiness({ready:false});document.dispatchEvent(new Event('roadshow:native-active'));});expect(screen.getByText('fallback')).toBeTruthy();
+ act(()=>document.dispatchEvent(new Event('roadshow:profile-refreshed')));await waitFor(()=>expect(m.connect).toHaveBeenCalledTimes(2));
+});
+it('native Back traverses history retaining query/state through POP and REPLACE',async()=>{
+ function Routes(){const loc=useLocation();const nav=useNavigate();return <><Probe/><p data-testid="query">{loc.search}</p><p data-testid="state">{loc.state?.draft}</p><button onClick={()=>nav('/notifications')}>forward</button><button onClick={()=>nav(-1)}>pop</button><button onClick={()=>nav('/resources?filter=a',{replace:true,state:{draft:'saved'}})}>replace</button></>;}
+ render(<MemoryRouter initialEntries={[{pathname:'/chat',search:'?thread=fixture',state:{draft:'keep'}}]}><NativeShellBridge><Routes/></NativeShellBridge></MemoryRouter>);await waitFor(()=>expect(last()?.visible).toBe(true));fireEvent.click(screen.getByText('forward'));
+ act(()=>m.listeners.action({connection:last().connection,action:'back'}));await waitFor(()=>expect(screen.getByTestId('query')).toHaveTextContent('?thread=fixture'));expect(screen.getByTestId('state')).toHaveTextContent('keep');
+ fireEvent.click(screen.getByText('replace'));fireEvent.click(screen.getByText('forward'));fireEvent.click(screen.getByText('pop'));await waitFor(()=>expect(screen.getByText('/resources')).toBeTruthy());act(()=>m.listeners.action({connection:last().connection,action:'back'}));await waitFor(()=>expect(screen.getByText('/')).toBeTruthy());
+});
+it('ignores verification finishing while the scene is still inactive',async()=>{render(<App/>);await waitFor(()=>expect(screen.getByText('ready')).toBeTruthy());act(()=>{m.listeners.readiness({ready:false});document.dispatchEvent(new Event('roadshow:profile-refreshed'));});await act(async()=>{});expect(m.connect).toHaveBeenCalledTimes(1);act(()=>document.dispatchEvent(new Event('roadshow:native-active')));act(()=>document.dispatchEvent(new Event('roadshow:profile-refreshed')));await waitFor(()=>expect(m.connect).toHaveBeenCalledTimes(2));});

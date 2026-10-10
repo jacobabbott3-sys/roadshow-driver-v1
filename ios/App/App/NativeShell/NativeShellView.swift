@@ -1,6 +1,10 @@
 import SwiftUI
-private let roadshowGreen=Color(red:0.12,green:0.48,blue:0.32)
 struct NativeShellView:View {
+ @Environment(\.colorScheme) private var colorScheme
+ private var roadshowGreen:Color {
+  let rgb=colorScheme == .dark ? ShellPalette.dark : ShellPalette.light
+  return Color(red:rgb.0,green:rgb.1,blue:rgb.2)
+ }
  @ObservedObject var store:ShellStore
  let position:String
  @Environment(\.accessibilityReduceTransparency) private var opaque
