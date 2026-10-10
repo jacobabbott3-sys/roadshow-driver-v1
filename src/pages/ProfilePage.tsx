@@ -1,3 +1,4 @@
+import { isNativeApp } from "../lib/nativePlatform";
 import {
   BellOff,
   BellRing,
@@ -224,13 +225,12 @@ export function ProfilePage() {
           </div>
           <div>
             <h2>Device notifications</h2>
-            <p>Get alerts even when the app is not open.</p>
+            <p>{isNativeApp() ? "Updates appear in Notifications while you use the app." : "Get alerts even when the app is not open."}</p>
           </div>
         </div>
         {!supported ? (
           <p className="muted">
-            This browser does not support device notifications. On iPhone or
-            iPad, add the app to your Home Screen first.
+            {isNativeApp() ? "This personal iPhone build supports in-app notifications only. Alerts while the app is closed are unavailable." : "This browser does not support device notifications. On iPhone or iPad, add the app to your Home Screen first."}
           </p>
         ) : (
           <button

@@ -1,3 +1,4 @@
+import { isNativeApp } from "./nativePlatform";
 import { supabase } from "./supabase";
 
 export type NotificationPreferences = {
@@ -22,6 +23,7 @@ export const defaultNotificationPreferences: Omit<
 };
 
 export function deviceNotificationsSupported() {
+  if (isNativeApp()) return false;
   return (
     "serviceWorker" in navigator &&
     "PushManager" in window &&

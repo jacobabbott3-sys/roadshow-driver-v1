@@ -38,3 +38,9 @@ do not import or invent raw transcript history.
 References: [cloud design](superpowers/specs/2026-10-01-cloud-development-design.md),
 [contract design](superpowers/specs/2026-09-29-contract-publishing-reliability-design.md),
 `supabase/migrations/`, and Git history.
+
+October 10, 2026: Jacob chose a free Personal Team iPhone build using Public 5
+and real account/live data, replacing the initial beta-only packaging proposal.
+Use Capacitor bundled assets, no native remote push/offline sync, and accept
+seven-day rebuild/reinstall. Apple security/signing/legal steps stay user-owned;
+no paid enrollment, TestFlight or web/backend release is authorized.

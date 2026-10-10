@@ -199,3 +199,11 @@ app, and perform tiny emergency text edits. Use a desktop browser for normal
 coding, database migrations, security work, and conflict resolution. Initial
 rollout is complete only after [another-desktop acceptance](releases/cloud-development-verification.md)
 with the original laptop off.
+
+## Personal native build
+
+Jacob approved a separate local iPhone package from Public 5/main, using his real
+account/live data. This is an explicit exception to starting application work
+from beta; no merge/push or production deployment accompanies it. Use the
+[personal build workflow](ios-personal-build.md), keep signing user-controlled,
+and never create production fixtures for automated acceptance.

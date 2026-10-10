@@ -90,3 +90,14 @@ deployment is introduced. See [workflow](development-workflow.md).
 
 Sources: source modules above, `supabase/migrations/`, `supabase/functions/web-push/index.ts`,
 `supabase/tests/`, `vite.config.ts`, and `vercel.json`.
+
+## Local personal iPhone package
+
+`capacitor.config.ts` bundles `dist-ios` for the personal Public 5 app. The native
+build/runtime origin guard selects the existing public Supabase project and
+rejects beta/missing configuration. Startup gates Auth before it mounts. Native
+recovery uses the public website in the default browser, scene pause/resume
+controls token refresh, and device push is unavailable. Private photo/PDF
+services retain their authorization; ordinary web builds are unchanged.
+See [personal build instructions](ios-personal-build.md) for signing and pending
+physical-device acceptance. This is not a public deployment or backend change.

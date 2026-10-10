@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import { nativeConfigurationError } from './nativeRuntime'
+if (nativeConfigurationError) throw new Error(nativeConfigurationError)
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const isSupabaseConfigured = Boolean(url && key)

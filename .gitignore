@@ -12,3 +12,7 @@ work
 outputs
 supabase/.temp
 /public/pdfjs-assets/
+
+dist-ios/
+ios/**/DerivedData/
+ios/**/xcuserdata/

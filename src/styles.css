@@ -3431,3 +3431,22 @@ h2 {
   .sort-menu { width: 100%; }
   .show-list-toolbar .sort-control { margin-left: 0; }
 }
+
+/* The native WKWebView owns keyboard resizing; the app owns safe-area spacing. */
+html[data-native="ios"] body {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+html[data-native="ios"] .app-shell,
+html[data-native="ios"] .auth-page,
+html[data-native="ios"] .center-page {
+  min-height: calc(100dvh - env(safe-area-inset-top));
+}
+.native-link-error {
+  position: fixed; z-index: 10000;
+  top: calc(12px + env(safe-area-inset-top)); left: 16px; right: 16px;
+  padding: 16px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--paper); color: var(--ink);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}

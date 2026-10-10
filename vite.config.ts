@@ -1,9 +1,14 @@
 import { loadEnv } from 'vite'
+import { validateNativeConfig } from './src/lib/nativeConfig'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  if (mode === 'ios') {
+    const error = validateNativeConfig({url: env.VITE_SUPABASE_URL || '', key: env.VITE_SUPABASE_ANON_KEY || '', channel: env.VITE_RELEASE_CHANNEL || '', version: env.VITE_RELEASE_VERSION || ''})
+    if (error) throw new Error(error)
+  }
   const branch = env.VERCEL_GIT_COMMIT_REF || ''
   const channel = env.VITE_RELEASE_CHANNEL || (branch === 'beta' ? 'beta' : 'public')
   const requestedVersion = env.VITE_RELEASE_VERSION || (channel === 'beta' ? '5A' : '5')
@@ -12,6 +17,7 @@ export default defineConfig(({ mode }) => {
     : requestedVersion.replace(/^v/i, '').toUpperCase()
   return {
     plugins: [react()],
+    build: { outDir: mode === 'ios' ? 'dist-ios' : 'dist' },
     test: {
       environment: 'jsdom',
       globals: true,
