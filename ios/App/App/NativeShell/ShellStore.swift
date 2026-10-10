@@ -28,7 +28,7 @@ import UIKit
   guard next.isValid else{return}
   appearance=next
   if let data=try? JSONEncoder().encode(next) {UserDefaults.standard.set(data,forKey:key)}
-  event?("appearanceChanged",["appearance":["mode":next.mode,"haptics":next.haptics]])
+  event?("appearanceChanged",["appearance":["mode":next.mode,"haptics":next.haptics,"color":next.accent]])
   layoutChanged?()
  }
 }

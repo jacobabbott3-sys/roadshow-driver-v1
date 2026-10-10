@@ -1,6 +1,6 @@
 export type NativeTab = 'home'|'contracts'|'resources'|'admin'|'profile';
 export type ShellAction = NativeTab|'chat'|'notifications'|'availability'|'redFolder'|'toolbag'|'back';
-export type ShellAppearance = {mode:'system'|'light'|'dark'; haptics:boolean};
+export type ShellAppearance = {mode:'system'|'light'|'dark'; haptics:boolean; color:'forest'|'blue'|'purple'|'rust'};
 export type ShellState = {version:1; connection:string; sequence:number; visible:boolean; tabs:NativeTab[]; selected:NativeTab|null; canGoBack:boolean; unreadChats:number; unreadNotifications:number; modalOpen:boolean};
 const routes: Record<Exclude<ShellAction,'back'>,string> = {home:'/',contracts:'/contracts',resources:'/resources',admin:'/admin',profile:'/profile',chat:'/chat',notifications:'/notifications',availability:'/availability',redFolder:'/resources/red-folder',toolbag:'/resources/toolbag'};
 export function actionRoute(action: unknown): string|null {return typeof action==='string' && Object.hasOwn(routes,action) ? routes[action as keyof typeof routes] : null;}
@@ -15,7 +15,8 @@ export function parentRoute(path: string): string {const tab=selectedTab(path);r
 export function parseAppearance(value: unknown): ShellAppearance|null {
  if(!value||typeof value!=='object') return null;
  const v=value as Record<string,unknown>;
- return ['system','light','dark'].includes(String(v.mode)) && typeof v.haptics==='boolean' ? {mode:v.mode as ShellAppearance['mode'],haptics:v.haptics} : null;
+ const color=v.color??'forest';
+ return ['system','light','dark'].includes(String(v.mode)) && typeof v.haptics==='boolean' && ['forest','blue','purple','rust'].includes(String(color)) ? {mode:v.mode as ShellAppearance['mode'],haptics:v.haptics,color:color as ShellAppearance['color']} : null;
 }
 export function parseShellState(value: unknown): ShellState|null {
  if(!value||typeof value!=='object')return null;

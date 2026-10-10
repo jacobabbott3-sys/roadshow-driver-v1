@@ -118,14 +118,14 @@ advisories. No offline support or closed-app remote push is implied.
 ## Native glass presentation (October 10, 2026)
 
 The personal build now contains one retained Capacitor web view with native
-SwiftUI navigation: Home, Contracts, Resources, Profile and an Admin tab for a
+UIKit tab navigation and a compact SwiftUI menu: Home, Contracts, Resources, Profile and an Admin tab for a
 verified active administrator. Chat, Notifications, Back and Quick Access use
 allowlisted React routes. iOS 26+ uses system Liquid Glass; older supported iOS
 uses system material. Reduce Transparency supplies opaque surfaces.
 
-Appearance (System/Light/Dark) and tab haptics are saved only on this iPhone.
+Appearance (System/Light/Dark), color (Forest/blue/purple/rust) and tab haptics are saved only on this iPhone.
 Profile opens the native sheet; account confetti remains a separate preference.
-Native content uses system typography, neutral grouped cards and green accents.
+Native content uses system typography, neutral grouped cards and selectable readable accents.
 The public website's design and account appearance controls are unchanged.
 Native controls hide for web dialogs, when the app pauses, and until account
 verification completes after resume. Unread badges share one subscription owner
@@ -136,8 +136,8 @@ collapse for the keyboard, and native editable controls use at least 16px text.
 This implements the prevention for automatic focus zoom; actual focus/blur scale
 and keyboard behavior still require iPhone confirmation.
 
-Source verification: 50 unit tests, 75 UI tests, 2 native build-pipeline tests,
-19 executable Swift state/contrast assertions plus WebKit delegate forwarding tests, web build, guarded native sync and unsigned
+Source verification: 51 unit tests, 75 UI tests, 2 native build-pipeline tests,
+35 executable Swift state/contrast/persistence assertions plus WebKit delegate forwarding tests, web build, guarded native sync and unsigned
 iOS device compilation passed. Lint has zero errors and the existing 3 warnings.
 The Swift state tests execute Foundation code on macOS; they do not establish
 UIKit/SwiftUI rendering or substitute for an iOS runtime. Simulator runtime
@@ -190,3 +190,22 @@ now separates the bright text accent from dark filled surfaces. Jacob requested
 a further presentation revision: compact combined top menu, standard iOS tab-bar
 interaction, consistent buttons, local color choices and layered Liquid Glass icon.
 These replace the initial fixed-green/custom-tab visual choices.
+
+Revision verification: 51 unit and 75 UI tests pass; web build, guarded iOS sync,
+and unsigned device build including RoadshowIcon.icon pass. Lint remains at
+zero errors and three existing warnings. Four accent palettes meet the tested
+4.5:1 solid-background contrast target in light and dark; actual glass appearance
+remains a device acceptance item. Icon Composer visually shows all three vector
+layers with glass effects, and actool emits the layered icon plus legacy PNGs.
+The existing public favicon and website are unchanged. The Xcode project selects
+RoadshowIcon as the app icon; the former raster asset remains available in source.
+
+Revision ruling: implement Jacob's requested visual correction within the already
+approved native architecture, using UIKit's standard tab interaction and Apple's
+layered icon format. No new product/backend/signing scope is introduced. Drag
+feel, accessibility and keyboard acceptance require the real device; no additional
+review pass was claimed. The prior independent review has no deferred minors.
+
+Revised device install: Xcode reported “Running App on Hoid” after replacing
+the prior instance. User acceptance of the new color/menu/tab-drag interaction
+is pending. Device Hub screen sharing remained stopped throughout this install.

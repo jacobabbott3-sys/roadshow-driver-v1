@@ -93,7 +93,9 @@ current migrations, and the [contract design](superpowers/specs/2026-09-29-contr
 ### Personal iPhone presentation
 
 The private Public 5 iPhone build uses native glass navigation, SF Symbols,
-Quick Access and a device-local Appearance/Haptics sheet. Verified administrators
+a combined Chat/Notifications/Quick Access menu and a device-local
+Appearance/Color/Haptics sheet. Standard iOS tabs and a layered glass truck icon
+complete the presentation. Verified administrators
 also see Admin. These changes are local to the iPhone package; public website
 workflows, live account data and checklist eligibility are unchanged. Closed-app
 notifications, widgets and Dynamic Island remain outside this personal phase.

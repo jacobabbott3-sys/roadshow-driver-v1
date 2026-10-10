@@ -29,11 +29,20 @@ struct ShellGate {
  }
 }
 struct ShellAppearance:Codable {
- var mode:String="system";var haptics:Bool=true
- var isValid:Bool {["system","light","dark"].contains(mode)}
+ var mode:String="system";var haptics:Bool=true;var color:String?=nil
+ var accent:String {color ?? "forest"}
+ var isValid:Bool {["system","light","dark"].contains(mode) && ["forest","blue","purple","rust"].contains(accent)}
 }
 
 enum ShellPalette {
  static let light=(0.12,0.48,0.32)
  static let dark=(0.41,0.84,0.60)
+ static func rgb(_ color:String,dark:Bool)->(Double,Double,Double) {
+  switch color {
+  case "blue":return dark ? (0.47,0.73,1.0) : (0.12,0.36,0.65)
+  case "purple":return dark ? (0.76,0.64,0.98) : (0.43,0.28,0.65)
+  case "rust":return dark ? (1.0,0.65,0.5) : (0.59,0.25,0.16)
+  default:return dark ? Self.dark : Self.light
+  }
+ }
 }

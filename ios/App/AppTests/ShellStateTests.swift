@@ -31,8 +31,17 @@ import Foundation
    func linear(_ n:Double)->Double {n<=0.04045 ? n/12.92 : pow((n+0.055)/1.055,2.4)}
    return 0.2126*linear(rgb.0)+0.7152*linear(rgb.1)+0.0722*linear(rgb.2)
   }
-  assert(1.05/(luminance(ShellPalette.light)+0.05)>=4.5)
-  assert((luminance(ShellPalette.dark)+0.05)/(luminance((0.11,0.11,0.12))+0.05)>=4.5)
-  print("ShellState: 19 assertions passed, including light/dark accent contrast")
+  for color in ["forest","blue","purple","rust"] {
+   assert(1.05/(luminance(ShellPalette.rgb(color,dark:false))+0.05)>=4.5)
+   assert((luminance(ShellPalette.rgb(color,dark:true))+0.05)/(luminance((0.11,0.11,0.12))+0.05)>=4.5)
+   let appearance=ShellAppearance(mode:"dark",haptics:false,color:color)
+   assert(appearance.isValid)
+   let restored=try JSONDecoder().decode(ShellAppearance.self,from:JSONEncoder().encode(appearance))
+   assert(restored.accent == color)
+  }
+  let legacy=try JSONDecoder().decode(ShellAppearance.self,from:Data(#"{"mode":"dark","haptics":false}"#.utf8))
+  assert(legacy.accent == "forest" && legacy.mode == "dark" && !legacy.haptics)
+  assert(!ShellAppearance(mode:"system",haptics:true,color:"invalid").isValid)
+  print("ShellState: 35 assertions passed, including four palette contrasts and persistence")
  }
 }

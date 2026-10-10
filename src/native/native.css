@@ -8,6 +8,7 @@ html[data-native="ios"] {
   --muted: #636366;
   --line: #d1d1d6;
   --green: #176440;
+  --native-fill: #176440;
   --green2: #1f784e;
   --shadow: 0 4px 20px rgb(0 0 0 / 5%);
   background: var(--cream);
@@ -45,7 +46,7 @@ html[data-native="ios"] :is(.detail-panel,.profile-card,.contract-card,.resource
 html[data-native="ios"] .page { padding: 20px 18px 28px; }
 html[data-native="ios"] .page-header { margin-bottom: 24px; }
 html[data-native="ios"] .eyebrow { color: var(--muted); letter-spacing: .1em; }
-html[data-native="ios"] .button.primary { background: #176440; color: white; border-radius: 14px; }
+html[data-native="ios"] .button.primary { background: var(--native-fill); color: white; border-radius: 14px; }
 html[data-native="ios"][data-native-shell="ready"] body { padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left); }
 html[data-native="ios"][data-native-shell="ready"] :is(.side-nav,.top-bar,.bottom-nav) { display: none; }
 html[data-native="ios"][data-native-shell="ready"] .app-shell { display: block; min-height: 100dvh; }
@@ -62,3 +63,38 @@ html[data-native="ios"] .modal-backdrop { padding-top: max(20px, env(safe-area-i
 @media (prefers-reduced-motion: reduce) {
   html[data-native="ios"] *, html[data-native="ios"] *::before, html[data-native="ios"] *::after { scroll-behavior: auto; animation-duration: .01ms; transition-duration: .01ms; }
 }
+/* Keep white-on-green filled surfaces distinct from the brighter dark-mode text accent. */
+html[data-native="ios"] :is(.primary,.auth-intro,.auth-simple,.side-nav,.show-card,.calendar-box,.contract-detail-head,.resource-hero-grid article,.review-row button.approve,.review-open-button,.review-overview,.review-approve,.template-tabs button.active,.chat-avatar,.chat-bubble.mine,.show-booth-icon,.publish-opportunity-card.selected .publish-check,.contract-publication-filter button.active) {
+  background: var(--native-fill);
+}
+html[data-native="ios"] .show-card :is(.eyebrow,p) { color: #e0eee7; }
+html[data-native="ios"] :is(.avatar,.date-badge,.role-pill) { color: var(--native-fill); }
+html[data-native="ios"] .admin-nav { background: var(--paper); border: 1px solid var(--line); }
+html[data-native="ios"] .admin-nav a.active { background: color-mix(in srgb, var(--green) 12%, var(--paper)); }
+
+/* A small local palette: filled controls always retain white-text contrast. */
+html[data-native="ios"][data-accent="blue"] { --native-fill: #1f5ca6; --green: #1f5ca6; --green2: #1f5ca6; }
+html[data-native="ios"][data-accent="purple"] { --native-fill: #6e47a6; --green: #6e47a6; --green2: #6e47a6; }
+html[data-native="ios"][data-accent="rust"] { --native-fill: #964029; --green: #964029; --green2: #964029; }
+html[data-native="ios"][data-theme="dark"][data-accent="blue"] { --green: #78baff; --green2: #78baff; }
+html[data-native="ios"][data-theme="dark"][data-accent="purple"] { --green: #c2a3fa; --green2: #c2a3fa; }
+html[data-native="ios"][data-theme="dark"][data-accent="rust"] { --green: #ffa680; --green2: #ffa680; }
+html[data-native="ios"] :is(button,.button,.profile-link) {
+  border-radius: 16px;
+  font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease, opacity .12s ease, background-color .15s ease;
+}
+html[data-native="ios"] :is(button,.button):active:not(:disabled) { transform: scale(.97); }
+html[data-native="ios"] :is(.button.secondary,.button.light,.back-button,.profile-link) {
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--line) 65%, white);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%), 0 3px 12px rgb(0 0 0 / 6%);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  backdrop-filter: blur(18px) saturate(1.35);
+}
+html[data-native="ios"] :is(button,.button):focus-visible { outline: 3px solid var(--green2); outline-offset: 3px; }
+html[data-native="ios"] :is(button,.button):disabled { opacity: .5; }
+@media (prefers-reduced-motion: reduce) { html[data-native="ios"] :is(button,.button) { transition: none; transform: none; } }
+@media (prefers-reduced-transparency: reduce) { html[data-native="ios"] :is(.button.secondary,.button.light,.back-button,.profile-link) { background: var(--paper); backdrop-filter: none; -webkit-backdrop-filter: none; } }

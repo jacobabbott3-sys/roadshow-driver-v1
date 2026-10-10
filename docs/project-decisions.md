@@ -49,6 +49,8 @@ no paid enrollment, TestFlight or web/backend release is authorized.
 
 Approved native SwiftUI glass over a single retained Capacitor web view, backed
 by existing React auth/routing and Public 5 live services. Native appearance and
-haptics are device-local; the accent is green. Retain iOS 15 minimum with guarded
+haptics and Forest/blue/purple/rust colors are device-local. The revised shell uses
+a standard UIKit tab bar and a compact SwiftUI menu; the icon is a layered
+Icon Composer document. Retain iOS 15 minimum with guarded
 material fallback. Use one unread-data owner and explicit modal/inset ownership.
 No backend changes or paid capabilities accompany this presentation phase.

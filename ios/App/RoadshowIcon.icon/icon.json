@@ -1,0 +1,37 @@
+{
+  "fill": {
+    "automatic-gradient": "extended-srgb:0.09020,0.23922,0.19216,1.00000"
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "Wheels.svg",
+          "name": "Wheels"
+        },
+        {
+          "image-name": "Warm accents.svg",
+          "name": "Warm accents"
+        },
+        {
+          "image-name": "Truck body.svg",
+          "name": "Truck body"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
+  }
+}

@@ -8,6 +8,6 @@ it('defaults System and follows OS with explicit overrides and local cache only'
  applyNativeAppearance('light');expect(document.documentElement.dataset.theme).toBe('light');expect(document.documentElement.dataset.accent).toBe('forest');expect(localStorage.getItem('roadshow-theme')).toBeNull();
 });
 it('validates persisted preferences and listens for native mode/haptics without account data',()=>{
- localStorage.setItem('roadshow-native-appearance-v1','{"mode":"bad"}');expect(readNativeAppearance()).toEqual({mode:'system',haptics:true});const stop=watchNativeAppearance();
- act(()=>window.dispatchEvent(new CustomEvent('roadshow:native-appearance',{detail:{mode:'dark',haptics:false}})));expect(readNativeAppearance()).toEqual({mode:'dark',haptics:false});expect(document.documentElement.dataset.theme).toBe('dark');expect(localStorage.getItem('roadshow-color-scheme')).toBeNull();stop();
+ localStorage.setItem('roadshow-native-appearance-v1','{"mode":"bad"}');expect(readNativeAppearance()).toEqual({mode:'system',haptics:true,color:'forest'});const stop=watchNativeAppearance();
+ act(()=>window.dispatchEvent(new CustomEvent('roadshow:native-appearance',{detail:{mode:'dark',haptics:false,color:'blue'}})));expect(readNativeAppearance()).toEqual({mode:'dark',haptics:false,color:'blue'});expect(document.documentElement.dataset.theme).toBe('dark');expect(document.documentElement.dataset.accent).toBe('blue');expect(localStorage.getItem('roadshow-color-scheme')).toBeNull();stop();
 });

@@ -11,7 +11,7 @@ import Foundation
    guard let self,let store=self.store else{call.reject("Native shell unavailable");return}
    store.event = { [weak self] name,payload in self?.notifyListeners(name,data:payload) }
    store.connect(connection)
-   call.resolve(["version":1,"connection":connection,"appearance":["mode":store.appearance.mode,"haptics":store.appearance.haptics]])
+   call.resolve(["version":1,"connection":connection,"appearance":["mode":store.appearance.mode,"haptics":store.appearance.haptics,"color":store.appearance.accent]])
   }
  }
  @objc func setState(_ call:CAPPluginCall) {
@@ -26,7 +26,7 @@ import Foundation
  }
  @objc func setAppearance(_ call:CAPPluginCall) {
   guard let object=call.getObject("appearance"),let mode=object["mode"] as? String,let haptics=object["haptics"] as? Bool else{call.reject("Invalid appearance");return}
-  let appearance=ShellAppearance(mode:mode,haptics:haptics)
+  let appearance=ShellAppearance(mode:mode,haptics:haptics,color:object["color"] as? String)
   guard appearance.isValid else{call.reject("Invalid appearance");return}
   DispatchQueue.main.async { [weak self] in self?.store?.updateAppearance(appearance);call.resolve() }
  }
