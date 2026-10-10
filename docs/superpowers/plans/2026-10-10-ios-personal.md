@@ -35,14 +35,14 @@
 
 **Interfaces:** `validateNativeConfig(config: { url: string; key: string; channel: string; version: string }): string | null` returns a sanitized error or null. `isNativeApp(): boolean` in `src/lib/nativePlatform.ts` uses Capacitor platform detection. `npm run ios:sync` validates, builds fresh assets to `dist-ios`, then syncs the generated iOS project; ordinary `npm run build` retains its existing output/behavior.
 
-- [ ] Align npm locally, verify exact compatible Capacitor 8 package versions against official docs, and install pinned dependencies/lockfile. Prefer the current 8.x patch with Xcode 27 support and SPM; no global npm modification.
-- [ ] Run existing unit/UI tests, build and lint to establish the Public 5 baseline. Diagnose failures before implementation; report preexisting failures separately.
-- [ ] Add failing guard tests: exact public origin/channel/version with browser-safe key succeeds; missing values, beta origin, suffix spoof, embedded credentials, `sb_secret_` and legacy service-role JWT fail without including keys in errors. Malformed legacy tokens fail closed. Include stale-output/sync failure coverage using temporary fixtures and mocked child commands, with no real keys.
-- [ ] Run focused tests and confirm intended failures; implement shared validation and a native build entrypoint that validates resolved Vite environment, creates fresh `dist-ios` and invokes sync only after success. Exclude generated assets and never set `server.url`.
-- [ ] Add a startup gate that shows a readable configuration error before AuthProvider mounts; invalid native configuration must not instantiate a production-connected Supabase client. Test zero client/network calls on invalid startup and unchanged ordinary web startup.
-- [ ] Generate the iOS SPM project using the verified Capacitor CLI. Use a native minimum deployment target supported by Capacitor 8 (iOS 15). Leave development team/signing credentials unconfigured. Generate the icon from existing repository artwork without changing web branding.
-- [ ] Run unit/UI tests, ordinary web build, native negative configuration tests and a native fixture build using a clearly nonfunctional browser-safe test key. Inspect bundled origin/release metadata without printing any real key. Fixture output is never installed for live use.
-- [ ] Commit the independently verified package/configuration changes locally.
+- [x] Align npm locally, verify exact compatible Capacitor 8 package versions against official docs, and install pinned dependencies/lockfile. Prefer the current 8.x patch with Xcode 27 support and SPM; no global npm modification.
+- [x] Run existing unit/UI tests, build and lint to establish the Public 5 baseline. Diagnose failures before implementation; report preexisting failures separately.
+- [x] Add failing guard tests: exact public origin/channel/version with browser-safe key succeeds; missing values, beta origin, suffix spoof, embedded credentials, `sb_secret_` and legacy service-role JWT fail without including keys in errors. Malformed legacy tokens fail closed. Include stale-output/sync failure coverage using temporary fixtures and mocked child commands, with no real keys.
+- [x] Run focused tests and confirm intended failures; implement shared validation and a native build entrypoint that validates resolved Vite environment, creates fresh `dist-ios` and invokes sync only after success. Exclude generated assets and never set `server.url`.
+- [x] Add a startup gate that shows a readable configuration error before AuthProvider mounts; invalid native configuration must not instantiate a production-connected Supabase client. Test zero client/network calls on invalid startup and unchanged ordinary web startup.
+- [x] Generate the iOS SPM project using the verified Capacitor CLI. Use a native minimum deployment target supported by Capacitor 8 (iOS 15). Leave development team/signing credentials unconfigured. Generate the icon from existing repository artwork without changing web branding.
+- [x] Run unit/UI tests, ordinary web build, native negative configuration tests and a native fixture build using a clearly nonfunctional browser-safe test key. Inspect bundled origin/release metadata without printing any real key. Fixture output is never installed for live use.
+- [x] Commit the independently verified package/configuration changes locally.
 
 ### Task 2: Native behavior adapters
 
@@ -50,12 +50,12 @@
 
 **Interfaces:** `isNativeApp(): boolean`; `openExternalUrl(url: string): Promise<void>` uses a verified system-browser mechanism for supported HTTPS URLs. `NativeLifecycle` registers and cleans up native foreground/background listeners, controlling Supabase auto-refresh without altering web lifecycle. Native recovery opens exactly `https://www.roadshowdriver.com/forgot-password`.
 
-- [ ] Add failing UI tests that native recovery opens the exact public HTTPS page and never sends an email or builds a `capacitor://` callback; web recovery retains its existing flow. Exercise external-open failure with a recoverable message.
-- [ ] Add failing tests that native device-push support is false even when browser APIs are mocked present, enabling push never registers a subscription, and in-app notification preferences/rows remain available.
-- [ ] Add lifecycle tests for foreground/background refresh control and listener cleanup. Test remember-me on/off and logout with mocked sessions; do not introduce a new token store without evidence it is required.
-- [ ] Implement the smallest adapters satisfying those tests. Open external links outside WKWebView through the chosen official platform API. Gate native push with clear copy that in-app notifications remain available.
-- [ ] Apply a native-only root marker and CSS safe-area/keyboard layout adjustments. Keep web layout unchanged. Preserve role/active-account checks and existing recovery boundaries.
-- [ ] Run focused UI/unit tests, then repository suites/build/lint; commit locally.
+- [x] Add failing UI tests that native recovery opens the exact public HTTPS page and never sends an email or builds a `capacitor://` callback; web recovery retains its existing flow. Exercise external-open failure with a recoverable message.
+- [x] Add failing tests that native device-push support is false even when browser APIs are mocked present, enabling push never registers a subscription, and in-app notification preferences/rows remain available.
+- [x] Add lifecycle tests for foreground/background refresh control and listener cleanup. Test remember-me on/off and logout with mocked sessions; do not introduce a new token store without evidence it is required.
+- [x] Implement the smallest adapters satisfying those tests. Open external links outside WKWebView through the chosen official platform API. Gate native push with clear copy that in-app notifications remain available.
+- [x] Apply a native-only root marker and CSS safe-area/keyboard layout adjustments. Keep web layout unchanged. Preserve role/active-account checks and existing recovery boundaries.
+- [x] Run focused UI/unit tests, then repository suites/build/lint; commit locally.
 
 ### Task 3: iOS verification and handoff
 
@@ -63,7 +63,7 @@
 
 **Interfaces:** Conditional `sharePrivatePdf(url: string, filename: string): Promise<void>` downloads only a validated HTTPS signed URL from the selected project, uses temporary app storage, invokes the native share sheet and performs cleanup. It must not log signed URLs or make private storage public. Add official Filesystem/Share dependencies only if needed.
 
-- [ ] Verify the completed official Apple archive/signature, extract/install Xcode without replacing another installation, then stop at new legal/security/signing prompts for Jacob. Use per-command `DEVELOPER_DIR` to avoid changing global tool selection unnecessarily. Verify Xcode build and available iOS SDK/runtime.
+- [x] Verify the completed official Apple archive/signature, extract/install Xcode without replacing another installation, then stop at new legal/security/signing prompts for Jacob. Use per-command `DEVELOPER_DIR` to avoid changing global tool selection unnecessarily. Verify Xcode build and available iOS SDK/runtime.
 - [ ] Build for iOS Simulator with `CODE_SIGNING_ALLOWED=NO` using dedicated ignored DerivedData. Launch with mocked/disconnected fixtures to verify shell boot, asset loading, route navigation and native gates; do not authenticate production as an automated test.
 - [ ] Verify PDF worker/CMaps/fonts/WASM on local fixtures, including multipage and scanned documents, zoom/close, retry and expired-link handling. If downloads fail on WKWebView, implement the conditional export adapter with failure/cancellation/cleanup tests before retesting.
 - [ ] Verify upload UI with synthetic JPEG/PNG/WebP and HEIC inputs: supported conversion or clear rejection, cancel, denial and failures must not create metadata or claim success. Preserve all private-storage policies. Live upload acceptance remains a user-assisted action.
@@ -82,4 +82,4 @@ the approved scope. No beta integration is required.
 Recommended execution: native in this session, followed by one independent review;
 the three tasks share configuration/platform interfaces, and this avoids repeated
 context setup. Alternative: fresh implementer/reviewer subagents per task.
-Plan review/execution choice is pending; no product code has been changed.
+Jacob approved inline execution with one independent final review. Tasks 1–2 are complete. Task 3 source checks and unsigned simulator/device compilation passed; device installation and acceptance are in progress. The independent review found one important issue, fixed with three RED→GREEN regression tests in 73a5600; one minor signing-metadata cleanup is deferred while user-owned signing is active. No second review was requested.

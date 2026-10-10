@@ -69,9 +69,9 @@ Commands: `npm test`, `npm run test:ui`, `npm run test:native`, `npm run build`,
 | Final source checks after review fix | 48 unit + 59 UI + 2 pipeline tests pass; web build and native sync pass |
 | Web build/lint | Passing, existing three warnings retained |
 | iOS simulator compilation | Passed unsigned against iOS 27.2 SDK |
-| iOS device compilation | Passed unsigned against iOS 27.2 SDK before final JS-only review fix |
+| iOS device compilation | Passed unsigned against iOS 27.2 SDK again after the final review fix |
 | Simulator launch | Blocked: no installed runtime; Apple download reports iOS 27.2 unavailable |
-| Device signing/install | Personal Team and managed profile configured by user; installation underway |
+| Device signing/install | Personal Team, managed profile and Developer Mode configured by user; Xcode preparing first run |
 | Device login/remember-me/background/resume/logout | Pending; mocked persistence tests pass |
 | Camera/photo picker/HEIC/denial/cancellation | Pending device check; JPEG/PNG/WebP validation retained; HEIC requires system conversion or clear rejection |
 | Private PDF/scanned PDF/expired links/download | Pending device check; existing renderer and its tests retained |

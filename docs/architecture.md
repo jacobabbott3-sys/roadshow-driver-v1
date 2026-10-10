@@ -97,7 +97,9 @@ Sources: source modules above, `supabase/migrations/`, `supabase/functions/web-p
 build/runtime origin guard selects the existing public Supabase project and
 rejects beta/missing configuration. Startup gates Auth before it mounts. Native
 recovery uses the public website in the default browser, scene pause/resume
-controls token refresh, and device push is unavailable. Private photo/PDF
+controls token refresh, and device push is unavailable. Native profile verification
+blocks protected content while pending or failed; a previously inactive account
+remains blocked on network failure. Private photo/PDF
 services retain their authorization; ordinary web builds are unchanged.
 See [personal build instructions](ios-personal-build.md) for signing and pending
 physical-device acceptance. This is not a public deployment or backend change.
