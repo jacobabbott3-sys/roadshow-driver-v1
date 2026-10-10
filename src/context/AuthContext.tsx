@@ -5,10 +5,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
+import { isNativeApp } from "../lib/nativePlatform";
 import type { ColorScheme, Profile, ThemePreference } from "../types";
 
 type AuthValue = {
@@ -16,6 +18,7 @@ type AuthValue = {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  nativeProfileVerified: boolean;
   error: string | null;
   signIn: (email: string, password: string, stayLoggedIn: boolean) => Promise<void>;
   signOut: () => Promise<void>;
@@ -40,8 +43,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [nativePending, setNativePending] = useState(false);
+  const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
+  const nativeRequest = useRef(0);
 
   const refreshProfile = useCallback(async () => {
+    if (isNativeApp()) {
+      const request = ++nativeRequest.current;
+      const userId = session?.user.id;
+      setVerifiedUserId(null);
+      if (!userId) {
+        setProfile(null);
+        setNativePending(false);
+        return;
+      }
+      setNativePending(true);
+      try {
+        const { data, error: profileError } = await supabase.from("profiles")
+          .select("id,full_name,avatar_url,phone,role,is_active,theme_preference,color_scheme,extreme_confetti")
+          .eq("id", userId).single();
+        if (request !== nativeRequest.current) return;
+        if (profileError || !data || data.id !== userId) throw new Error("Profile verification failed");
+        setProfile(data as Profile);
+        setVerifiedUserId(userId);
+        setError(null);
+      } catch {
+        if (request !== nativeRequest.current) return;
+        // Keep a verified inactive account blocked even when the device is offline.
+        setProfile(previous => previous?.id === userId && previous.is_active === false ? previous : null);
+        setError("We could not verify your account. Connect to the internet and try again.");
+      } finally {
+        if (request === nativeRequest.current) setNativePending(false);
+      }
+      return;
+    }
     if (!session?.user) {
       setProfile(null);
       return;
@@ -97,7 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     user: session?.user ?? null,
     profile,
-    loading,
+    loading: loading || (isNativeApp() && nativePending),
+    nativeProfileVerified: !!verifiedUserId && verifiedUserId === session?.user.id,
     error,
     signIn: async (email, password, stayLoggedIn) => {
       setError(null);
@@ -128,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (updateError) throw updateError;
       await refreshProfile();
     },
-  }), [session, profile, loading, error, refreshProfile]);
+  }), [session, profile, loading, nativePending, verifiedUserId, error, refreshProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

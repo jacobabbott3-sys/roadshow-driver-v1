@@ -66,10 +66,12 @@ Commands: `npm test`, `npm run test:ui`, `npm run test:native`, `npm run build`,
 | --- | --- |
 | Public 5 baseline | 44 unit + 40 UI pass; web build passes |
 | Native guard/recovery/push/lifecycle/link tests | Passing; see final task report for totals |
+| Final source checks after review fix | 48 unit + 59 UI + 2 pipeline tests pass; web build and native sync pass |
 | Web build/lint | Passing, existing three warnings retained |
 | iOS simulator compilation | Passed unsigned against iOS 27.2 SDK |
+| iOS device compilation | Passed unsigned against iOS 27.2 SDK before final JS-only review fix |
 | Simulator launch | Blocked: no installed runtime; Apple download reports iOS 27.2 unavailable |
-| Device signing/install | User-assisted, pending |
+| Device signing/install | Personal Team and managed profile configured by user; installation underway |
 | Device login/remember-me/background/resume/logout | Pending; mocked persistence tests pass |
 | Camera/photo picker/HEIC/denial/cancellation | Pending device check; JPEG/PNG/WebP validation retained; HEIC requires system conversion or clear rejection |
 | Private PDF/scanned PDF/expired links/download | Pending device check; existing renderer and its tests retained |
@@ -84,3 +86,27 @@ three moderate findings through the new Capacitor CLI toolchain. No forced
 upgrade/downgrade was applied: npm's suggested Capacitor downgrade loses the
 Xcode 27 support this build requires. Reconcile advisories separately before
 broader distribution; this build is limited to personal-device testing.
+
+## Independent review
+
+One independent final review identified an important offline-resume account-gate
+issue. Three integrated tests reproduced the failures, then passed after the
+native AuthProvider began blocking content during verification, preserving a
+known inactive state on failure, and offering retry when verification is unavailable.
+The ordinary web auth path is unchanged. Final repository checks passed after
+this fix; the review was not repeated.
+
+Minor review finding: the committed Xcode target metadata says automatic while
+its effective build settings say manual. The user has now explicitly configured
+automatic Personal Team signing locally. Those user-specific project edits remain
+uncommitted; the metadata cleanup is deferred to avoid overwriting active signing.
+
+Execution rulings: tracked progress manually in ignored `work/ios-personal` because
+the cloud skill's helper scripts were unavailable; used Capacitor 8.5 scene events
+instead of an extra App plugin; added supplemental startup/platform tests after
+implementation; left Xcode installation user-owned (an unused extracted task copy
+occupies temporary disk space); retained existing photo/PDF code pending device
+evidence; and deferred audit upgrades that would disrupt Public 5/Xcode 27 support.
+Consequences are manual progress tracking, device validation still required,
+temporary duplicate disk use, possible media follow-up, and unresolved dependency
+advisories. No offline support or closed-app remote push is implied.
