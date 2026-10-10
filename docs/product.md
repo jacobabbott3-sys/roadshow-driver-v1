@@ -99,3 +99,8 @@ complete the presentation. Verified administrators
 also see Admin. These changes are local to the iPhone package; public website
 workflows, live account data and checklist eligibility are unchanged. Closed-app
 notifications, widgets and Dynamic Island remain outside this personal phase.
+
+The personal build also applies matching glass styling to search/filter controls,
+resource tiles and document toolbars; long-form reading surfaces stay solid.
+Widgets and an active-checklist Live Activity are now under design investigation,
+not shipped features.

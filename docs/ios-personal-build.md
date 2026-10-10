@@ -209,3 +209,16 @@ review pass was claimed. The prior independent review has no deferred minors.
 Revised device install: Xcode reported “Running App on Hoid” after replacing
 the prior instance. User acceptance of the new color/menu/tab-drag interaction
 is pending. Device Hub screen sharing remained stopped throughout this install.
+
+Jacob confirmed the combined menu, color changes and hold/slide tab interaction
+all work well. The next content pass extends native-only matching translucent
+styling to search/sort, segmented filters, quick-access/resource tiles, primary
+actions, checklist states and PDF/photo controls. Text-heavy cards remain solid.
+These web-content surfaces use CSS blur/highlights, not UIKit Liquid Glass lens
+interaction. Light/dark representative browser fixtures were visually reviewed;
+physical-device acceptance of this new content pass remains pending. Unit 51/UI
+75 pass; lint retains only its three existing warnings. No backend logic changed.
+
+Widget/Live Activity investigation is recorded in
+[the proposed design](superpowers/specs/2026-10-10-ios-widgets-live-activity-design.md).
+No extension, App Group, entitlement or signing change has been made.
