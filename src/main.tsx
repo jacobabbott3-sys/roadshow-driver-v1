@@ -9,13 +9,19 @@ import { AppErrorBoundary } from "./components/AppErrorBoundary";
 
 import { release } from "./lib/release";
 import "./styles.css";
+import "./native/native.css";
+import { watchNativeAppearance } from "./native/nativeAppearance";
 
 if (isNativeApp()) document.documentElement.dataset.native = "ios";
 
+if (isNativeApp()) {
+  watchNativeAppearance();
+} else {
 const savedTheme = localStorage.getItem("roadshow-theme") || "light";
 const initialDark = savedTheme === "dark" || (savedTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 document.documentElement.dataset.theme = initialDark ? "dark" : "light";
 document.documentElement.dataset.accent = localStorage.getItem("roadshow-color-scheme") || "forest";
+}
 document.title = `Roadshow Driver · ${release.label} ${release.version}`;
 
 createRoot(document.getElementById("root")!).render(

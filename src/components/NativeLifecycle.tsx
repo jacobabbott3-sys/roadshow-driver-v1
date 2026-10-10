@@ -9,7 +9,7 @@ export function NativeLifecycle() {
     // Capacitor 8.5 forwards the bridge's UIScene lifecycle to these events.
     const start = () => { void supabase.auth.startAutoRefresh(); };
     const pause = () => { void supabase.auth.stopAutoRefresh(); };
-    const resume = () => { start(); void refreshProfile(); };
+    const resume = () => { start(); void refreshProfile().finally(() => document.dispatchEvent(new Event('roadshow:profile-refreshed'))); };
     document.addEventListener('pause', pause);
     document.addEventListener('resume', resume);
     start();

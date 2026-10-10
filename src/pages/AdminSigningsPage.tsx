@@ -1,3 +1,4 @@
+import { useNativeModal } from "../native/useShellPresentation";
 import { BriefcaseBusiness, CalendarPlus, Clock3, Link2, MapPin, PenLine, Pencil, Trash2, UsersRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
@@ -61,6 +62,8 @@ export function AdminSigningsPage() {
   const [assigning, setAssigning] = useState<AdminShow | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+
+  useNativeModal(Boolean(deleting));
 
   function startNew() { setForm(blank); setEditing(null); setOpen(true); }
   function close() { setForm(blank); setEditing(null); setOpen(false); }

@@ -1,3 +1,4 @@
+import { useNativeModal } from "../native/useShellPresentation";
 import { Plus, RefreshCw, UserRoundPlus, X } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { getTeamMembers } from "../lib/adminData";
@@ -25,6 +26,7 @@ export function AssignmentDialog({
 }: AssignmentDialogProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  useNativeModal(true);
   const [people, setPeople] = useState<AvailabilityResponsePerson[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [externalNames, setExternalNames] = useState<string[]>(initialExternalNames);

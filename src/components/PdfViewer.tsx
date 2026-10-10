@@ -1,3 +1,4 @@
+import { useNativeModal } from "../native/useShellPresentation";
 import { ChevronLeft, ChevronRight, Download, Minus, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -25,6 +26,7 @@ export function PdfViewer({ title, filePath, onClose }: {
   const dialog = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  useNativeModal(true);
   const [urls, setUrls] = useState<{ view: string; download: string } | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);

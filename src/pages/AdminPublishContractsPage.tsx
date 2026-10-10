@@ -1,3 +1,4 @@
+import { useNativeModal } from "../native/useShellPresentation";
 import { BellRing, CalendarDays, Check, CircleDollarSign, Send, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AdminHeader } from "../components/AdminNav";
@@ -35,6 +36,8 @@ export function AdminPublishContractsPage() {
   }, [publishable.data, search, sort]);
   const selectedItems = (publishable.data || []).filter((item) => selected.includes(item.opportunity_id));
   const allVisibleSelected = visible.length > 0 && visible.every((item) => selected.includes(item.opportunity_id));
+
+  useNativeModal(confirming);
 
   function toggle(item: PublishableOpportunity, checked: boolean) {
     setSelected((current) => checked

@@ -1,3 +1,4 @@
+import { NativeShellBridge } from "./native/NativeShellBridge";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
@@ -35,6 +36,7 @@ const AdminOperationsPage = lazy(() => import("./pages/AdminOperationsPage").the
 export default function App() {
   return (
     <BrowserRouter>
+      <NativeShellBridge>
       <Suspense fallback={<LoadingScreen label="Opening screen…" />}>
         <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -84,6 +86,7 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+    </NativeShellBridge>
     </BrowserRouter>
   );
 }

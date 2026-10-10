@@ -1,3 +1,4 @@
+import { shellPlugin } from "../native/shellPlugin";
 import { isNativeApp } from "../lib/nativePlatform";
 import {
   BellOff,
@@ -87,7 +88,7 @@ export function ProfilePage() {
     setMessage("");
     try {
       await updateAppearance(theme, colorScheme, extremeConfetti);
-      setMessage("Appearance saved to your account.");
+      setMessage(isNativeApp() ? "Confetti preference saved." : "Appearance saved to your account.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to save appearance.");
     } finally {
@@ -190,8 +191,9 @@ export function ProfilePage() {
       <section className="detail-panel profile-form appearance-settings">
         <div className="notification-heading">
           <div className="notification-icon"><Palette /></div>
-          <div><h2>Appearance</h2><p>These settings follow your account on every device.</p></div>
+          <div><h2>Appearance</h2><p>{isNativeApp() ? "Display and haptics are saved on this iPhone." : "These settings follow your account on every device."}</p></div>
         </div>
+        {isNativeApp() ? <button className="button secondary" onClick={() => void shellPlugin.showAppearance().catch(() => setMessage("Appearance is unavailable. Reopen the app and try again."))}>iPhone appearance</button> : <>
         <div className="form-grid">
           <label>
             Display mode
@@ -212,11 +214,12 @@ export function ProfilePage() {
           </label>
         </div>
         <div className="color-preview" aria-label={`${colorScheme} color preview`}><span /><span /><span /></div>
+        </>}
         <div className="extreme-confetti-setting">
           <div className="notification-icon"><Sparkles /></div>
           <Preference title="Extreme Confetti Mode" description="Launch confetti whenever you click anything in the app" checked={extremeConfetti} onChange={setExtremeConfetti} />
         </div>
-        <button className="button secondary" onClick={() => void saveAppearance()} disabled={saving}><Save /> Save appearance</button>
+        <button className="button secondary" onClick={() => void saveAppearance()} disabled={saving}><Save /> {isNativeApp() ? "Save confetti preference" : "Save appearance"}</button>
       </section>
       <section className="detail-panel notification-settings">
         <div className="notification-heading">

@@ -1,3 +1,4 @@
+import { useNativeModal } from "../native/useShellPresentation";
 import { Maximize2, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import { createPortal } from "react-dom";
@@ -6,6 +7,7 @@ type Point = { x: number; y: number };
 
 export function ImageViewer({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
   const [open, setOpen] = useState(false);
+  useNativeModal(open);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const drag = useRef<{ pointerId: number; start: Point; origin: Point } | null>(null);

@@ -1,3 +1,4 @@
+import { useNativeModal } from "../native/useShellPresentation";
 import {
   BriefcaseBusiness,
   CalendarPlus,
@@ -127,6 +128,8 @@ export function AdminShowsPage() {
   useEffect(() => {
     if (open) localStorage.setItem(draftKey, JSON.stringify({ form, editing }));
   }, [form, editing, open]);
+  useNativeModal(Boolean(deleting));
+
   function closeForm() {
     setOpen(false);
     setEditing(null);

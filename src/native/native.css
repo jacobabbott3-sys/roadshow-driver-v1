@@ -1,0 +1,64 @@
+/* Native presentation only. The browser release retains its original design. */
+html[data-native="ios"] {
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  color-scheme: light;
+  --cream: #f2f2f7;
+  --paper: #ffffff;
+  --ink: #1c1c1e;
+  --muted: #636366;
+  --line: #d1d1d6;
+  --green: #176440;
+  --green2: #1f784e;
+  --shadow: 0 4px 20px rgb(0 0 0 / 5%);
+  background: var(--cream);
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+html[data-native="ios"][data-theme="dark"] {
+  color-scheme: dark;
+  --cream: #000000;
+  --paper: #1c1c1e;
+  --ink: #f2f2f7;
+  --muted: #aeaeb2;
+  --line: #48484a;
+  --green: #68d69a;
+  --green2: #8de6b3;
+  --shadow: none;
+}
+html[data-native="ios"] body {
+  background: var(--cream);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
+html[data-native="ios"] :is(h1,h2,.auth-brand) { font-family: inherit; }
+html[data-native="ios"] h1 { font-size: clamp(1.8rem, 6vw, 2.4rem); letter-spacing: -.035em; }
+html[data-native="ios"] :is(input,textarea,select,[contenteditable="true"]) {
+  font-size: max(16px, 1rem);
+  scroll-margin-block: calc(var(--native-top, 80px) + 16px) 32px;
+}
+html[data-native="ios"] :is(button,.button,select) { min-height: 44px; }
+html[data-native="ios"] :is(.detail-panel,.profile-card,.contract-card,.resource-card,.stat-card) {
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+html[data-native="ios"] .page { padding: 20px 18px 28px; }
+html[data-native="ios"] .page-header { margin-bottom: 24px; }
+html[data-native="ios"] .eyebrow { color: var(--muted); letter-spacing: .1em; }
+html[data-native="ios"] .button.primary { background: #176440; color: white; border-radius: 14px; }
+html[data-native="ios"][data-native-shell="ready"] body { padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+html[data-native="ios"][data-native-shell="ready"] :is(.side-nav,.top-bar,.bottom-nav) { display: none; }
+html[data-native="ios"][data-native-shell="ready"] .app-shell { display: block; min-height: 100dvh; }
+html[data-native="ios"][data-native-shell="ready"] .app-main {
+  padding-top: var(--native-top, env(safe-area-inset-top));
+  padding-bottom: var(--native-bottom, env(safe-area-inset-bottom));
+  min-width: 0;
+}
+html[data-native="ios"][data-native-shell="ready"] :is(.auth-page,.center-page) {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+html[data-native="ios"] .modal-backdrop { padding-top: max(20px, env(safe-area-inset-top)); padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+@media (prefers-reduced-motion: reduce) {
+  html[data-native="ios"] *, html[data-native="ios"] *::before, html[data-native="ios"] *::after { scroll-behavior: auto; animation-duration: .01ms; transition-duration: .01ms; }
+}
