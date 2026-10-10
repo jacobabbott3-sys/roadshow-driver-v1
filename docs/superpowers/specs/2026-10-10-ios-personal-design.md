@@ -22,8 +22,8 @@ Apple sign-in, legal acceptance, signing and device trust are user-controlled.
 The independent checkout is `roadshow-ios-personal`. It was initially based on
 beta `c439a0fe43b202667436decd6b17861e5a5bd1e0`. The selected implementation base
 is now Public 5, main `950a2628a517ce067b0167382e5aafe4fd02b9ea`, verified through
-GitHub on October 10. Carry the design onto a new local feature branch from that
-exact commit before implementation; do not merge beta into it. It was cloned locally
+GitHub on October 10. The design is now on local branch `feat/ios-personal-public`
+from that exact commit, with no beta merge. It was cloned locally
 without shared hardlinks because the managed worktree tool is unavailable in
 this execution context. No old checkout or worktree is modified.
 
