@@ -22,7 +22,7 @@ import UIKit
  func action(_ action:String) {
   guard gate.actionAllowed(action),let connection=gate.connection else{return}
   if appearance.haptics && (gate.state?.tabs.contains(action) == true) {UISelectionFeedbackGenerator().selectionChanged()}
-  sheet=nil;event?("action",["action":action,"connection":connection])
+  sheet=nil;event?("action",["action":action,"connection":connection,"sequence":gate.state?.sequence ?? -1])
  }
  func updateAppearance(_ next:ShellAppearance) {
   guard next.isValid else{return}

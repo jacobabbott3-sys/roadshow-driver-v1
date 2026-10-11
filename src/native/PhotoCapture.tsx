@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
+import { useSwipeBackBlock } from './useShellPresentation';
 import { normalizePhotoFile } from '../lib/imageUpload';
 
 type Props = {
@@ -24,6 +25,7 @@ export function PhotoCapture({ slot, upload }: Props) {
   const [state, setState] = useState<'ready' | 'uploading' | 'failed' | 'uploaded'>('ready');
   const [progress, setProgress] = useState(0);
   const uploading = state === 'uploading';
+  useSwipeBackBlock(!!file || uploading);
 
   useEffect(() => {
     if (!file) { setPreview(''); return; }

@@ -57,3 +57,16 @@ it('native Back traverses history retaining query/state through POP and REPLACE'
  fireEvent.click(screen.getByText('replace'));fireEvent.click(screen.getByText('forward'));fireEvent.click(screen.getByText('pop'));await waitFor(()=>expect(screen.getByText('/resources')).toBeTruthy());act(()=>m.listeners.action({connection:last().connection,action:'back'}));await waitFor(()=>expect(screen.getByText('/')).toBeTruthy());
 });
 it('ignores verification finishing while the scene is still inactive',async()=>{render(<App/>);await waitFor(()=>expect(screen.getByText('ready')).toBeTruthy());act(()=>{m.listeners.readiness({ready:false});document.dispatchEvent(new Event('roadshow:profile-refreshed'));});await act(async()=>{});expect(m.connect).toHaveBeenCalledTimes(1);act(()=>document.dispatchEvent(new Event('roadshow:native-active')));act(()=>document.dispatchEvent(new Event('roadshow:profile-refreshed')));await waitFor(()=>expect(m.connect).toHaveBeenCalledTimes(2));});
+it('allows swipe Back only on nested routes and ignores drafts, dialogs and tab roots',async()=>{
+ function Screen(){const nav=useNavigate();const shell=useShellPresentation();return <><Probe/><button onClick={()=>nav('/profile/status')}>status</button><button onClick={()=>shell.setSwipeBlocked?.('photo',true)}>draft</button><button onClick={()=>shell.setSwipeBlocked?.('photo',false)}>discard</button></>;}
+ render(<MemoryRouter initialEntries={['/profile']}><NativeShellBridge><Screen/></NativeShellBridge></MemoryRouter>);
+ await waitFor(()=>expect(last()?.visible).toBe(true));expect(last().canSwipeBack).toBe(false);
+ act(()=>m.listeners.action({connection:last().connection,sequence:last().sequence,action:'swipeBack'}));expect(screen.getByText('/profile')).toBeTruthy();
+ for(let i=0;i<2;i++){
+  fireEvent.click(screen.getByText('status'));await waitFor(()=>expect(last().canSwipeBack).toBe(true));
+  fireEvent.click(screen.getByText('draft'));await waitFor(()=>expect(last().canSwipeBack).toBe(false));
+  act(()=>m.listeners.action({connection:last().connection,sequence:last().sequence,action:'swipeBack'}));expect(screen.getByText('/profile/status')).toBeTruthy();
+  fireEvent.click(screen.getByText('discard'));await waitFor(()=>expect(last().canSwipeBack).toBe(true));
+  act(()=>m.listeners.action({connection:last().connection,sequence:last().sequence,action:'swipeBack'}));await waitFor(()=>expect(screen.getByText('/profile')).toBeTruthy());
+ }
+});

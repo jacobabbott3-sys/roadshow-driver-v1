@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+import { ShellPresentationContext } from './useShellPresentation';
 import { PhotoCapture } from './PhotoCapture';
 
 beforeEach(() => {
@@ -61,4 +62,13 @@ it('shows progress and prevents duplicate uploads while saving', async () => {
   expect(screen.getByRole('button', { name: 'Discard photo' })).toBeDisabled();
   finish();
   await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Uploaded'));
+});
+
+it('blocks swipe-back while a draft or failed upload is retained and releases it on discard',async()=>{
+ const setSwipeBlocked=vi.fn();
+ const view=render(<ShellPresentationContext.Provider value={{ready:true,chats:0,notifications:0,setModalOpen:()=>{},setSwipeBlocked}}><PhotoCapture slot="Front" upload={async()=>{throw Error('Offline')}}/></ShellPresentationContext.Provider>);
+ selectPhoto();expect(setSwipeBlocked.mock.lastCall?.[1]).toBe(true);
+ fireEvent.click(screen.getByRole('button',{name:'Use photo'}));await screen.findByRole('alert');expect(setSwipeBlocked.mock.lastCall?.[1]).toBe(true);
+ fireEvent.click(screen.getByRole('button',{name:'Discard photo'}));expect(setSwipeBlocked.mock.lastCall?.[1]).toBe(false);
+ selectPhoto();view.unmount();expect(setSwipeBlocked.mock.lastCall?.[1]).toBe(false);
 });

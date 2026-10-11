@@ -183,3 +183,15 @@ active administrator profile, remain read-only during a new query, and are disca
 on owner changes, signout, and known inactivity. Generation checks reject late
 old-account writes. These broader results never enter the private disk snapshot;
 unverified/offline access remains limited to the existing owned-data allowlist.
+
+### Native edge-back gesture
+
+A UIKit screen-edge recognizer on the retained bridge view sends `swipeBack` through
+the existing shell connection. React advertises an optional `canSwipeBack` flag
+(default-denied by older messages), excluding tab roots and active modal/draft
+blockers. The gesture captures connection/sequence at start and rechecks both at
+completion; React also checks the current sequence before traversing its existing
+route history. Cancelled, reversed and predominantly vertical drags do nothing.
+PhotoCapture registers an owner-scoped blocker while an unsent photo exists;
+discard, successful upload or unmount removes it. No screenshots or extra WebViews
+are retained, and the existing account/role gate remains authoritative.

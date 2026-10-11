@@ -1,17 +1,21 @@
 import UIKit
 import SwiftUI
-final class NativeShellContainer:UIViewController,UITabBarDelegate {
+final class NativeShellContainer:UIViewController,UITabBarDelegate,UIGestureRecognizerDelegate {
  let store=ShellStore()
  private let bridgeController=RoadshowBridgeViewController()
  private var top:UIHostingController<NativeShellView>!
  private let bottom=UITabBar()
  private var tabIDs:[String]=[]
  private var observers:[NSObjectProtocol]=[]
+ private var swipeStart:(connection:String,sequence:Int)?
+ private var lastSwipeToken:String?
  private var previousLayout:CGSize = .zero
  override func viewDidLoad() {
   super.viewDidLoad();view.backgroundColor = .systemBackground
   bridgeController.shellStore=store
   addChild(bridgeController);view.addSubview(bridgeController.view);bridgeController.didMove(toParent:self)
+  let swipe=UIScreenEdgePanGestureRecognizer(target:self,action:#selector(handleSwipe(_:)))
+  swipe.edges = .left;swipe.delegate=self;bridgeController.view.addGestureRecognizer(swipe)
   top=UIHostingController(rootView:NativeShellView(store:store))
   addChild(top);top.view.backgroundColor = .clear;view.addSubview(top.view);top.didMove(toParent:self)
   bottom.delegate=self;view.addSubview(bottom)
@@ -27,6 +31,30 @@ final class NativeShellContainer:UIViewController,UITabBarDelegate {
   })
   observers.append(NotificationCenter.default.addObserver(forName:UIContentSizeCategory.didChangeNotification,object:nil,queue:.main){[weak self] _ in self?.view.setNeedsLayout()})
   applyAppearance()
+ }
+ private var swipeAllowed:Bool {
+  store.visible && store.gate.actionAllowed("swipeBack") && store.sheet == nil &&
+  !store.keyboardVisible && presentedViewController == nil && bridgeController.presentedViewController == nil
+ }
+ func gestureRecognizerShouldBegin(_ gesture:UIGestureRecognizer)->Bool {
+  guard let pan=gesture as? UIScreenEdgePanGestureRecognizer,swipeAllowed,
+   let state=store.gate.state,lastSwipeToken != "\(state.connection):\(state.sequence)" else{return false}
+  let velocity=pan.velocity(in:view)
+  return velocity.x > 0 && velocity.x > abs(velocity.y)
+ }
+ @objc private func handleSwipe(_ pan:UIScreenEdgePanGestureRecognizer) {
+  if pan.state == .began {
+   if let state=store.gate.state {swipeStart=(state.connection,state.sequence)}
+   return
+  }
+  guard pan.state == .ended || pan.state == .cancelled || pan.state == .failed else{return}
+  defer {swipeStart=nil}
+  guard swipeAllowed,let start=swipeStart,let current=store.gate.state,
+   start.connection == current.connection,start.sequence == current.sequence else{return}
+  let distance=pan.translation(in:view),velocity=pan.velocity(in:view)
+  if ShellSwipe.commits(ended:pan.state == .ended,distance:distance.x,vertical:distance.y,velocity:velocity.x,width:view.bounds.width) {
+   lastSwipeToken="\(current.connection):\(current.sequence)";store.action("swipeBack")
+  }
  }
  private func syncTabs() {
   let ids=store.gate.state?.tabs ?? []

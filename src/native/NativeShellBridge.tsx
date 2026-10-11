@@ -4,7 +4,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
 import { useAuth } from '../context/AuthContext';
 import { isNativeApp } from '../lib/nativePlatform';
 import { useUnreadBadges } from '../hooks/useUnreadBadges';
-import { actionRoute,parentRoute,parseAppearance,selectedTab,tabsForRole,validLayout,type ShellState } from './shellProtocol';
+import { actionRoute,parentRoute,canSwipeBack,parseAppearance,selectedTab,tabsForRole,validLayout,type ShellState } from './shellProtocol';
 import { shellPlugin } from './shellPlugin';
 import { ShellPresentationContext } from './useShellPresentation';
 
@@ -18,8 +18,11 @@ export function NativeShellBridge({children}:{children:ReactNode}){
  const [connection,setConnection]=useState<string|null>(null);const [ready,setReady]=useState(false);const [epoch,setEpoch]=useState(0);
  const [modals,setModals]=useState<Set<string>>(()=>new Set());
  const setModalOpen=useCallback((owner:string,open:boolean)=>setModals(previous=>{if(previous.has(owner)===open)return previous;const next=new Set(previous);if(open)next.add(owner);else next.delete(owner);return next;}),[]);
- const latest=useRef({visible,role:auth.profile?.role,path:location.pathname,modalOpen:modals.size>0});
- latest.current={visible,role:auth.profile?.role,path:location.pathname,modalOpen:modals.size>0};
+ const [swipeBlocks,setSwipeBlocks]=useState<Set<string>>(()=>new Set());
+ const setSwipeBlocked=useCallback((owner:string,blocked:boolean)=>setSwipeBlocks(previous=>{if(previous.has(owner)===blocked)return previous;const next=new Set(previous);if(blocked)next.add(owner);else next.delete(owner);return next;}),[]);
+ const swipeAllowed=visible&&canSwipeBack(location.pathname)&&modals.size===0&&swipeBlocks.size===0;
+ const latest=useRef({visible,role:auth.profile?.role,path:location.pathname,modalOpen:modals.size>0,swipeAllowed});
+ latest.current={visible,role:auth.profile?.role,path:location.pathname,modalOpen:modals.size>0,swipeAllowed};
  const navigateRef=useRef(navigate);navigateRef.current=navigate;
  const activeConnection=useRef<string|null>(null);const failRef=useRef<()=>void>(()=>{});const sequence=useRef(0);const queue=useRef(Promise.resolve());
  // Keep the router's real entry keys, including search/hash/state. Unknown POPs
@@ -50,9 +53,10 @@ export function NativeShellBridge({children}:{children:ReactNode}){
   void (async()=>{
    await bounded(Promise.all([
     listen('action',value=>{
-     if(!value||typeof value!=='object')return;const event=value as {action?:unknown;connection?:unknown};const now=latest.current;
+     if(!value||typeof value!=='object')return;const event=value as {action?:unknown;connection?:unknown;sequence?:unknown};const now=latest.current;
      if(activeConnection.current!==id||event.connection!==id||!now.visible||now.modalOpen)return;
-     if(event.action==='back'){const h=history.current;const previous=h.entries[h.index-1];if(previous&&!/^\/(login|forgot-password|update-password|auth)(\/|$)/.test(previous.pathname))navigateRef.current(-1);else navigateRef.current(parentRoute(now.path),{replace:true});return;}
+     if(event.action==='swipeBack'&&(!now.swipeAllowed||event.sequence!==sequence.current))return;
+     if(event.action==='back'||event.action==='swipeBack'){const h=history.current;const previous=h.entries[h.index-1];if(previous&&!/^\/(login|forgot-password|update-password|auth)(\/|$)/.test(previous.pathname))navigateRef.current(-1);else navigateRef.current(parentRoute(now.path),{replace:true});return;}
      const target=actionRoute(event.action);if(!target||target===now.path||(event.action==='admin'&&now.role!=='admin'))return;
      navigateRef.current(target);
     }),
@@ -73,14 +77,14 @@ export function NativeShellBridge({children}:{children:ReactNode}){
  },[native,epoch]);
  useEffect(()=>{
   if(!connection)return;
-  const state:ShellState={version:1,connection,sequence:++sequence.current,visible:!!visible,tabs:tabsForRole(visible?auth.profile?.role||'driver':'driver'),selected:visible?selectedTab(location.pathname):null,canGoBack:visible&&location.pathname!=='/',unreadChats:visible?Math.min(99,badges.chats):0,unreadNotifications:visible?Math.min(99,badges.notifications):0,modalOpen:modals.size>0};
+  const state:ShellState={version:1,connection,sequence:++sequence.current,visible:!!visible,tabs:tabsForRole(visible?auth.profile?.role||'driver':'driver'),selected:visible?selectedTab(location.pathname):null,canGoBack:visible&&location.pathname!=='/',canSwipeBack:swipeAllowed,unreadChats:visible?Math.min(99,badges.chats):0,unreadNotifications:visible?Math.min(99,badges.notifications):0,modalOpen:modals.size>0};
   const fail=failRef.current;
   queue.current=queue.current.then(async()=>{
    if(activeConnection.current!==connection||state.sequence!==sequence.current)return;
    await bounded(shellPlugin.setState({state}));
    if(activeConnection.current===connection){setReady(true);document.documentElement.dataset.nativeShell='ready';}
   }).catch(fail);
- },[connection,visible,auth.profile?.role,location.pathname,badges.chats,badges.notifications,modals]);
- const value=useMemo(()=>({ready,chats:badges.chats,notifications:badges.notifications,setModalOpen}),[ready,badges.chats,badges.notifications,setModalOpen]);
+ },[connection,visible,auth.profile?.role,location.pathname,location.key,badges.chats,badges.notifications,modals,swipeAllowed]);
+ const value=useMemo(()=>({ready,chats:badges.chats,notifications:badges.notifications,setModalOpen,setSwipeBlocked}),[ready,badges.chats,badges.notifications,setModalOpen,setSwipeBlocked]);
  return <ShellPresentationContext.Provider value={value}>{children}</ShellPresentationContext.Provider>;
 }

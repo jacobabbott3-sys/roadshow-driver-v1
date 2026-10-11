@@ -149,3 +149,12 @@ switch or known inactive status clears the account's copies.
 Quiet foreground refresh is the primary update path. iOS may also grant background
 refresh while the existing short-lived access token remains valid. Closed-app
 refresh is not guaranteed and requires no push service or paid membership.
+
+### Personal iPhone swipe Back
+
+Nested screens support a left-edge swipe that commits the existing Back action on
+release after sufficient distance or a deliberate forward flick. Short, reversed
+and cancelled gestures keep the current screen. Tab roots do not swipe between
+tabs. Existing Back buttons remain. The gesture is disabled for dialogs, native
+sheets, keyboard entry and retained/failed/uploading photo drafts. It does not
+provide an interactive preview of the previous screen.

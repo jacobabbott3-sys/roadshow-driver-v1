@@ -42,6 +42,16 @@ import Foundation
   let legacy=try JSONDecoder().decode(ShellAppearance.self,from:Data(#"{"mode":"dark","haptics":false}"#.utf8))
   assert(legacy.accent == "forest" && legacy.mode == "dark" && !legacy.haptics)
   assert(!ShellAppearance(mode:"system",haptics:true,color:"invalid").isValid)
+  assert(ShellSwipe.commits(ended:true,distance:140,vertical:10,velocity:40,width:400))
+  assert(ShellSwipe.commits(ended:true,distance:35,vertical:4,velocity:750,width:400))
+  for (ended,x,y,v) in [(false,200.0,0.0,900.0),(true,20.0,0.0,100.0),(true,150.0,0.0,-100.0),(true,100.0,200.0,900.0)] {
+   assert(!ShellSwipe.commits(ended:ended,distance:x,vertical:y,velocity:v,width:400))
+  }
+  gate.connect("gesture");var swipe=state(1,"gesture");swipe.canSwipeBack=true
+  assert(gate.accept(swipe));assert(gate.actionAllowed("swipeBack"))
+  swipe.sequence=2;swipe.modalOpen=true;assert(gate.accept(swipe));assert(!gate.actionAllowed("swipeBack"))
+  gate.suspend();assert(!gate.actionAllowed("swipeBack"))
+  print("Shell swipe completion/cancellation and modal gates passed")
   print("ShellState: 35 assertions passed, including four palette contrasts and persistence")
  }
 }

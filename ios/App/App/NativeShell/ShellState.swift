@@ -1,7 +1,7 @@
 import Foundation
 struct ShellState: Codable {
  var version:Int; var connection:String; var sequence:Int; var visible:Bool
- var tabs:[String]; var selected:String?; var canGoBack:Bool
+ var tabs:[String]; var selected:String?; var canGoBack:Bool; var canSwipeBack:Bool?=nil
  var unreadChats:Int; var unreadNotifications:Int; var modalOpen:Bool
  static let driverTabs=["home","contracts","resources","profile"]
  static let adminTabs=["home","contracts","resources","admin","profile"]
@@ -24,6 +24,7 @@ struct ShellGate {
  func actionAllowed(_ action:String)->Bool {
   guard let s=state,s.visible,!s.modalOpen else{return false}
   if s.tabs.contains(action) {return action != s.selected}
+  if action == "swipeBack" {return s.canSwipeBack == true}
   if action == "back" {return s.canGoBack}
   return ["chat","notifications","availability","redFolder","toolbag"].contains(action)
  }
@@ -44,5 +45,13 @@ enum ShellPalette {
   case "rust":return dark ? (1.0,0.65,0.5) : (0.59,0.25,0.16)
   default:return dark ? Self.dark : Self.light
   }
+ }
+}
+
+// Completion only: a cancelled/reversed drag never changes router history.
+enum ShellSwipe {
+ static func commits(ended:Bool,distance:Double,vertical:Double,velocity:Double,width:Double)->Bool {
+  ended && width > 0 && distance > abs(vertical) && velocity >= 0 &&
+  (distance >= max(60,width * 0.28) || (distance >= 30 && velocity >= 700))
  }
 }
