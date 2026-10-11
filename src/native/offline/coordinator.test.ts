@@ -67,3 +67,21 @@ test('removing a queued resource during refresh does not select it again',async(
  await c.remove({kind:'resource',recordId:resources[1].id});finish({mime:'application/pdf',base64:'JVBERi0='});await new Promise(resolve=>setImmediate(resolve));
  assert.equal(c.getState().snapshot!.resources[resources[1].id],undefined);
 });
+
+test('retries an unavailable native saved read before waiting for any network response',async()=>{
+ let available=false;
+ const plugin={setAccess:async()=>{},clearAccess:async()=>{},configure:async()=>{if(!available)throw Error('Scene inactive')},read:async()=>({snapshot}),replace:async()=>{},clear:async()=>{},usage:async()=>({bytes:0,limit:262144000}),manifest:async()=>({files:[]}),removeFile:async()=>{},putFile:async()=>{},readFile:async()=>{throw Error('none')}};
+ const c=new OfflineCoordinator(plugin,()=>new Promise(()=>{}),()=>now);
+ await c.activate(owner);assert.equal(c.getState().snapshot,null);
+ available=true;await c.activate(owner);
+ assert.equal(c.getState().snapshot?.owner,owner);assert.equal(c.getState().contracts.source,'saved');assert.equal(c.getState().contracts.canMutate,false);
+});
+test('same-account activation waits for the in-flight saved read before refreshing',async()=>{
+ let finish!:(value:{snapshot:OfflineSnapshot})=>void;
+ const read=new Promise<{snapshot:OfflineSnapshot}>(resolve=>{finish=resolve});
+ const plugin={setAccess:async()=>{},clearAccess:async()=>{},configure:async()=>{},read:()=>read,replace:async()=>{},clear:async()=>{},usage:async()=>({bytes:0,limit:262144000}),manifest:async()=>({files:[]}),removeFile:async()=>{},putFile:async()=>{},readFile:async()=>{throw Error('none')}};
+ const c=new OfflineCoordinator(plugin,async()=>snapshot,()=>now);let secondFinished=false;
+ const first=c.activate(owner),second=c.activate(owner).then(()=>{secondFinished=true});
+ await new Promise(resolve=>setImmediate(resolve));assert.equal(secondFinished,false);
+ finish({snapshot});await Promise.all([first,second]);assert.equal(c.getState().contracts.source,'saved');
+});

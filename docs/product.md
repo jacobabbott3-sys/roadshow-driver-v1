@@ -118,8 +118,8 @@ termination. Device acceptance is pending; the website photo flow is unchanged.
 Native route navigation suppresses duplicate web Back links while the iOS shell
 is ready. Recovery screens and local actions keep their controls. The personal
 app's launch and loading screens share the existing truck branding; its build uses
-system fonts without the website's remote font import. Offline contracts and
-selected resources are still proposed, not available in the installed app yet.
+system fonts without the website's remote font import. Saved-first contracts and selected resources are implemented locally; installed
+build and device acceptance are tracked in the offline verification record.
 
 ### Personal iPhone saved-first contracts
 
@@ -131,7 +131,9 @@ freshness line distinguishes saved content, updating, successful refresh and err
 
 Red Folder resources and contract photos/documents have explicit download/remove
 controls. Only selected attachments are retained; saved PDFs open with the bundled
-reader. Profile shows storage usage and Clear downloads. The initial limits are
+reader. The personal iPhone Settings tab organizes profile details and account
+controls, Appearance, and Downloads, with refresh/status at the bottom. Downloads
+shows storage usage and Clear downloads. The website keeps its Profile page. The initial limits are
 250 MiB of app storage and 20 MiB per file. Offline access requires an existing
 session and an active-account verification within seven days; sign-out, account
 switch or known inactive status clears the account's copies.

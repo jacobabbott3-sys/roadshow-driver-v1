@@ -1,4 +1,5 @@
-import { BriefcaseBusiness, CircleUserRound, FolderOpen, House, ShieldCheck } from "lucide-react";
+import { isNativeApp } from "../lib/nativePlatform";
+import { BriefcaseBusiness, CircleUserRound, Settings, FolderOpen, House, ShieldCheck } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { TopBar } from "./TopBar";
@@ -13,7 +14,7 @@ const base = [
 export function AppShell() {
   const { profile } = useAuth();
   const nav = profile?.role === "admin"
-    ? [...base, { to: "/admin", label: "Admin", icon: ShieldCheck }, { to: "/profile", label: "Profile", icon: CircleUserRound }]
-    : [...base, { to: "/profile", label: "Profile", icon: CircleUserRound }];
+    ? [...base, { to: "/admin", label: "Admin", icon: ShieldCheck }, { to: "/profile", label: isNativeApp() ? "Settings" : "Profile", icon: isNativeApp() ? Settings : CircleUserRound }]
+    : [...base, { to: "/profile", label: isNativeApp() ? "Settings" : "Profile", icon: isNativeApp() ? Settings : CircleUserRound }];
   return <div className="app-shell"><ExtremeConfetti /><aside className="side-nav"><div className="brand"><span className="brand-mark"><img src="/favicon.svg" alt="" /></span><span>Roadshow<br /><strong>Driver</strong></span></div><nav>{nav.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"}><Icon size={20} /><span>{label}</span></NavLink>)}</nav><p className="role-pill">{profile?.role === "admin" ? "Admin access" : "Driver account"}</p></aside><div className="app-main"><TopBar /><Outlet /></div><nav className="bottom-nav">{nav.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"}><Icon size={21} /><span>{label}</span></NavLink>)}</nav></div>;
 }

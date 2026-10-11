@@ -1,3 +1,4 @@
+import {FreshnessNotice} from "../native/offline/FreshnessNotice";
 import {DownloadSettings} from "../native/offline/DownloadSettings";
 import { shellPlugin } from "../native/shellPlugin";
 import { isNativeApp } from "../lib/nativePlatform";
@@ -141,56 +142,8 @@ export function ProfilePage() {
   const supported = deviceNotificationsSupported();
   const enabled = Boolean(preferences.data?.device_notifications);
 
-  return (
-    <main className="page">
-      <DownloadSettings/>
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">YOUR ACCOUNT</p>
-          <h1>Profile</h1>
-          <p>Personal details, notifications, and account access.</p>
-        </div>
-      </header>
-      <section className="profile-card">
-        <div className="profile-avatar">
-          <UserRound size={32} />
-        </div>
-        <div>
-          <h2>{profile?.full_name || "Roadshow team member"}</h2>
-          <p>{user?.email}</p>
-          <span className="role-pill">{profile?.role || "driver"}</span>
-        </div>
-      </section>
-      <section className="detail-panel profile-form">
-        <h2>Contact information</h2>
-        <label>
-          Full name
-          <input value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label>
-          Email
-          <input value={user?.email || ""} disabled />
-        </label>
-        <label>
-          Phone number
-          <input
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            type="tel"
-            placeholder="(555) 555-5555"
-          />
-        </label>
-        <button
-          className="button primary"
-          onClick={() => void saveProfile()}
-          disabled={saving}
-        >
-          <Save size={18} />
-          {saving ? "Saving…" : "Save profile"}
-        </button>
-        {message && <p className="notice">{message}</p>}
-      </section>
-      <section className="detail-panel profile-form appearance-settings">
+  const appearance = (
+    <section className="detail-panel profile-form appearance-settings">
         <div className="notification-heading">
           <div className="notification-icon"><Palette /></div>
           <div><h2>Appearance</h2><p>{isNativeApp() ? "Display and haptics are saved on this iPhone." : "These settings follow your account on every device."}</p></div>
@@ -223,6 +176,57 @@ export function ProfilePage() {
         </div>
         <button className="button secondary" onClick={() => void saveAppearance()} disabled={saving}><Save /> {isNativeApp() ? "Save confetti preference" : "Save appearance"}</button>
       </section>
+  );
+
+  return (
+    <main className="page">
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">YOUR ACCOUNT</p>
+          <h1>{isNativeApp() ? "Settings" : "Profile"}</h1>
+          <p>{isNativeApp() ? "Profile, appearance, and downloads." : "Personal details, notifications, and account access."}</p>
+        </div>
+      </header>
+      <section className="profile-card">
+        <div className="profile-avatar">
+          <UserRound size={32} />
+        </div>
+        <div>
+          <h2>{profile?.full_name || "Roadshow team member"}</h2>
+          <p>{user?.email}</p>
+          <span className="role-pill">{profile?.role || "driver"}</span>
+        </div>
+      </section>
+      <section className="detail-panel profile-form">
+        <h2>{isNativeApp() ? "Profile" : "Contact information"}</h2>
+        <label>
+          Full name
+          <input value={name} onChange={(event) => setName(event.target.value)} />
+        </label>
+        <label>
+          Email
+          <input value={user?.email || ""} disabled />
+        </label>
+        <label>
+          Phone number
+          <input
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            type="tel"
+            placeholder="(555) 555-5555"
+          />
+        </label>
+        <button
+          className="button primary"
+          onClick={() => void saveProfile()}
+          disabled={saving}
+        >
+          <Save size={18} />
+          {saving ? "Saving…" : "Save profile"}
+        </button>
+        {message && <p className="notice">{message}</p>}
+      </section>
+      {!isNativeApp() && appearance}
       <section className="detail-panel notification-settings">
         <div className="notification-heading">
           <div className="notification-icon">
@@ -302,6 +306,8 @@ export function ProfilePage() {
       <button className="button danger" onClick={() => void signOut()}>
         <LogOut size={18} /> Sign out
       </button>
+      {isNativeApp() && appearance}
+      {isNativeApp() && <><DownloadSettings/><section className="detail-panel" aria-label="Refresh and status"><h2>Status</h2><FreshnessNotice showEmpty/></section></>}
     </main>
   );
 }

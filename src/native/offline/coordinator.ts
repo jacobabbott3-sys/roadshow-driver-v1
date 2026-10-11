@@ -7,6 +7,7 @@ const initial=():OfflineState=>({revision:0,cacheError:null,owner:null,generatio
 export type DownloadServices={download:(ref:FileRef)=>Promise<{mime:string;base64:string}>;resources:()=>Promise<Resource[]>};
 export class OfflineCoordinator {
  private downloads?:DownloadServices;private selections=new Map<string,number>();
+ private hydration: {generation:string;promise:Promise<void>}|null=null;private hydrated=false;
  private state=initial();private listeners=new Set<()=>void>();private verifiedAt=0;private pending:Promise<void>|null=null;private queue:Promise<unknown>=Promise.resolve();
  private plugin:OfflinePlugin;private load:(owner:string)=>Promise<OfflineSnapshot>;private now:()=>number;
  constructor(plugin:OfflinePlugin,load:(owner:string)=>Promise<OfflineSnapshot>,now=()=>Date.now(),downloads?:DownloadServices){this.plugin=plugin;this.load=load;this.now=now;this.downloads=downloads;}
@@ -22,19 +23,29 @@ export class OfflineCoordinator {
   this.emit();
  }
  async activate(owner:string){
-  if(this.state.owner===owner)return;
-  const generation=crypto.randomUUID();this.verifiedAt=0;this.pending=null;this.state={...initial(),owner,generation};this.emit();
-  try{
-   const raw=await this.serial(async()=>{await this.plugin.configure({owner,generation});return this.plugin.read({generation});});
-   if(this.state.generation!==generation)return;
-   const snapshot=validateSnapshot(raw.snapshot);this.display(snapshot,'saved');
-   await this.updateFiles();
-  }catch{if(this.state.generation===generation)this.display(null,'none',false,'Could not read saved data.');}
+  if(this.state.owner!==owner){
+   const generation=crypto.randomUUID();this.verifiedAt=0;this.pending=null;this.hydrated=false;
+   this.state={...initial(),owner,generation};this.emit();
+  }
+  const {generation}=this.state;
+  if(this.hydration?.generation===generation)return this.hydration.promise;
+  if(this.hydrated)return;
+  const task=(async()=>{
+   try{
+    const raw=await this.serial(async()=>{await this.plugin.configure({owner,generation});return this.plugin.read({generation});});
+    if(this.state.generation!==generation)return;
+    const snapshot=validateSnapshot(raw.snapshot);this.hydrated=true;this.display(snapshot,'saved');
+    await this.updateFiles();
+   }catch{if(this.state.generation===generation)this.display(null,'none',false,'Could not read saved data.');}
+  })();
+  this.hydration={generation,promise:task};
+  await task;
+  if(this.hydration?.promise===task)this.hydration=null;
  }
  verify(owner:string,verifiedAt:number){if(this.state.owner===owner)this.verifiedAt=verifiedAt;}
  suspend(){this.verifiedAt=0;this.display(this.state.snapshot,'saved');}
  async deactivate(_reason:'signout'|'switch'|'inactive'|'session-removed'){
-  void _reason;this.verifiedAt=0;this.pending=null;this.state=initial();this.selections.clear();this.emit();await this.serial(()=>this.plugin.clear());
+  void _reason;this.hydrated=false;this.verifiedAt=0;this.pending=null;this.state=initial();this.selections.clear();this.emit();await this.serial(()=>this.plugin.clear());
  }
  refresh(_reason:'launch'|'resume'|'route'|'manual'|'mutation'|'periodic',_contractId?:string):Promise<void>{
   void _reason;void _contractId;

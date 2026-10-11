@@ -32,8 +32,8 @@ final class NativeShellContainer:UIViewController,UITabBarDelegate {
   let ids=store.gate.state?.tabs ?? []
   if ids != tabIDs {
    tabIDs=ids
-   let titles=["home":"Home","contracts":"Contracts","resources":"Resources","admin":"Admin","profile":"Profile"]
-   let symbols=["home":"house","contracts":"briefcase","resources":"folder","admin":"checkmark.shield","profile":"person.crop.circle"]
+   let titles=["home":"Home","contracts":"Contracts","resources":"Resources","admin":"Admin","profile":"Settings"]
+   let symbols=["home":"house","contracts":"briefcase","resources":"folder","admin":"checkmark.shield","profile":"gearshape"]
    bottom.setItems(ids.enumerated().map { index,id in
     let symbol=symbols[id] ?? "circle"
     let item=UITabBarItem(title:titles[id],image:UIImage(systemName:symbol),selectedImage:UIImage(systemName:symbol+".fill"))

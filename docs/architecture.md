@@ -162,3 +162,12 @@ server-side revocation. Optional resources refresh in foreground; without a reli
 object validator they re-download while preserving an existing file on failure.
 Quota counts actual disk usage, including envelope overhead. No schema, RLS,
 storage bucket, auth setting or production website changes are involved.
+
+### Native saved-read startup recovery
+
+The saved-data coordinator coalesces same-owner hydration calls until the private
+native read completes. A native scene-activation event retries a failed hydration
+without awaiting online profile verification. This covers a bridge call rejected
+while UIApplication is not active. Successful empty reads remain empty; retries
+do not invent data, renew the lease, or grant mutation access. Owner/generation,
+seven-day lease, and verified-live mutation checks remain in place.

@@ -22,6 +22,14 @@ export function OfflineBridge({children}:{children:ReactNode}){
   });
   return ()=>{alive=false;coordinator.suspend();};
  },[native,coordinator,owner,auth.sessionResolved,auth.nativeProfileVerified,auth.loading,auth.profile?.is_active,auth.session?.access_token,auth.session?.expires_at]);
+ useEffect(()=>{
+  if(!native||!owner||auth.profile?.is_active===false)return;
+  // A bridge call made before the scene becomes active can fail. Retry the
+  // private saved read immediately, independently of network verification.
+  const active=()=>void coordinator.activate(owner);
+  document.addEventListener('roadshow:native-active',active);
+  return ()=>document.removeEventListener('roadshow:native-active',active);
+ },[native,coordinator,owner,auth.profile?.is_active]);
  useEffect(()=>{if(native)void coordinator.refresh('route');},[native,coordinator,location.pathname]);
  useEffect(()=>{
   if(!native)return;
