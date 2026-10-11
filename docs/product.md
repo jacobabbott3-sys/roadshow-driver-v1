@@ -127,14 +127,18 @@ The personal iPhone build automatically saves explicitly assigned contracts and
 checklists in private app storage. Existing screens show a usable saved copy while
 account verification and fresh reads run, then update in place. Saved views are
 read-only; signing, checklist updates and uploads require verified live data. A
-freshness line distinguishes saved content, updating, successful refresh and errors.
+Status screen distinguishes saved content, updating, successful refresh and errors.
 
 Red Folder resources and contract photos/documents have explicit download/remove
 controls. Only selected attachments are retained; saved PDFs open with the bundled
 reader. The personal iPhone Settings tab is a navigation menu with separate
 Profile, Appearance, Downloads, Notifications, and Status screens. Only Status
-contains the manual Refresh button; other saved-content screens retain passive
-freshness/read-only indicators and automatic refresh. Downloads shows storage
+contains refresh and timestamp details. Other saved-content screens have no top
+refresh/status strip; a read-only saved-copy label remains below the content when
+needed. Automatic refresh runs at launch, after foreground account verification,
+on saved changes, and periodically, rather than restarting on each tab change.
+Previously loaded administrator contract views remain in account-scoped memory
+for quick revisits, read-only until the current read completes. Downloads shows storage
 usage and Clear downloads. Submenus use native Back when available, with a single
 web fallback otherwise. Account changes discard local form drafts. The website
 keeps its combined Profile page. The initial limits are

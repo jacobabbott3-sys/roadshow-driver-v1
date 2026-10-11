@@ -21,7 +21,7 @@ export function ContractsPage() {
   }, [], snapshot=>({groups:groupContracts(Object.values(snapshot.contracts).map(s=>s.contract),snapshot.links),statuses:Object.fromEntries(Object.values(snapshot.contracts).map(s=>{
     const items=s.checklist.sections.flatMap(section=>section.items),completed=items.filter(i=>i.response?.completed).length;
     return [s.contract.id,{label:items.length&&completed===items.length?'Checklist complete':s.checklist.sections.find(section=>section.items.some(i=>!i.response?.completed))?.title||'Waiting for checklist',completed,total:items.length,complete:items.length>0&&completed===items.length}];
-  }))}));
+  }))}),"contracts-list");
   const groups = query.data?.groups || [];
   const visibleGroups = sortList(
     groups.filter((group) => matchesListSearch(

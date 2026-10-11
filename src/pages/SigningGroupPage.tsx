@@ -35,7 +35,7 @@ export function SigningGroupPage({groupId}:{groupId?:string}={}) {
     const ids=new Set([showId]);let changed=true;
     while(changed){changed=false;for(const link of snapshot.links)if(ids.has(link.show_id)||ids.has(link.linked_show_id)){const size=ids.size;ids.add(link.show_id);ids.add(link.linked_show_id);changed ||= ids.size!==size;}}
     return Object.values(snapshot.contracts).map(s=>s.contract).filter(c=>ids.has(c.show.id)&&c.show.event_type==='signing');
-  });
+  },"signing-group");
   const title = query.data?.map((contract) => contract.show.artist || contract.show.name).join(" & ") || "Linked signings";
   const contracts = sortList(
     query.data || [],

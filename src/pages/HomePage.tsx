@@ -17,7 +17,7 @@ const tiles = [
 
 export function HomePage() {
   const { profile } = useAuth();
-  const contracts = useSavedQuery(getContracts, [], snapshot=>Object.values(snapshot.contracts).map(s=>s.contract));
+  const contracts = useSavedQuery(getContracts, [], snapshot=>Object.values(snapshot.contracts).map(s=>s.contract),"home-contracts");
   const first = profile?.full_name?.split(" ")[0] || "there";
   const next = nextAssignment(contracts.data || []);
   const signing = next?.show.event_type === "signing";

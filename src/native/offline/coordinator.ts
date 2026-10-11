@@ -6,6 +6,9 @@ const empty=<T>():ReadState<T>=>({data:null,source:'none',refreshing:false,fetch
 const initial=():OfflineState=>({revision:0,cacheError:null,owner:null,generation:'',snapshot:null,contracts:empty(),details:{},resources:empty(),files:[],usage:{bytes:0,limit:LIMIT_BYTES}});
 export type DownloadServices={download:(ref:FileRef)=>Promise<{mime:string;base64:string}>;resources:()=>Promise<Resource[]>};
 export class OfflineCoordinator {
+ private memoryReads=new Map<string,unknown>();
+ readMemory<T>(key:string):T|null{return (this.memoryReads.get(key) as T)??null;}
+ remember<T>(generation:string,key:string,data:T){if(generation===this.state.generation&&this.verifiedAt)this.memoryReads.set(key,data);}
  private downloads?:DownloadServices;private selections=new Map<string,number>();
  private hydration: {generation:string;promise:Promise<void>}|null=null;private hydrated=false;
  private state=initial();private listeners=new Set<()=>void>();private verifiedAt=0;private pending:Promise<void>|null=null;private queue:Promise<unknown>=Promise.resolve();
@@ -24,7 +27,7 @@ export class OfflineCoordinator {
  }
  async activate(owner:string){
   if(this.state.owner!==owner){
-   const generation=crypto.randomUUID();this.verifiedAt=0;this.pending=null;this.hydrated=false;
+   this.memoryReads.clear();const generation=crypto.randomUUID();this.verifiedAt=0;this.pending=null;this.hydrated=false;
    this.state={...initial(),owner,generation};this.emit();
   }
   const {generation}=this.state;
@@ -45,7 +48,7 @@ export class OfflineCoordinator {
  verify(owner:string,verifiedAt:number){if(this.state.owner===owner)this.verifiedAt=verifiedAt;}
  suspend(){this.verifiedAt=0;this.display(this.state.snapshot,'saved');}
  async deactivate(_reason:'signout'|'switch'|'inactive'|'session-removed'){
-  void _reason;this.hydrated=false;this.verifiedAt=0;this.pending=null;this.state=initial();this.selections.clear();this.emit();await this.serial(()=>this.plugin.clear());
+  void _reason;this.memoryReads.clear();this.hydrated=false;this.verifiedAt=0;this.pending=null;this.state=initial();this.selections.clear();this.emit();await this.serial(()=>this.plugin.clear());
  }
  refresh(_reason:'launch'|'resume'|'route'|'manual'|'mutation'|'periodic',_contractId?:string):Promise<void>{
   void _reason;void _contractId;

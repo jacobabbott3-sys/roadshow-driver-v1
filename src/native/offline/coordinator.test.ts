@@ -85,3 +85,11 @@ test('same-account activation waits for the in-flight saved read before refreshi
  await new Promise(resolve=>setImmediate(resolve));assert.equal(secondFinished,false);
  finish({snapshot});await Promise.all([first,second]);assert.equal(c.getState().contracts.source,'saved');
 });
+
+test('administrator memory reads are discarded on owner change and signout; late old writes are ignored',async()=>{
+ const f=fixture(),c=f.coordinator;await c.activate(owner);c.verify(owner,now);const generation=c.getState().generation;
+ c.remember(generation,'list',['private']);assert.deepEqual(c.readMemory('list'),['private']);
+ await c.activate('44444444-4444-4444-8444-444444444444');assert.equal(c.readMemory('list'),null);
+ c.remember(generation,'list',['late']);assert.equal(c.readMemory('list'),null);
+ c.verify(c.getState().owner!,now);c.remember(c.getState().generation,'list',['next']);await c.deactivate('signout');assert.equal(c.readMemory('list'),null);
+});

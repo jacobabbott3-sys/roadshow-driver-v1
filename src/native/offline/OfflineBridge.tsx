@@ -1,5 +1,4 @@
 import {useEffect,useMemo,type ReactNode} from 'react';
-import {useLocation} from 'react-router-dom';
 import {useAuth} from '../../context/AuthContext';
 import {isNativeApp} from '../../lib/nativePlatform';
 import {OfflineCoordinator} from './coordinator';
@@ -7,7 +6,7 @@ import {OfflineContext} from './context';
 import {offlinePlugin} from './plugin';
 import {loadOwnedSnapshot,downloadServices} from './data';
 export function OfflineBridge({children}:{children:ReactNode}){
- const auth=useAuth(),location=useLocation(),native=isNativeApp();
+ const auth=useAuth(),native=isNativeApp();
  const coordinator=useMemo(()=>new OfflineCoordinator(offlinePlugin,loadOwnedSnapshot,()=>Date.now(),downloadServices),[]);
  const owner=auth.user?.id||auth.savedSessionOwner||undefined;
  useEffect(()=>{
@@ -30,7 +29,6 @@ export function OfflineBridge({children}:{children:ReactNode}){
   document.addEventListener('roadshow:native-active',active);
   return ()=>document.removeEventListener('roadshow:native-active',active);
  },[native,coordinator,owner,auth.profile?.is_active]);
- useEffect(()=>{if(native)void coordinator.refresh('route');},[native,coordinator,location.pathname]);
  useEffect(()=>{
   if(!native)return;
   const refresh=()=>void coordinator.refresh('mutation');const periodic=()=>void coordinator.refresh('periodic');

@@ -171,3 +171,15 @@ without awaiting online profile verification. This covers a bridge call rejected
 while UIApplication is not active. Successful empty reads remain empty; retries
 do not invent data, renew the lease, or grant mutation access. Owner/generation,
 seven-day lease, and verified-live mutation checks remain in place.
+
+### Native foreground refresh presentation
+
+Tab navigation does not restart the full owned snapshot download. Launch/foreground
+verification, the five-minute foreground timer, saved-change events, and Settings
+Status's manual action remain refresh triggers. Administrator contract query results
+may survive page remounts in the coordinator's memory only, keyed by query and
+parameters. They are exposed only for a matching owner with a freshly verified
+active administrator profile, remain read-only during a new query, and are discarded
+on owner changes, signout, and known inactivity. Generation checks reject late
+old-account writes. These broader results never enter the private disk snapshot;
+unverified/offline access remains limited to the existing owned-data allowlist.

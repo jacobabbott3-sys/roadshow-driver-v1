@@ -45,14 +45,15 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
   const
     [searchParams] = useSearchParams(),
     { user } = useAuth(),
-    contract = useSavedQuery(() => getContract(id), [id], s=>s.contracts[id]?.contract??null),
-    checklist = useSavedQuery(() => getChecklist(id), [id], s=>s.contracts[id]?.checklist??null);
+    contract = useSavedQuery(() => getContract(id), [id], s=>s.contracts[id]?.contract??null,"contract"),
+    checklist = useSavedQuery(() => getChecklist(id), [id], s=>s.contracts[id]?.checklist??null,"checklist");
   const canMutate=!coordinator||!!(contract.live&&checklist.live&&auth.nativeProfileVerified&&auth.profile?.is_active&&!auth.loading);
   const photos = useAsync(() => canMutate ? getContractPhotos(id) : Promise.resolve([]), [id,canMutate]),
     linkedSignings = useSavedQuery(
       () => contract.data?.show.id ? getLinkedSigningContracts(contract.data.show.id) : Promise.resolve([]),
       [contract.data?.show.id],
       s=>Object.values(s.contracts).map(v=>v.contract).filter(c=>s.links.some(l=>(l.show_id===contract.data?.show.id&&l.linked_show_id===c.show.id)||(l.linked_show_id===contract.data?.show.id&&l.show_id===c.show.id))),
+      "linked-signings",
     );
   const [tab, setTab] = useState<Tab>(searchParams.get("tab")==="checklist"?"checklist":"info"),
     [busy, setBusy] = useState(""),

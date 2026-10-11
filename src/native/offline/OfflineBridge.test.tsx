@@ -1,5 +1,5 @@
-import {act,render,screen,waitFor} from '@testing-library/react';
-import {MemoryRouter} from 'react-router-dom';
+import {act,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {MemoryRouter,Link} from 'react-router-dom';
 import {expect,it,vi} from 'vitest';
 const m=vi.hoisted(()=>({active:false,owner:'11111111-1111-4111-8111-111111111111'}));
 vi.mock('../../lib/nativePlatform',()=>({isNativeApp:()=>true}));
@@ -18,4 +18,16 @@ it('hydrates read-only saved data when the scene activates without waiting for s
  await screen.findByText('Could not read saved data.');
  m.active=true;act(()=>document.dispatchEvent(new Event('roadshow:native-active')));
  await waitFor(()=>expect(screen.getByText('Saved: read only')).toBeTruthy());
+});
+
+it('does not restart a full refresh for every tab but still refreshes saved changes',async()=>{
+ m.active=true;
+ const {OfflineCoordinator}=await import('./coordinator');
+ const refresh=vi.spyOn(OfflineCoordinator.prototype,'refresh');
+ render(<MemoryRouter><OfflineBridge><Link to="/contracts">Contracts tab</Link><Link to="/">Home tab</Link></OfflineBridge></MemoryRouter>);
+ await act(async()=>{});refresh.mockClear();
+ fireEvent.click(screen.getByText('Contracts tab'));fireEvent.click(screen.getByText('Home tab'));fireEvent.click(screen.getByText('Contracts tab'));
+ expect(refresh).not.toHaveBeenCalled();
+ act(()=>document.dispatchEvent(new Event('roadshow:checklist-saved')));
+ expect(refresh).toHaveBeenCalledWith('mutation');refresh.mockRestore();
 });
