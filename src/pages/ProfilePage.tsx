@@ -1,3 +1,4 @@
+import {DownloadSettings} from "../native/offline/DownloadSettings";
 import { shellPlugin } from "../native/shellPlugin";
 import { isNativeApp } from "../lib/nativePlatform";
 import {
@@ -142,6 +143,7 @@ export function ProfilePage() {
 
   return (
     <main className="page">
+      <DownloadSettings/>
       <header className="page-header">
         <div>
           <p className="eyebrow">YOUR ACCOUNT</p>

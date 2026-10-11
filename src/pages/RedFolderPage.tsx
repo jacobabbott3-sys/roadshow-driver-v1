@@ -1,3 +1,6 @@
+import {useOffline} from "../native/offline/context";
+import {DownloadControl} from "../native/offline/DownloadControl";
+import {useAuth} from "../context/AuthContext";
 import { BookOpen, Download, FileText } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { PageState } from "../components/PageState";
@@ -13,7 +16,11 @@ import { resourceFileKindFromPath } from "../lib/imageUpload";
 const PdfViewer = lazy(() => import("../components/PdfViewer").then((module) => ({ default: module.PdfViewer })));
 
 export function RedFolderPage() {
-  const resources = useAsync(getResources, []);
+  const {state:offline,coordinator}=useOffline();const auth=useAuth();
+  const live=!coordinator||!!(auth.nativeProfileVerified&&auth.profile?.is_active&&!auth.loading);
+  const online=useAsync(()=>live?getResources():Promise.resolve(null),[live]);
+  const saved=useMemo(()=>Object.values(offline?.snapshot?.resources||{}).map(s=>s.resource),[offline?.snapshot?.resources]);
+  const resources=coordinator?{...online,data:live&&online.data?online.data:saved,loading:false,error:''}:online;
   const [urls, setUrls] = useState<Record<string, { view: string; download: string }>>({});
   const [fileError, setFileError] = useState("");
   const [search, setSearch] = useState("");
@@ -29,6 +36,7 @@ export function RedFolderPage() {
   useEffect(() => {
     let active = true;
     setFileError("");
+    if(!live){setUrls({});return;}
     void Promise.allSettled(items.filter((item) => item.file_path).map(async (item) => {
       const bucket = supabase.storage.from("resources");
       const { data: viewData, error: viewError } = await bucket.createSignedUrl(item.file_path!, 3600);
@@ -51,7 +59,7 @@ export function RedFolderPage() {
       setFileError(failureCount ? `${failureCount} resource attachment${failureCount === 1 ? "" : "s"} could not be loaded.` : "");
     });
     return () => { active = false; };
-  }, [items]);
+  }, [items,live]);
 
   return (
     <main className="page">
@@ -86,6 +94,7 @@ export function RedFolderPage() {
               <BookOpen />
               <h2>{item.title}</h2>
               {item.content && <p>{item.content}</p>}
+              <DownloadControl file={{kind:"resource",recordId:item.id}} title={item.title} resource={item}/>
             </article>
           ))}
         </div>}

@@ -1,3 +1,4 @@
+import {DownloadControl} from "../native/offline/DownloadControl";
 import { useOffline } from "../native/offline/context";
 import { useSavedQuery } from "../native/offline/useSavedRead";
 import { PhotoCapture } from "../native/PhotoCapture";
@@ -359,6 +360,7 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
             {(tab === "photos" || isNativeApp()) && (
               <section className="detail-panel" hidden={tab !== "photos"}>
                 <h2>Required photos</h2>
+                {!canMutate&&offline?.files.filter(f=>f.ref.contractId===id&&f.ref.kind==='contract-photo').map(f=><DownloadControl key={f.ref.recordId} file={f.ref} title="Contract photo"/>)}
                 <p className="muted">
                   Upload a clear view from each side. Photos stay private to
                   your team.
@@ -369,6 +371,7 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
                     return <div className={`photo-slot ${photo ? "has-photo" : ""}`} key={slot}>
                       {photo ? <ImageViewer src={photo.signed_url} alt={`${slot} view`} /> : <Camera />}
                       <strong>{slot}</strong>
+                      {photo&&<DownloadControl file={{kind:"contract-photo",recordId:photo.id,contractId:id}} title={`${slot} photo`}/>}
                       {!canMutate ? <p className="muted">Connect and refresh to take photos.</p> : isNativeApp() ? <PhotoCapture key={`${user?.id}:${id}:${slot}`} slot={slot} upload={async (file, onProgress) => {
                         if (!user || !canMutate) throw new Error("Verify your account before uploading.");
                         await uploadContractPhoto({ contractId: id, userId: user.id, slot, file, onProgress }, { client: supabase as unknown as UploadClient });
@@ -393,6 +396,7 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
                     : "Review and sign contract"}
                 </h2>
                 <div className="contract-terms">
+                  {contract.data.document_path&&<DownloadControl file={{kind:"contract-document",recordId:id,contractId:id}} title="Contract document"/>}
                   <p className="eyebrow">PUBLISHED TERMS</p>
                   {contract.data.terms ? (
                     <p>{contract.data.terms}</p>

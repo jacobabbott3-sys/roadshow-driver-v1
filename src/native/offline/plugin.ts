@@ -8,6 +8,7 @@ export interface OfflinePlugin {
  usage(options:{generation:string}):Promise<{bytes:number;limit:number}>;
  manifest(options:{generation:string}):Promise<{files:SavedFile[]}>;
  readFile(options:{generation:string;ref:FileRef}):Promise<{mime:string;base64:string}>;
+ putFile(options:{generation:string;ref:FileRef;mime:string;base64:string}):Promise<void>;
  removeFile(options:{generation:string;ref:FileRef}):Promise<void>;
 }
 export const offlinePlugin=registerPlugin<OfflinePlugin>('RoadshowOffline');

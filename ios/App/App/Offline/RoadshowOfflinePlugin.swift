@@ -6,7 +6,7 @@ import UIKit
 @objc(RoadshowOfflinePlugin) public class RoadshowOfflinePlugin:CAPPlugin,CAPBridgedPlugin {
  public let identifier="RoadshowOfflinePlugin"
  public let jsName="RoadshowOffline"
- public let pluginMethods:[CAPPluginMethod] = ["configure","read","replace","clear","usage","readFile","removeFile","manifest"].map{CAPPluginMethod(name:$0,returnType:CAPPluginReturnPromise)}
+ public let pluginMethods:[CAPPluginMethod] = ["configure","read","replace","clear","usage","readFile","removeFile","manifest","putFile"].map{CAPPluginMethod(name:$0,returnType:CAPPluginReturnPromise)}
  private func perform(_ call:CAPPluginCall,configured:Bool=true,_ body:@escaping @MainActor (OfflineStore,String,Double)throws->[String:Any]) {
   Task{@MainActor in do {
    guard UIApplication.shared.applicationState == .active,let store=OfflineRuntime.store else{throw OfflineError.stale}
@@ -22,5 +22,6 @@ import UIKit
  @objc func usage(_ call:CAPPluginCall){perform(call){store,_,_ in ["bytes":try store.usage(),"limit":OfflinePolicy.limit]}}
  @objc func manifest(_ call:CAPPluginCall){perform(call){store,_,now in ["files":try store.manifest(now:now)]}}
  @objc func readFile(_ call:CAPPluginCall){perform(call){store,_,now in guard let ref=call.getObject("ref") as? [String:String] else{throw OfflineError.invalid};return try store.readFile(ref:ref,now:now)}}
+ @objc func putFile(_ call:CAPPluginCall){perform(call){store,g,now in guard let ref=call.getObject("ref") as? [String:String],let mime=call.getString("mime"),let base64=call.getString("base64"),base64.utf8.count<=OfflinePolicy.fileLimit*2,let data=Data(base64Encoded:base64) else{throw OfflineError.invalid};try store.putFile(ref:ref,data:data,mime:mime,generation:g,now:now);return [:]}}
  @objc func removeFile(_ call:CAPPluginCall){perform(call){store,g,_ in guard let ref=call.getObject("ref") as? [String:String] else{throw OfflineError.invalid};try store.removeFile(ref:ref,generation:g);return [:]}}
 }

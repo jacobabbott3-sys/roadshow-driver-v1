@@ -101,3 +101,8 @@ describe("PdfViewer", () => {
     document.body.style.overflow = "";
   });
 });
+it('opens saved bytes without requesting a signed URL',async()=>{
+ mocks.sign.mockClear();render(<PdfViewer title="Saved handbook" local={{bytes:new Uint8Array([37,80,68,70,45])}} onClose={()=>{}}/>);
+ await screen.findByTestId('pdf-document');expect(mocks.sign).not.toHaveBeenCalled();
+ act(()=>mocks.loaded?.({numPages:2}));expect(screen.getByText('Page 1 of 2')).toBeVisible();
+});

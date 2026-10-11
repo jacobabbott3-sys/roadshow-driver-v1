@@ -1,6 +1,6 @@
 import { useNativeModal } from "../native/useShellPresentation";
 import { ChevronLeft, ChevronRight, Download, Minus, Plus, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -20,9 +20,11 @@ const pdfOptions = {
   wasmUrl: `${import.meta.env.BASE_URL}pdfjs-assets/wasm/`,
 };
 
-export function PdfViewer({ title, filePath, onClose }: {
-  title: string; filePath: string; onClose: () => void;
-}) {
+export function PdfViewer({ title, filePath, local, onClose }: {
+  title: string; onClose: () => void;
+} & ({filePath:string;local?:never}|{filePath?:never;local:{bytes:Uint8Array}})) {
+  const localBytes=local?.bytes;
+  const localFile=useMemo(()=>localBytes?{data:new Uint8Array(localBytes)}:null,[localBytes]);
   const dialog = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -80,14 +82,15 @@ export function PdfViewer({ title, filePath, onClose }: {
     setNumPages(0);
     setPage(1);
     setScale(1);
+    if(localFile)return;
     async function load() {
       try {
         const bucket = supabase.storage.from("resources");
         // Refresh at open/retry so an old resource card cannot pass an expired URL.
-        const view = await bucket.createSignedUrl(filePath, 3600);
+        const view = await bucket.createSignedUrl(filePath!, 3600);
         if (view.error || !view.data?.signedUrl) throw new Error("No resource access");
         const filename = `${title.replace(/[^a-zA-Z0-9._-]+/g, "-") || "resource"}.pdf`;
-        const download = await bucket.createSignedUrl(filePath, 3600, { download: filename })
+        const download = await bucket.createSignedUrl(filePath!, 3600, { download: filename })
           .catch(() => ({ data: null, error: true }));
         if (active) setUrls({ view: view.data.signedUrl,
           download: download.error ? "" : download.data?.signedUrl || "" });
@@ -97,7 +100,7 @@ export function PdfViewer({ title, filePath, onClose }: {
     }
     void load();
     return () => { active = false; };
-  }, [filePath, title, attempt]);
+  }, [filePath, title, attempt, localFile]);
 
   return createPortal(
     <div ref={dialog} className="pdf-viewer" role="dialog" aria-modal="true" aria-label={title}>
@@ -118,7 +121,7 @@ export function PdfViewer({ title, filePath, onClose }: {
         {error ? <div className="pdf-viewer-error"><p role="alert">{error}</p>
           <button className="button primary" onClick={() => setAttempt((value) => value + 1)}>Try again</button>
           <p>You can also download the document when a download link is available.</p>
-        </div> : urls ? <Document file={urls.view} options={pdfOptions}
+        </div> : (localFile || urls) ? <Document file={localFile || urls!.view} options={pdfOptions}
           loading={<p role="status">Loading PDF…</p>}
           onLoadSuccess={({ numPages: count }) => setNumPages(count)}
           onLoadError={() => setError("Unable to display this PDF. Try again to refresh the document link, or download it.")}

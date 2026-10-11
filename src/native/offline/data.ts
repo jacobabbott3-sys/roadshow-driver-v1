@@ -1,4 +1,5 @@
-import {getChecklist,getContract,getShowLinks,type Contract} from '../../lib/driverData';
+import {supabase} from '../../lib/supabase';
+import {getChecklist,getContract,getShowLinks,getResources,type Contract} from '../../lib/driverData';
 import {getWidgetAssignments} from '../widgetData';
 import type {OfflineSnapshot,SavedContract} from './model';
 const contractKeys=['id','kind','service_date','service_time','status','contract_pay','bonus_pay','document_path','terms','signed_at','signature_name','admin_signed_at','admin_signature_name','admin_note','show'] as const;
@@ -14,3 +15,22 @@ export async function loadOwnedSnapshot(owner:string):Promise<OfflineSnapshot>{
  return {version:1,owner,verifiedAt:now,lastSeenAt:now,contracts,links:links.filter(l=>shows.has(l.show_id)&&shows.has(l.linked_show_id)),resources:{}};
 }
 export async function loadOwnedContract(owner:string,id:string):Promise<SavedContract|null>{const owned=await getWidgetAssignments(owner);return owned.some(c=>c.id===id)?loadContract(id):null;}
+
+export const downloadServices={resources:getResources,download:async(ref:import('./model').FileRef)=>{
+ let bucket:string,path:string|null=null;
+ if(ref.kind==='resource'){
+  const {data,error}=await supabase.from('resources').select('id,file_path,kind').eq('id',ref.recordId).eq('published',true).single();
+  if(error||data?.kind!=='handbook')throw Error('This resource is no longer available.');bucket='resources';path=data.file_path;
+ }else if(ref.kind==='contract-document'){
+  const data=await getContract(ref.contractId!);bucket='contract-files';path=data.document_path;
+ }else{
+  const {data,error}=await supabase.from('photos').select('storage_path').eq('id',ref.recordId).eq('contract_id',ref.contractId!).single();
+  if(error)throw Error('This photo is no longer available.');bucket='roadshow-photos';path=data.storage_path;
+ }
+ if(!path)throw Error('No attachment is available.');
+ const {data,error}=await supabase.storage.from(bucket).download(path);
+ if(error||!data)throw Error('Could not download. Check your connection and try again.');
+ if(data.size>20*1024*1024)throw Error('This file exceeds the 20 MiB download limit.');
+ const bytes=new Uint8Array(await data.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
+ return {mime:data.type.split(';')[0],base64:btoa(binary)};
+}};

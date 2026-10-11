@@ -5,10 +5,10 @@ import {isNativeApp} from '../../lib/nativePlatform';
 import {OfflineCoordinator} from './coordinator';
 import {OfflineContext} from './context';
 import {offlinePlugin} from './plugin';
-import {loadOwnedSnapshot} from './data';
+import {loadOwnedSnapshot,downloadServices} from './data';
 export function OfflineBridge({children}:{children:ReactNode}){
  const auth=useAuth(),location=useLocation(),native=isNativeApp();
- const coordinator=useMemo(()=>new OfflineCoordinator(offlinePlugin,loadOwnedSnapshot),[]);
+ const coordinator=useMemo(()=>new OfflineCoordinator(offlinePlugin,loadOwnedSnapshot,()=>Date.now(),downloadServices),[]);
  const owner=auth.user?.id;
  useEffect(()=>{
   if(!native||!auth.sessionResolved)return;
