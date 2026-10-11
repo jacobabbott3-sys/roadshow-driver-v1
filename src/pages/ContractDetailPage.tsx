@@ -1,3 +1,4 @@
+import { FollowChecklist } from "../native/FollowChecklist";
 import {
   Camera,
   Check,
@@ -9,7 +10,7 @@ import {
   Upload,
   XCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { PageState } from "../components/PageState";
 import { ImageViewer } from "../components/ImageViewer";
@@ -43,7 +44,7 @@ export function ContractDetailPage() {
       () => contract.data?.show.id ? getLinkedSigningContracts(contract.data.show.id) : Promise.resolve([]),
       [contract.data?.show.id],
     );
-  const [tab, setTab] = useState<Tab>("info"),
+  const [tab, setTab] = useState<Tab>(searchParams.get("tab")==="checklist"?"checklist":"info"),
     [busy, setBusy] = useState(""),
     [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}),
     [signature, setSignature] = useState(""),
@@ -72,6 +73,8 @@ export function ContractDetailPage() {
         : activeSection?.title ||
           (items.length ? "Ready to submit" : "Waiting for checklist"),
     checklistLocked = !isSigning && ["submitted", "under_review", "approved"].includes(contract.data?.status || "");
+  const linkedTab = searchParams.get("tab");
+  useEffect(() => { setTab(linkedTab === "checklist" ? "checklist" : "info"); }, [id, linkedTab]);
   const signingGroupId = searchParams.get("group");
   const linkedGroupId = signingGroupId || contract.data?.show.id || "";
   const latestPhotos = useMemo(() => {
@@ -87,6 +90,7 @@ export function ContractDetailPage() {
       await setChecklistItem(checklist.data.id, itemId, value);
       if (completesChecklist) launchConfetti({ pieces: 140, distance: 560 });
       await checklist.refresh();
+      document.dispatchEvent(new Event("roadshow:checklist-saved"));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to update this checklist item.");
       await checklist.refresh();
@@ -115,6 +119,7 @@ export function ContractDetailPage() {
       await submitChecklist(id);
       setMessage("Checklist submitted to the admin team for review.");
       await contract.refresh();
+      document.dispatchEvent(new Event("roadshow:checklist-saved"));
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Unable to submit checklist.",
@@ -191,6 +196,7 @@ export function ContractDetailPage() {
                 </small>
               </div>
             </header>
+            <FollowChecklist id={id} completed={done} total={items.length} />
             <div className="contract-tabs">
               {(
                 ([

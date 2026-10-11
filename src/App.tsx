@@ -1,3 +1,4 @@
+import { WidgetBridge } from "./native/WidgetBridge";
 import { NativeShellBridge } from "./native/NativeShellBridge";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
@@ -37,6 +38,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <NativeShellBridge>
+      <WidgetBridge>
       <Suspense fallback={<LoadingScreen label="Opening screen…" />}>
         <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -86,6 +88,7 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+    </WidgetBridge>
     </NativeShellBridge>
     </BrowserRouter>
   );

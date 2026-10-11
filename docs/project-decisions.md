@@ -54,3 +54,13 @@ a standard UIKit tab bar and a compact SwiftUI menu; the icon is a layered
 Icon Composer document. Retain iOS 15 minimum with guarded
 material fallback. Use one unread-data owner and explicit modal/inset ownership.
 No backend changes or paid capabilities accompany this presentation phase.
+
+### 2026-10-10 — Private next-show widget and checklist Live Activity
+
+Jacob approved next show + active checklist. Use WidgetKit and ActivityKit with a
+minimal expiring App Group snapshot, no extension credentials or background
+network client. Follow is explicit and limited to the verified user’s eligible
+assignment; progress comes from confirmed checklist responses. Clear on logout
+and account changes; stop completed/unassigned activities after verified refresh.
+The local app retains only an owner marker outside shared storage. Public web and
+backend release remain unchanged; physical-device acceptance is a separate gate.

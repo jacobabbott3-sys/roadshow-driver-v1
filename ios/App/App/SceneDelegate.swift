@@ -11,6 +11,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window?.rootViewController = NativeShellContainer()
         window?.makeKeyAndVisible()
 
+        for context in connectionOptions.urlContexts {WidgetLinkInbox.receive(context.url)}
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
 
@@ -23,6 +24,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        for context in URLContexts {WidgetLinkInbox.receive(context.url)}
         SceneDelegateProxy.shared.scene(scene, openURLContexts: URLContexts)
     }
 

@@ -115,3 +115,10 @@ single-page reader. Use the previous/next-page controls; this is a deferred mino
 review finding, not a blocker for in-app viewing.
 
 Evidence and unfinished account steps: [cloud verification](releases/cloud-development-verification.md).
+
+
+Private iPhone work is isolated on `feat/ios-personal-public`: native glass shell,
+matching content styling, next-show WidgetKit extension and checklist ActivityKit
+integration are implemented locally. Signed and unsigned builds and automated
+checks pass; device acceptance is tracked in [the personal build record](ios-personal-build.md).
+No push, merge, public deployment or database change accompanies this work.

@@ -221,4 +221,68 @@ physical-device acceptance of this new content pass remains pending. Unit 51/UI
 
 Widget/Live Activity investigation is recorded in
 [the proposed design](superpowers/specs/2026-10-10-ios-widgets-live-activity-design.md).
-No extension, App Group, entitlement or signing change has been made.
+The following implementation section supersedes that investigation status.
+
+## Widget and Live Activity implementation (October 10)
+
+The app now contains a `RoadshowWidgets` WidgetKit extension (iOS 16.2+)
+and a separate `RoadshowWidgets` Capacitor plugin. The main app still supports
+iOS 15; Live Activities require iOS 16.2+. The extension reads a minimal App Group
+snapshot, with no auth token or backend client. Widget data becomes stale after
+30 minutes and expires after six hours; ActivityKit progress becomes stale after
+five minutes without a confirmed refresh. Updates occur only while the verified
+app is active. No APNs capability, background fetch or server changes were added.
+
+`Follow checklist` appears only for an eligible assignment returned by the
+explicit owner filter. The action rereads ownership and confirmed checklist
+responses. The Lock Screen shows the show name and aggregate progress after the
+user presses Follow; no checklist writes occur from the widget or Live Activity.
+Stop following, completion, unassignment and account clearing end the activity.
+
+### Signing and device setup
+
+The new extension needs its own provisioning profile and both targets need the
+same App Group: `group.com.jacobabbott.roadshowdriver.widgets`. Project entitlements
+are supplied, but the agent has not registered the group, created profiles or
+accepted any new signing/security prompts. In Xcode select the App target and
+then RoadshowWidgets under Signing & Capabilities; use the same Personal Team
+and Automatically manage signing, and confirm the same group for both targets.
+Jacob handles any Apple security/account prompts. If Xcode rejects Personal Team
+App Groups, preserve the code and report the exact error; do not enroll or pay.
+
+After provisioning, build/run App on Hoid. Add Roadshow → Next show from the
+iPhone widget gallery. Open an owned, editable checklist and press Follow
+checklist; verify Lock Screen and Dynamic Island, then Stop following. Do not
+change real checklist data just to test progress without a suitable authorized
+assignment. Check sign-out clearing, stale state, cold links, text size and
+VoiceOver separately. An unsigned compile is not evidence of device acceptance.
+
+### Verification and review
+
+Final checks: 63 unit tests, 80 UI tests, 2 native build-pipeline tests and 11 Swift
+snapshot assertions passed. Web build, guarded iOS sync, unsigned app/extension
+build and signed app/extension build passed. Lint has zero errors and the same
+three pre-existing warnings. The signed build used existing local provisioning,
+without allowing provisioning updates or creating certificates.
+
+A fresh independent review identified three Important findings, all resolved with
+failing-then-passing regressions: an old refresh could stop a newly followed
+activity; snapshot/progress failures could prevent ending terminal work; and an
+admin’s large visible contract list could omit their own assignments. Explicit
+activity epochs now reject stale commands, terminal reconciliation survives widget
+storage failures, and owner-filtered paginated queries detect incomplete results.
+No deferred minor findings. Review did not verify deployed RLS, user-owned signing
+or icon changes, or device presentation/accessibility.
+
+Process rulings: reused Jacob’s approved isolated Public 5 branch; executed the
+approved design without another permission round; used a manual local ledger
+because cloud skill helpers were unavailable; retained an account marker only in
+private app preferences for switch clearing; left security prompts user-owned;
+used existing read-only Supabase query conventions without backend changes.
+TypeScript permits explicit .ts imports under noEmit so pure production helpers
+also run in the Node test runner. Each choice is bounded by the native-only scope.
+
+Device installation: Xcode reported “Running App on Hoid” after Run with the
+embedded extension. Device Hub screen sharing stayed off to preserve software
+keyboard behavior. User acceptance of the widget gallery, owned-assignment Follow
+flow, Dynamic Island/Lock Screen and accessibility remains pending.

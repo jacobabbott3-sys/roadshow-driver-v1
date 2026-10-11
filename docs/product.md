@@ -98,9 +98,12 @@ Appearance/Color/Haptics sheet. Standard iOS tabs and a layered glass truck icon
 complete the presentation. Verified administrators
 also see Admin. These changes are local to the iPhone package; public website
 workflows, live account data and checklist eligibility are unchanged. Closed-app
-notifications, widgets and Dynamic Island remain outside this personal phase.
+notifications remain outside this personal phase.
 
 The personal build also applies matching glass styling to search/filter controls,
 resource tiles and document toolbars; long-form reading surfaces stay solid.
-Widgets and an active-checklist Live Activity are now under design investigation,
-not shipped features.
+The native package now includes a next-assignment widget and an explicitly started
+active-checklist Live Activity. They show only the signed-in user’s own assignments,
+with minimal local presentation data and stale/expired states. Progress refreshes
+while the app is active; no closed-app server updates are promised. Physical-device
+acceptance is tracked in [the build record](ios-personal-build.md).

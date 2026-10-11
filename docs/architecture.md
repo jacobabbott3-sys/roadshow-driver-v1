@@ -122,3 +122,17 @@ Native document-navigation/process-termination callbacks invalidate chrome befor
 forwarding to Capacitor; all other optional delegate selectors forward unchanged.
 React native Back traverses actual owned history entries, preserving query/hash/
 state and handling POP/REPLACE, with a parent fallback for cold routes.
+
+### Personal widgets and checklist Live Activity
+
+`WidgetBridge` is mounted inside the existing shell provider and outside routed
+Suspense. Verified auth plus native readiness gates `WidgetController`; its
+generation checks discard stale reads across account/lifecycle changes. A separate
+plugin handles snapshots and ActivityKit, leaving navigation protocol content-free.
+Minimal snapshots use App Group atomic file storage with expiry; no credentials
+are shared. Owner identity is kept only in the app's private preferences to clear
+prior-account content. The extension does not make network requests. Explicit
+assignment ownership includes primary and linked drivers; admin read visibility
+alone never qualifies. Deep links accept only a contract UUID and optional
+checklist tab, and route only after profile verification. Existing RLS and
+checklist RPC permissions remain authoritative and unchanged.

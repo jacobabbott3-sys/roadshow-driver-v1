@@ -1,7 +1,8 @@
-# Next show widget and active checklist Live Activity — proposed design
+# Next show widget and active checklist Live Activity — approved design
 
 Jacob selected “Next show + active checklist” on October 10. This document
-records the investigation; extensions and capabilities are not yet implemented.
+records the approved design, now implemented locally. Build and device acceptance
+are tracked in [the build record](../../ios-personal-build.md).
 
 ## Experience
 

@@ -9,5 +9,6 @@ final class RoadshowBridgeViewController:CAPBridgeViewController {
   }
   let plugin=RoadshowShellPlugin();plugin.store=shellStore
   bridge?.registerPluginInstance(plugin)
+  bridge?.registerPluginInstance(RoadshowWidgetsPlugin())
  }
 }
