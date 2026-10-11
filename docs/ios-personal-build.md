@@ -317,3 +317,12 @@ and two native pipeline tests passed. Web build, `ios:sync`, and unsigned generi
 iOS device compilation passed with Xcode 27.2 (27B5028f). Lint retained exactly
 three known warnings and no errors; native compilation retained the documented
 upstream plugin warnings. This update has not been installed or device-tested.
+
+Device installation follow-up: used Xcode Run with the existing App scheme,
+Hoid destination and Personal Team configuration. Xcode reported Build succeeded
+(87.1 seconds, 15 warnings), then “Running App on Hoid”; its console confirmed
+loading `capacitor://localhost` from the newly installed application. No new
+security prompt, agreement, signing change or device unlock was required. The
+photo-capture assets from `2b6d2ea` were synced before this Run. Device behavior
+acceptance still awaits Jacob's camera/library/preview/cancel checks. Retry should
+only be exercised on a legitimate intended photo upload, not production fixtures.
