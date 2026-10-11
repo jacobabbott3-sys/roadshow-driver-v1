@@ -177,6 +177,6 @@ Task 5 native harnesses assert `networkCallCount == 0` for expired credentials a
 
 ## Plan review
 
-The design is approved; this plan awaits review. Preserve the requested sole coding
+The design and plan are approved. Implementation and one independent review are complete; local verification passed. See `docs/releases/2026-10-10-ios-offline-verification.md` for evidence and device-only gaps. The original detailed checklist below is retained as acceptance criteria, not a claim that every device scenario was exercised. Preserve the requested sole coding
 owner: implement here, followed by one independent review of the complete change.
 Auth, storage and routing share lifecycle state, so implementation remains sequential.

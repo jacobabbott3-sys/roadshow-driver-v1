@@ -356,3 +356,18 @@ or warnings were reported. Xcode Run then installed the updated app with existin
 signing and reported “Running App on Hoid.” No new security prompts were handled.
 Jacob still needs to assess launch appearance and perceived responsiveness on the
 phone; no before/after on-device launch benchmark has been recorded.
+
+## Saved-first offline feature verification
+
+The approved design and plan are in `docs/superpowers/specs/2026-10-10-ios-offline-design.md`
+and `docs/superpowers/plans/2026-10-10-ios-offline.md`. Native core tests run with
+`node scripts/test-offline-native.mjs`; they use standalone Foundation assertion
+harnesses and do not contact Supabase. Set `DEVELOPER_DIR` to the installed Xcode
+when its location differs.
+
+After local tests/builds and installation pass, device acceptance uses legitimate
+assigned records read-only: open online, reopen in airplane mode, inspect cached
+contract/checklist content, reconnect and verify live replacement, then select/open/
+remove a Red Folder download. No test assignment answers or photos may be written
+without separate permission. OS-scheduled background execution must be observed
+on-device; compilation and manually invoking its reader do not prove scheduling.

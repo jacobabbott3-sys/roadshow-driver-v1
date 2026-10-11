@@ -19,8 +19,10 @@ async function setup(path:string){
  return {coordinator,resolve};
 }
 it('shows saved contract before account/network completion, retaining selected tab after live update',async()=>{
+ const started=performance.now();
  const {coordinator,resolve}=await setup(`/contracts/${id}`);
  expect(await screen.findByText('Fixture show')).toBeVisible();
+ const savedAt=performance.now()-started;
  fireEvent.click(screen.getByRole('button',{name:'Checklist'}));
  expect(screen.getByText('0 of 0 tasks complete')).toBeVisible();
  expect(screen.queryByText('General protected outlet')).toBeNull();
@@ -28,6 +30,9 @@ it('shows saved contract before account/network completion, retaining selected t
  await act(async()=>{coordinator.verify(owner,Date.now());const pending=coordinator.refresh('manual');resolve({...snapshot,contracts:{[id]:{...snapshot.contracts[id],contract:{...snapshot.contracts[id].contract,show:{...snapshot.contracts[id].contract.show,name:'Updated fixture'}}}}});await pending;});
  await waitFor(()=>expect(screen.getByText('Updated fixture')).toBeVisible());
  expect(screen.getByText('0 of 0 tasks complete')).toBeVisible();
+ const liveAt=performance.now()-started;
+ expect(liveAt).toBeGreaterThan(savedAt);
+ process.stdout.write(`Fixture render timings: saved=${savedAt.toFixed(1)}ms; live=${liveAt.toFixed(1)}ms (network held until after saved render)\n`);
 });
 it('never opens an administrator route using saved account data',async()=>{
  await setup('/admin/users');

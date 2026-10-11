@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { RedFolderPage } from "./RedFolderPage";
 
+vi.mock("../context/AuthContext",()=>({useAuth:()=>({nativeProfileVerified:true,profile:{is_active:true},loading:false})}));
 vi.mock("../hooks/useAsync", () => ({ useAsync: () => ({ loading: false, error: null, data: [
   { id: "pdf", title: "Driver handbook", content: "Read this guide", kind: "handbook", file_type: "pdf", file_path: "guide.pdf" },
   { id: "image", title: "Setup photo", kind: "handbook", file_type: "image", file_path: "setup.jpg" },

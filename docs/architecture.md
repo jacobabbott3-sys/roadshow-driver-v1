@@ -85,8 +85,9 @@ Codespaces is the private hands-on environment; Codex cloud has a separate
 toolchain/setup lifecycle and proposes PRs. CI checks tests/build/lint with no
 live Supabase or deployment credentials. Initial migrations run through the
 intended Supabase dashboard after backup, actual-state verification, and review.
-No local Supabase stack, offline synchronization subsystem, or automatic database
-deployment is introduced. See [workflow](development-workflow.md).
+No local Supabase stack or automatic database deployment is introduced. The web
+client has no offline synchronization subsystem; the personal iPhone build adds
+the bounded read-only cache described below. See [workflow](development-workflow.md).
 
 Sources: source modules above, `supabase/migrations/`, `supabase/functions/web-push/index.ts`,
 `supabase/tests/`, `vite.config.ts`, and `vercel.json`.
@@ -136,3 +137,28 @@ assignment ownership includes primary and linked drivers; admin read visibility
 alone never qualifies. Deep links accept only a contract UUID and optional
 checklist tab, and route only after profile verification. Existing RLS and
 checklist RPC permissions remain authoritative and unchanged.
+
+### Personal iPhone read-only offline storage
+
+`src/native/offline/` owns account-scoped hydration and coalesced live reads. A
+strict route whitelist may render saved presentations without mounting the general
+protected Outlet; existing pages share their presentation with these reads. A local
+persisted-session owner is used only to identify saved copies before SDK token
+refresh completes, never to construct an online Session/Profile or grant a role.
+
+`ios/App/App/Offline/` stores versioned snapshots and optional file envelopes in
+private Application Support, excluded from backups and protected until first
+unlock. File contents are bounded, MIME checked and atomically replaced. Signed
+URLs are not persisted. Generation checks reject stale account work. Supabase JS
+continues to own session refresh; only its existing short-lived access token and
+public client key are mirrored into app-private, this-device-only Keychain storage.
+The native background reader uses a fixed Public 5 origin, GET requests, active
+profile verification and paginated explicit ownership reads. It never refreshes a
+token or writes to Supabase. Expiry/cancellation keeps the last complete snapshot.
+
+Offline lease: seven days after a successful active-profile check, with clock
+rollback requiring online verification. Offline access cannot observe immediate
+server-side revocation. Optional resources refresh in foreground; without a reliable
+object validator they re-download while preserving an existing file on failure.
+Quota counts actual disk usage, including envelope overhead. No schema, RLS,
+storage bucket, auth setting or production website changes are involved.

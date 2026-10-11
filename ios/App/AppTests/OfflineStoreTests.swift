@@ -2,6 +2,10 @@ import Foundation
 @main struct OfflineStoreTests {
  static func check(_ value:Bool){assert(value)}
  static func main() throws {
+  for (name,valid) in [("valid",true),("invalid-date",false)] {
+   let value=try JSONSerialization.jsonObject(with:Data(contentsOf:URL(fileURLWithPath:"tests/fixtures/offline/\(name).json"))) as! [String:Any]
+   assert(OfflinePolicy.valid(value)==valid)
+  }
   let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
   defer {try? FileManager.default.removeItem(at:root)}
   let store=try OfflineStore(root:root), owner="11111111-1111-4111-8111-111111111111", generation=UUID().uuidString
@@ -16,6 +20,7 @@ import Foundation
   check((try store.read(now:now)) != nil)
   check((try store.read(now:now+1)) != nil)
   check((try store.read(now:now)) == nil)
+  do{try store.replace(snapshot,generation:generation,now:now);assertionFailure("replace rolled clock backward")}catch{}
   try store.clear()
   do {try store.replace(snapshot,generation:generation,now:now);assertionFailure("stale generation accepted")}catch{}
   check((try store.read(now:now)) == nil)

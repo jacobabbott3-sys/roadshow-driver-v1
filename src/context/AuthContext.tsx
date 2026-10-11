@@ -114,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sessionError) setError(sessionError.message);
       const temporary = localStorage.getItem("roadshow-stay-logged-in") === "false";
       const activeTab = sessionStorage.getItem("roadshow-session-active") === "true";
+      const retainedSession=data.session&&temporary&&!activeTab?null:data.session;
       if (data.session && temporary && !activeTab) {
         await supabase.auth.signOut({ scope: "local" });
         setSession(null);
@@ -122,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.session) sessionStorage.setItem("roadshow-session-active", "true");
       }
       setLoading(false);
-      setSavedSessionOwner(data.session?.user.id??null);
+      setSavedSessionOwner(retainedSession?.user.id??null);
       setSessionResolved(true);
     });
     const { data } = supabase.auth.onAuthStateChange((_event, next) => {setSession(next);setSavedSessionOwner(next?.user.id??null);});

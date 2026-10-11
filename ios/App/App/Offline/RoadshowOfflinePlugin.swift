@@ -12,7 +12,7 @@ import UIKit
    guard UIApplication.shared.applicationState == .active,let store=OfflineRuntime.store else{throw OfflineError.stale}
    let generation=call.getString("generation") ?? ""
    if configured {try store.require(generation)}
-   call.resolve(try body(store,generation,Date().timeIntervalSince1970*1000))
+   call.resolve(try body(store,generation,floor(Date().timeIntervalSince1970*1000)))
   }catch{call.reject(error.localizedDescription)}}
  }
  @objc func clearAccess(_ call:CAPPluginCall){perform(call){_,_,_ in OfflineCredentialStore.clear();OfflineBackgroundScheduler.cancel();return [:]}}
@@ -21,6 +21,7 @@ import UIKit
   let parts=token.split(separator:".");guard parts.count==3 else{throw OfflineError.invalid}
   var encoded=String(parts[1]).replacingOccurrences(of:"-",with:"+").replacingOccurrences(of:"_",with:"/");encoded+=String(repeating:"=",count:(4-encoded.count%4)%4)
   guard let data=Data(base64Encoded:encoded),let claims=try JSONSerialization.jsonObject(with:data) as? [String:Any],claims["sub"] as? String == owner,let exp=claims["exp"] as? Double,expires<=exp*1000 else{throw OfflineError.invalid}
+  try store.reverify(now:now,generation:g)
   try OfflineCredentialStore.set(OfflineAccess(owner:owner,token:token,expiresAt:expires,apiKey:apiKey,generation:g));OfflineBackgroundScheduler.schedule();return [:]
  }}
  @objc func configure(_ call:CAPPluginCall){perform(call,configured:false){store,g,_ in let owner=call.getString("owner") ?? "";if OfflineCredentialStore.read()?.owner != owner {OfflineCredentialStore.clear();OfflineBackgroundScheduler.cancel()};try store.configure(owner:owner,generation:g);return [:]}}

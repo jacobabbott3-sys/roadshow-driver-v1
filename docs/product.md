@@ -120,3 +120,22 @@ is ready. Recovery screens and local actions keep their controls. The personal
 app's launch and loading screens share the existing truck branding; its build uses
 system fonts without the website's remote font import. Offline contracts and
 selected resources are still proposed, not available in the installed app yet.
+
+### Personal iPhone saved-first contracts
+
+The personal iPhone build automatically saves explicitly assigned contracts and
+checklists in private app storage. Existing screens show a usable saved copy while
+account verification and fresh reads run, then update in place. Saved views are
+read-only; signing, checklist updates and uploads require verified live data. A
+freshness line distinguishes saved content, updating, successful refresh and errors.
+
+Red Folder resources and contract photos/documents have explicit download/remove
+controls. Only selected attachments are retained; saved PDFs open with the bundled
+reader. Profile shows storage usage and Clear downloads. The initial limits are
+250 MiB of app storage and 20 MiB per file. Offline access requires an existing
+session and an active-account verification within seven days; sign-out, account
+switch or known inactive status clears the account's copies.
+
+Quiet foreground refresh is the primary update path. iOS may also grant background
+refresh while the existing short-lived access token remains valid. Closed-app
+refresh is not guaranteed and requires no push service or paid membership.

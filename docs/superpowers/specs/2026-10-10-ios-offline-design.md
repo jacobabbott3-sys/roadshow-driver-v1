@@ -2,7 +2,7 @@
 
 Status: written design approved October 10, 2026, with Jacob’s clarification
 that saved copies provide immediate loading and refresh into the live view.
-Implementation plan review is the next checkpoint. Local personal Public 5 app only. No backend or website changes.
+Implementation plan approved; implemented locally. Verification and device acceptance are recorded in `docs/releases/2026-10-10-ios-offline-verification.md`. Local personal Public 5 app only. No backend or website changes.
 
 ## Intent and approved scope
 

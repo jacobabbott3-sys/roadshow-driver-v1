@@ -35,3 +35,35 @@ test('removing a selected resource during download prevents a late file from res
  const ref={kind:'resource' as const,recordId:resource.id};const pending=c.download(ref,resource);await Promise.resolve();await c.remove(ref);finish({mime:'application/pdf',base64:'JVBERi0='});await pending;
  assert.equal(stored,0);assert.deepEqual(c.getState().snapshot?.resources,{});
 });
+test('concurrent resource selections merge instead of losing one',async()=>{
+ const resources=['22222222-2222-4222-8222-222222222222','33333333-3333-4333-8333-333333333333'].map(id=>({id,kind:'handbook' as const,title:id,content:'Text',file_path:null,file_type:null}));
+ const plugin={setAccess:async()=>{},clearAccess:async()=>{},configure:async()=>{},read:async()=>({snapshot}),replace:async()=>{},clear:async()=>{},usage:async()=>({bytes:0,limit:262144000}),manifest:async()=>({files:[]}),removeFile:async()=>{},putFile:async()=>{},readFile:async()=>{throw Error('none')}};
+ const c=new OfflineCoordinator(plugin,async()=>snapshot,()=>now,{download:async()=>{throw Error('no file')},resources:async()=>resources});await c.activate(owner);c.verify(owner,now);await c.refresh('launch');
+ await Promise.all(resources.map(resource=>c.download({kind:'resource',recordId:resource.id},resource)));
+ assert.equal(Object.keys(c.getState().snapshot!.resources).length,2);
+});
+test('a background resource loop stops at account switch without copying another resource into the next account',async()=>{
+ const resources=['22222222-2222-4222-8222-222222222222','33333333-3333-4333-8333-333333333333'].map(id=>({id,kind:'handbook' as const,title:id,content:'Private account A text',file_path:'guide.pdf',file_type:'pdf' as const}));
+ const saved={...snapshot,resources:Object.fromEntries(resources.map(resource=>[resource.id,{resource,fetchedAt:now}]))};
+ let configured=owner,finish!:(v:{mime:string;base64:string})=>void,started!:()=>void;const entered=new Promise<void>(yes=>{started=yes});const bytes=new Promise<{mime:string;base64:string}>(yes=>{finish=yes});
+ const plugin={setAccess:async()=>{},clearAccess:async()=>{},configure:async(o:{owner:string})=>{configured=o.owner},read:async()=>({snapshot:configured===owner?saved:{...snapshot,owner:configured}}),replace:async()=>{},clear:async()=>{},usage:async()=>({bytes:0,limit:262144000}),manifest:async()=>({files:[]}),removeFile:async()=>{},putFile:async()=>{},readFile:async()=>{throw Error('none')}};
+ const c=new OfflineCoordinator(plugin,async id=>({...snapshot,owner:id}),()=>now,{download:async()=>{started();return bytes},resources:async()=>resources});
+ await c.activate(owner);c.verify(owner,now);await c.refresh('launch');await entered;
+ const next='44444444-4444-4444-8444-444444444444';await c.activate(next);c.verify(next,now);finish({mime:'application/pdf',base64:'JVBERi0='});await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(c.getState().snapshot!.resources,{});
+});
+test('usable verified live data survives a cache persistence failure',async()=>{
+ const plugin={setAccess:async()=>{},clearAccess:async()=>{},configure:async()=>{},read:async()=>({snapshot:null}),replace:async()=>{throw Error('Storage full')},clear:async()=>{},usage:async()=>({bytes:0,limit:262144000}),manifest:async()=>({files:[]}),removeFile:async()=>{},putFile:async()=>{},readFile:async()=>{throw Error('none')}};
+ const c=new OfflineCoordinator(plugin,async()=>snapshot,()=>now);await c.activate(owner);c.verify(owner,now);await c.refresh('launch');
+ assert.equal(c.getState().contracts.source,'live');assert.equal(c.getState().contracts.canMutate,true);assert.ok(c.getState().cacheError);
+});
+test('removing a queued resource during refresh does not select it again',async()=>{
+ const resources=['22222222-2222-4222-8222-222222222222','33333333-3333-4333-8333-333333333333'].map(id=>({id,kind:'handbook' as const,title:id,content:'Private account A text',file_path:'guide.pdf',file_type:'pdf' as const}));
+ const saved={...snapshot,resources:Object.fromEntries(resources.map(resource=>[resource.id,{resource,fetchedAt:now}]))};
+ let configured=owner,finish!:(v:{mime:string;base64:string})=>void,started!:()=>void;const entered=new Promise<void>(yes=>{started=yes});const bytes=new Promise<{mime:string;base64:string}>(yes=>{finish=yes});
+ const plugin={setAccess:async()=>{},clearAccess:async()=>{},configure:async(o:{owner:string})=>{configured=o.owner},read:async()=>({snapshot:configured===owner?saved:{...snapshot,owner:configured}}),replace:async()=>{},clear:async()=>{},usage:async()=>({bytes:0,limit:262144000}),manifest:async()=>({files:[]}),removeFile:async()=>{},putFile:async()=>{},readFile:async()=>{throw Error('none')}};
+ const c=new OfflineCoordinator(plugin,async id=>({...snapshot,owner:id}),()=>now,{download:async()=>{started();return bytes},resources:async()=>resources});
+ await c.activate(owner);c.verify(owner,now);await c.refresh('launch');await entered;
+ await c.remove({kind:'resource',recordId:resources[1].id});finish({mime:'application/pdf',base64:'JVBERi0='});await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(c.getState().snapshot!.resources[resources[1].id],undefined);
+});

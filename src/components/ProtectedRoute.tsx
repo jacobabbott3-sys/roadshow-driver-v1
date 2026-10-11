@@ -24,6 +24,7 @@ export function ProtectedRoute() {
       <button className="button primary" onClick={() => void refreshProfile()}>Try again</button>
     </section></main>
   );
+  if(isNativeApp()&&state&&!state.snapshot&&state.contracts.error&&profile?.role!=="admin")return <main className="recovery-screen"><section className="recovery-card"><h1>Could not load your contracts</h1><p role="alert">{state.contracts.error}</p><button className="button primary" onClick={()=>void refreshProfile()}>Try again</button></section></main>;
   return <Outlet />;
 }
 

@@ -42,13 +42,13 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
   const params=useParams();const id=contractId||params.id||"";
   const {state:offline,coordinator}=useOffline();
   const auth=useAuth();
-  const canMutate=!coordinator||!!(offline?.details[id]?.canMutate&&auth.nativeProfileVerified&&auth.profile?.is_active&&!auth.loading);
   const
     [searchParams] = useSearchParams(),
     { user } = useAuth(),
     contract = useSavedQuery(() => getContract(id), [id], s=>s.contracts[id]?.contract??null),
-    checklist = useSavedQuery(() => getChecklist(id), [id], s=>s.contracts[id]?.checklist??null),
-    photos = useAsync(() => canMutate ? getContractPhotos(id) : Promise.resolve([]), [id,canMutate]),
+    checklist = useSavedQuery(() => getChecklist(id), [id], s=>s.contracts[id]?.checklist??null);
+  const canMutate=!coordinator||!!(contract.live&&checklist.live&&auth.nativeProfileVerified&&auth.profile?.is_active&&!auth.loading);
+  const photos = useAsync(() => canMutate ? getContractPhotos(id) : Promise.resolve([]), [id,canMutate]),
     linkedSignings = useSavedQuery(
       () => contract.data?.show.id ? getLinkedSigningContracts(contract.data.show.id) : Promise.resolve([]),
       [contract.data?.show.id],

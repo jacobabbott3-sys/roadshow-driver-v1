@@ -29,23 +29,30 @@ final class OfflineStore {
   owner=nil;generation=nil
   for url in try fm.contentsOfDirectory(at:root,includingPropertiesForKeys:nil){try fm.removeItem(at:url)}
  }
+ private var watermark:Double {Double((try? String(contentsOf:root.appendingPathComponent("watermark"),encoding:.utf8)) ?? "") ?? 0}
+ private func mark(_ now:Double)throws {let url=root.appendingPathComponent("watermark");try Data(String(now).utf8).write(to:url,options:.atomic);try protect(url)}
+ // Only after a successful online profile check, through the credential bridge or native reader.
+ func reverify(now:Double,generation:String)throws {try require(generation);try mark(now)}
  func read(now:Double)throws->[String:Any]? {
   let file=root.appendingPathComponent("snapshot.json")
-  guard fm.fileExists(atPath:file.path) else{return nil}
+  guard now>=watermark,fm.fileExists(atPath:file.path) else{return nil}
   guard !(try file.resourceValues(forKeys:[.isSymbolicLinkKey])).isSymbolicLink! else{throw OfflineError.invalid}
   guard let value=try? JSONSerialization.jsonObject(with:Data(contentsOf:file)) as? [String:Any],OfflinePolicy.readable(value,owner:owner,now:now) else{return nil}
+  try mark(now)
   var updated=value;updated["lastSeenAt"]=now
   try JSONSerialization.data(withJSONObject:updated).write(to:file,options:.atomic);try protect(file)
   return updated
  }
  func replace(_ value:[String:Any],generation:String,now:Double)throws {
   try require(generation)
-  guard OfflinePolicy.readable(value,owner:owner,now:now) else{throw OfflineError.invalid}
+  guard now>=watermark,OfflinePolicy.readable(value,owner:owner,now:now) else{throw OfflineError.invalid}
+  var value=value;value["lastSeenAt"]=max(watermark,now)
   let data=try JSONSerialization.data(withJSONObject:value,options:[.sortedKeys])
   let file=root.appendingPathComponent("snapshot.json")
   let old=(try? file.resourceValues(forKeys:[.fileSizeKey]).fileSize) ?? 0
   guard try usage()-old+data.count<=OfflinePolicy.limit else{throw OfflineError.full}
-  try data.write(to:file,options:.atomic);try protect(file)
+  try mark(now);try data.write(to:file,options:.atomic);try protect(file)
+  try pruneFiles(snapshot:value)
  }
  func usage()throws->Int {
   try fm.contentsOfDirectory(at:root,includingPropertiesForKeys:[.fileSizeKey]).reduce(0){sum,url in sum+((try? url.resourceValues(forKeys:[.fileSizeKey]).fileSize) ?? 0)}

@@ -1,3 +1,4 @@
+import {isNativeApp} from "../lib/nativePlatform";
 import { BookOpen, HelpCircle, MessageSquareText, UsersRound, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
@@ -16,9 +17,10 @@ const resources = [
 ] as const;
 
 export function ResourcesPage() {
-  const { user } = useAuth();
+  const { user,nativeProfileVerified,profile,loading } = useAuth();
   const [search, setSearch] = useState("");
-  const toolbag = useAsync(() => getMyToolbag(user!.id), [user?.id]);
+  const canLoad=!!user&&(!isNativeApp()||!!(nativeProfileVerified&&profile?.is_active&&!loading));
+  const toolbag = useAsync(() => canLoad ? getMyToolbag(user!.id) : Promise.resolve(null), [user?.id,canLoad]);
   const visible = resources.filter(([, title, description]) => matchesListSearch(search, title, description));
   return <main className="page"><header className="page-header"><div><p className="eyebrow">ON-THE-ROAD HELP</p><h1>Resources</h1><p>Choose the resource you need.</p></div></header><ListSearch value={search} onChange={setSearch} placeholder="Search resources" label="Search resources" resultCount={visible.length} />{!visible.length ? <div className="inline-empty">No resources match “{search}”.</div> : <div className="resource-link-grid">{visible.map(([to, title, description, Icon]) => {
     const toolbagTitle = to === "/resources/toolbag" && toolbag.data ? `My Toolbag #${toolbag.data.number}` : title;

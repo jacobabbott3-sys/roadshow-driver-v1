@@ -64,3 +64,13 @@ assignment; progress comes from confirmed checklist responses. Clear on logout
 and account changes; stop completed/unassigned activities after verified refresh.
 The local app retains only an owner marker outside shared storage. Public web and
 backend release remain unchanged; physical-device acceptance is a separate gate.
+
+## October 10, 2026 — personal iPhone saved-first reads
+
+Jacob approved automatic contract/checklist copies for fast initial loading and
+offline backup, with quiet live refresh on the same screens. Resource/attachment
+downloads remain opt-in. The first phase permits no offline writes. Approved limits:
+seven-day verified-account lease, 250 MiB total, 20 MiB per optional file. iOS
+background refresh is best effort and uses only an existing unexpired access token;
+JS remains the sole token-refresh owner. No paid services, push backend or new
+credentials. Existing personal signing and Public 5 account use are preserved.

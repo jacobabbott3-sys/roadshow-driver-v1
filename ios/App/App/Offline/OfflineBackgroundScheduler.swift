@@ -12,17 +12,18 @@ import BackgroundTasks
   let completion=OfflineCompletion{task.setTaskCompleted(success:$0)}
   let work=Task{@MainActor in
    defer{schedule()}
-   guard let access=OfflineCredentialStore.read(),access.expiresAt>Date().timeIntervalSince1970*1000,let store=OfflineRuntime.store else{completion.finish(false);return}
+   guard let access=OfflineCredentialStore.read(),access.expiresAt>floor(Date().timeIntervalSince1970*1000),let store=OfflineRuntime.store else{completion.finish(false);return}
    let config=URLSessionConfiguration.ephemeral;config.urlCache=nil;config.requestCachePolicy = .reloadIgnoringLocalCacheData
    let session=URLSession(configuration:config);defer{session.invalidateAndCancel()}
    do{
     if store.generation==nil {try store.configure(owner:access.owner,generation:access.generation)}
     try store.require(access.generation)
-    let old=try store.read(now:Date().timeIntervalSince1970*1000)
+    let old=try store.read(now:floor(Date().timeIntervalSince1970*1000))
     let reader=OfflineBackgroundReader{request in let (data,response)=try await session.data(for:request);guard let response=response as? HTTPURLResponse else{throw OfflineReadError.unavailable};return(data,response)}
-    guard let snapshot=try await reader.snapshot(access:access,now:Date().timeIntervalSince1970*1000,resources:old?["resources"] as? [String:Any] ?? [:]) else{completion.finish(false);return}
+    guard let snapshot=try await reader.snapshot(access:access,now:floor(Date().timeIntervalSince1970*1000),resources:old?["resources"] as? [String:Any] ?? [:]) else{completion.finish(false);return}
     try Task.checkCancellation();try store.require(access.generation)
-    try store.replace(snapshot,generation:access.generation,now:Date().timeIntervalSince1970*1000);completion.finish(true)
+    try store.reverify(now:floor(Date().timeIntervalSince1970*1000),generation:access.generation)
+    try store.replace(snapshot,generation:access.generation,now:floor(Date().timeIntervalSince1970*1000));completion.finish(true)
    }catch OfflineReadError.inactive {
     if store.generation==access.generation {try? store.clear();OfflineCredentialStore.clear();cancel()};completion.finish(false)
    }catch{completion.finish(false)}
