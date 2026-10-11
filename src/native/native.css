@@ -206,3 +206,26 @@ html[data-native="ios"] .native-loading .loader { width:20px; height:20px; borde
 .offline-download { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin:.75rem 0; }
 .offline-download small,.offline-download p { flex-basis:100%; }
 .offline-download button { padding:.5rem .7rem; border-radius:.65rem; border:1px solid currentColor; background:transparent; color:inherit; }
+
+/* Settings is a navigation list; each group has its own screen. */
+html[data-native="ios"] .settings-menu {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--paper);
+}
+html[data-native="ios"] .settings-menu a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 76px;
+  padding: 16px;
+  color: var(--ink);
+  text-decoration: none;
+}
+html[data-native="ios"] .settings-menu a + a { border-top: 1px solid var(--line); }
+html[data-native="ios"] .settings-menu a > svg:first-child { color: var(--green); flex-shrink: 0; }
+html[data-native="ios"] .settings-menu a > svg:last-child { margin-left: auto; width: 18px; color: var(--muted); flex-shrink: 0; }
+html[data-native="ios"] .settings-menu span { display: grid; gap: 4px; }
+html[data-native="ios"] .settings-menu small { color: var(--muted); }

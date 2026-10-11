@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AvailabilityResponsePerson } from "../types";
 import { AssignmentDialog } from "./AssignmentDialog";
 
+const platform = vi.hoisted(()=>({native:false}));
+vi.mock("../lib/nativePlatform",()=>({isNativeApp:()=>platform.native}));
 const loadResponses = vi.fn();
 const replaceAssignments = vi.fn();
 const people: AvailabilityResponsePerson[] = [
@@ -21,8 +23,15 @@ vi.mock("../lib/adminData", () => ({ getTeamMembers: vi.fn(async () => []) }));
 
 describe("AssignmentDialog", () => {
   beforeEach(() => {
+    platform.native=false;
     loadResponses.mockReset().mockResolvedValue(people);
     replaceAssignments.mockReset().mockResolvedValue(undefined);
+  });
+
+  it("loads native responses automatically without a manual refresh control",async()=>{
+    platform.native=true;renderDialog();await screen.findAllByTestId(/assignment-person-/);
+    expect(screen.queryByRole("button",{name:"Refresh responses"})).toBeNull();
+    expect(screen.getByRole("checkbox",{name:/Alex Available/})).toBeTruthy();
   });
 
   it("shows ordered response ranks and response times", async () => {

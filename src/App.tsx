@@ -63,7 +63,7 @@ export default function App() {
             <Route path="chat" element={<ChatPage />} />
             <Route path="messages" element={<Navigate to="/chat" replace />} />
             <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="profile" element={<ProfilePage />} />
+            <Route path="profile/*" element={<ProfilePage />} />
             <Route element={<AdminRoute />}>
               <Route path="admin" element={<AdminPage />} />
               <Route path="admin/shows" element={<AdminShowsPage />} />

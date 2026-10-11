@@ -1,8 +1,13 @@
+import {BackButton} from "../components/BackButton";
+import type {ReactNode} from "react";
 import {FreshnessNotice} from "../native/offline/FreshnessNotice";
 import {DownloadSettings} from "../native/offline/DownloadSettings";
 import { shellPlugin } from "../native/shellPlugin";
 import { isNativeApp } from "../lib/nativePlatform";
 import {
+  Activity,
+  ChevronRight,
+  Download,
   BellOff,
   BellRing,
   CalendarDays,
@@ -14,7 +19,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAsync } from "../hooks/useAsync";
 import {
@@ -28,10 +33,42 @@ import { supabase } from "../lib/supabase";
 import type { ColorScheme, ThemePreference } from "../types";
 
 export function ProfilePage() {
+  const {user} = useAuth();
+  return isNativeApp() ? <NativeSettings key={user?.id || 'signed-out'}/> : <ProfileForm key={user?.id || 'signed-out'}/>;
+}
+
+function NativeSettings() {
+  return <Routes>
+    <Route index element={<SettingsMenu/>}/>
+    <Route path="details" element={<ProfileForm key="profile" section="profile"/>}/>
+    <Route path="appearance" element={<ProfileForm key="appearance" section="appearance"/>}/>
+    <Route path="notifications" element={<ProfileForm key="notifications" section="notifications"/>}/>
+    <Route path="downloads" element={<SettingsScreen title="Downloads"><DownloadSettings/></SettingsScreen>}/>
+    <Route path="status" element={<SettingsScreen title="Status"><section className="detail-panel"><FreshnessNotice showEmpty allowRefresh/></section></SettingsScreen>}/>
+    <Route path="*" element={<Navigate to="/profile" replace/>}/>
+  </Routes>;
+}
+
+function SettingsScreen({title,children}:{title:string;children:ReactNode}) {
+  return <main className="page"><BackButton to="/profile" label="Back to settings"/><header className="page-header"><div><p className="eyebrow">SETTINGS</p><h1>{title}</h1></div></header>{children}</main>;
+}
+
+function SettingsMenu() {
+  const sections = [
+    ['details','Profile','Contact details and account access',UserRound],
+    ['appearance','Appearance','Display, color, haptics, and confetti',Palette],
+    ['downloads','Downloads','Offline files and storage',Download],
+    ['notifications','Notifications','Your alert preferences',BellRing],
+    ['status','Status','Saved data and refresh',Activity],
+  ] as const;
+  return <main className="page"><header className="page-header"><div><p className="eyebrow">YOUR ACCOUNT</p><h1>Settings</h1></div></header><nav className="settings-menu" aria-label="Settings">{sections.map(([path,title,description,Icon])=><Link key={path} to={`/profile/${path}`}><Icon aria-hidden="true"/><span><strong>{title}</strong><small>{description}</small></span><ChevronRight aria-hidden="true"/></Link>)}</nav></main>;
+}
+
+function ProfileForm({section}:{section?:'profile'|'appearance'|'notifications'}) {
   const { profile, user, signOut, refreshProfile, updateAppearance } = useAuth();
   const preferences = useAsync(
-    () => getNotificationPreferences(user!.id),
-    [user?.id],
+    () => !section || section === "notifications" ? getNotificationPreferences(user!.id) : Promise.resolve(null),
+    [user?.id, section],
   );
   const [name, setName] = useState(profile?.full_name || "");
   const [phone, setPhone] = useState(profile?.phone || "");
@@ -146,7 +183,7 @@ export function ProfilePage() {
     <section className="detail-panel profile-form appearance-settings">
         <div className="notification-heading">
           <div className="notification-icon"><Palette /></div>
-          <div><h2>Appearance</h2><p>{isNativeApp() ? "Display and haptics are saved on this iPhone." : "These settings follow your account on every device."}</p></div>
+          <div><h2>{section ? "Display and haptics" : "Appearance"}</h2><p>{isNativeApp() ? "Display and haptics are saved on this iPhone." : "These settings follow your account on every device."}</p></div>
         </div>
         {isNativeApp() ? <button className="button secondary" onClick={() => void shellPlugin.showAppearance().catch(() => setMessage("Appearance is unavailable. Reopen the app and try again."))}>iPhone appearance</button> : <>
         <div className="form-grid">
@@ -180,13 +217,15 @@ export function ProfilePage() {
 
   return (
     <main className="page">
+      {section && <BackButton to="/profile" label="Back to settings"/>}
       <header className="page-header">
         <div>
-          <p className="eyebrow">YOUR ACCOUNT</p>
-          <h1>{isNativeApp() ? "Settings" : "Profile"}</h1>
-          <p>{isNativeApp() ? "Profile, appearance, and downloads." : "Personal details, notifications, and account access."}</p>
+          <p className="eyebrow">{section ? "SETTINGS" : "YOUR ACCOUNT"}</p>
+          <h1>{section === "appearance" ? "Appearance" : section === "notifications" ? "Notifications" : "Profile"}</h1>
+          {!section && <p>Personal details, notifications, and account access.</p>}
         </div>
       </header>
+      {(!section || section === "profile") && <>
       <section className="profile-card">
         <div className="profile-avatar">
           <UserRound size={32} />
@@ -198,7 +237,7 @@ export function ProfilePage() {
         </div>
       </section>
       <section className="detail-panel profile-form">
-        <h2>{isNativeApp() ? "Profile" : "Contact information"}</h2>
+        <h2>Contact information</h2>
         <label>
           Full name
           <input value={name} onChange={(event) => setName(event.target.value)} />
@@ -226,7 +265,9 @@ export function ProfilePage() {
         </button>
         {message && <p className="notice">{message}</p>}
       </section>
-      {!isNativeApp() && appearance}
+      </>}
+      {(!section || section === "appearance") && <>{appearance}{section && message && <p className="notice" role="status">{message}</p>}</>}
+      {(!section || section === "notifications") && <>
       <section className="detail-panel notification-settings">
         <div className="notification-heading">
           <div className="notification-icon">
@@ -300,14 +341,15 @@ export function ProfilePage() {
           <p className="notice">{notificationMessage}</p>
         )}
       </section>
+      </>}
+      {(!section || section === "profile") && <>
       <Link className="profile-link" to="/availability">
         <CalendarDays /> Manage availability <span>→</span>
       </Link>
       <button className="button danger" onClick={() => void signOut()}>
         <LogOut size={18} /> Sign out
       </button>
-      {isNativeApp() && appearance}
-      {isNativeApp() && <><DownloadSettings/><section className="detail-panel" aria-label="Refresh and status"><h2>Status</h2><FreshnessNotice showEmpty/></section></>}
+      </>}
     </main>
   );
 }

@@ -1,3 +1,4 @@
+import {isNativeApp} from "../lib/nativePlatform";
 import { useNativeModal } from "../native/useShellPresentation";
 import { Plus, RefreshCw, UserRoundPlus, X } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
@@ -190,7 +191,7 @@ export function AssignmentDialog({
         </section>
         {clearingAssignment && <p className="assignment-reopen-note">Saving with no assigned drivers will reopen this contract. Existing availability responses and response order will be preserved.</p>}
         <div className="assignment-dialog-actions">
-          <button type="button" className="button secondary" disabled={loading || saving} onClick={() => void loadPeople(true)}><RefreshCw /> Refresh responses</button>
+          {!isNativeApp() && <button type="button" className="button secondary" disabled={loading || saving} onClick={() => void loadPeople(true)}><RefreshCw /> Refresh responses</button>}
           <button type="button" className="button primary" disabled={loading || saving} onClick={() => void save()}>{saving ? "Saving…" : clearingAssignment ? "Unassign contract" : "Save assignments"}</button>
         </div>
       </section>

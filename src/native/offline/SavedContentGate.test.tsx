@@ -22,6 +22,8 @@ it('shows saved contract before account/network completion, retaining selected t
  const started=performance.now();
  const {coordinator,resolve}=await setup(`/contracts/${id}`);
  expect(await screen.findByText('Fixture show')).toBeVisible();
+ expect(screen.queryByRole('button',{name:'Refresh'})).toBeNull();
+ expect(screen.getByText(/Read only/)).toBeVisible();
  const savedAt=performance.now()-started;
  fireEvent.click(screen.getByRole('button',{name:'Checklist'}));
  expect(screen.getByText('0 of 0 tasks complete')).toBeVisible();

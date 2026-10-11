@@ -131,9 +131,13 @@ freshness line distinguishes saved content, updating, successful refresh and err
 
 Red Folder resources and contract photos/documents have explicit download/remove
 controls. Only selected attachments are retained; saved PDFs open with the bundled
-reader. The personal iPhone Settings tab organizes profile details and account
-controls, Appearance, and Downloads, with refresh/status at the bottom. Downloads
-shows storage usage and Clear downloads. The website keeps its Profile page. The initial limits are
+reader. The personal iPhone Settings tab is a navigation menu with separate
+Profile, Appearance, Downloads, Notifications, and Status screens. Only Status
+contains the manual Refresh button; other saved-content screens retain passive
+freshness/read-only indicators and automatic refresh. Downloads shows storage
+usage and Clear downloads. Submenus use native Back when available, with a single
+web fallback otherwise. Account changes discard local form drafts. The website
+keeps its combined Profile page. The initial limits are
 250 MiB of app storage and 20 MiB per file. Offline access requires an existing
 session and an active-account verification within seven days; sign-out, account
 switch or known inactive status clears the account's copies.
