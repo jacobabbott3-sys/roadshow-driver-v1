@@ -37,6 +37,9 @@ D90000000000000000000001 = {isa = PBXBuildFile; fileRef = D800000000000000000000
 D90000000000000000000002 = {isa = PBXBuildFile; fileRef = D80000000000000000000002; };
 D90000000000000000000003 = {isa = PBXBuildFile; fileRef = D80000000000000000000003; };
 D90000000000000000000004 = {isa = PBXBuildFile; fileRef = D80000000000000000000004; };
+D90000000000000000000005 = {isa = PBXBuildFile; fileRef = D80000000000000000000005; };
+D90000000000000000000006 = {isa = PBXBuildFile; fileRef = D80000000000000000000006; };
+D90000000000000000000007 = {isa = PBXBuildFile; fileRef = D80000000000000000000007; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +72,9 @@ D80000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourceco
 D80000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/OfflineStore.swift"; sourceTree = SOURCE_ROOT; };
 D80000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/OfflineFileStore.swift"; sourceTree = SOURCE_ROOT; };
 D80000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/RoadshowOfflinePlugin.swift"; sourceTree = SOURCE_ROOT; };
+D80000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/OfflineBackgroundReader.swift"; sourceTree = SOURCE_ROOT; };
+D80000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/OfflineCredentialStore.swift"; sourceTree = SOURCE_ROOT; };
+D80000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/OfflineBackgroundScheduler.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +95,9 @@ B700000000000000000000002B = {isa = PBXFrameworksBuildPhase; buildActionMask = 2
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+D80000000000000000000007,
+D80000000000000000000006,
+D80000000000000000000005,
 D80000000000000000000004,
 D80000000000000000000003,
 D80000000000000000000002,
@@ -235,6 +244,9 @@ B700000000000000000000002C = {isa = PBXResourcesBuildPhase; buildActionMask = 21
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+D90000000000000000000007,
+D90000000000000000000006,
+D90000000000000000000005,
 D90000000000000000000004,
 D90000000000000000000003,
 D90000000000000000000002,

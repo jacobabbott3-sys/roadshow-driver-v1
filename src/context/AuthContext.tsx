@@ -1,3 +1,5 @@
+import {persistedOwner} from "../native/offline/sessionOwner";
+import {PUBLIC_SUPABASE_URL} from "../lib/nativeConfig";
 import type { Session, User } from "@supabase/supabase-js";
 import {
   createContext,
@@ -20,6 +22,7 @@ type AuthValue = {
   loading: boolean;
   nativeProfileVerified: boolean;
   sessionResolved: boolean;
+  savedSessionOwner: string | null;
   profileVerification: "pending" | "verified" | "unavailable" | "inactive";
   error: string | null;
   signIn: (email: string, password: string, stayLoggedIn: boolean) => Promise<void>;
@@ -42,6 +45,11 @@ function applyAppearance(theme: ThemePreference, color: ColorScheme) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [savedSessionOwner,setSavedSessionOwner]=useState<string|null>(()=>{
+    if(!isNativeApp())return null;
+    if(localStorage.getItem("roadshow-stay-logged-in")==="false"&&sessionStorage.getItem("roadshow-session-active")!=="true")return null;
+    return persistedOwner(localStorage.getItem(`sb-${new URL(PUBLIC_SUPABASE_URL).hostname.split('.')[0]}-auth-token`));
+  });
   const [sessionResolved, setSessionResolved] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -114,9 +122,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.session) sessionStorage.setItem("roadshow-session-active", "true");
       }
       setLoading(false);
+      setSavedSessionOwner(data.session?.user.id??null);
       setSessionResolved(true);
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => {setSession(next);setSavedSessionOwner(next?.user.id??null);});
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -136,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthValue>(() => ({
     session,
     sessionResolved,
+    savedSessionOwner,
     profileVerification: profile?.is_active === false ? "inactive" : loading || nativePending ? "pending" : verifiedUserId === session?.user.id ? "verified" : "unavailable",
     user: session?.user ?? null,
     profile,
@@ -171,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (updateError) throw updateError;
       await refreshProfile();
     },
-  }), [session, sessionResolved, profile, loading, nativePending, verifiedUserId, error, refreshProfile]);
+  }), [session, sessionResolved, savedSessionOwner, profile, loading, nativePending, verifiedUserId, error, refreshProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

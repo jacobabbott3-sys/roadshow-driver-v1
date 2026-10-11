@@ -39,7 +39,7 @@ export class OfflineCoordinator {
  refresh(_reason:'launch'|'resume'|'route'|'manual'|'mutation'|'periodic',_contractId?:string):Promise<void>{
   void _reason;void _contractId;
   if(this.pending)return this.pending;
-  if(!this.state.owner||!this.verifiedAt)return Promise.resolve();
+  if(!this.state.owner||!this.verifiedAt){this.display(this.state.snapshot,'saved');return Promise.resolve();}
   const {owner,generation}=this.state;this.display(this.state.snapshot,'saved',true);
   const task=(async()=>{
    try{
@@ -101,5 +101,6 @@ export class OfflineCoordinator {
    }
   }catch{/* Optional refresh failure preserves the previous usable file. */}
  }
+ async mirrorAccess(token:string,expiresAt:number,apiKey:string){const {generation}=this.state;if(!generation||!this.verifiedAt)return;await this.serial(async()=>{if(this.state.generation===generation)await this.plugin.setAccess({generation,token,expiresAt,apiKey});});}
  async updateFiles(){const {generation}=this.state;if(!generation)return;try{const [manifest,usage]=await Promise.all([this.plugin.manifest({generation}),this.plugin.usage({generation})]);if(this.state.generation===generation){this.state={...this.state,files:manifest.files,usage};this.emit();}}catch{/* Snapshot remains usable when optional storage is unavailable. */}}
 }

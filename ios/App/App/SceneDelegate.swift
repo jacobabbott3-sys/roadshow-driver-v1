@@ -19,6 +19,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         (window?.rootViewController as? NativeShellContainer)?.activateShell()
     }
 
+    func sceneDidEnterBackground(_ scene: UIScene) { OfflineBackgroundScheduler.schedule() }
+
     func sceneWillResignActive(_ scene: UIScene) {
         (window?.rootViewController as? NativeShellContainer)?.suspendShell()
     }

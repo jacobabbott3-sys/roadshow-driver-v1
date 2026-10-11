@@ -10,9 +10,9 @@ import { LoadingScreen } from "./LoadingScreen";
 import { isNativeApp } from "../lib/nativePlatform";
 
 export function ProtectedRoute() {
-  const { user, profile, loading, nativeProfileVerified, refreshProfile } = useAuth();
-  const {state}=useOffline(),location=useLocation();
-  if (user && sessionStorage.getItem("roadshow-auth-flow") !== "invite" && profile?.is_active !== false && isNativeApp() && state?.snapshot && canReadSaved(state.snapshot,user.id,Date.now()) && savedRoute(location.pathname)) return <SavedContentGate owner={user.id}/>;
+  const { user, profile, loading, nativeProfileVerified, refreshProfile, savedSessionOwner } = useAuth();
+  const {state}=useOffline(),location=useLocation();const savedOwner=user?.id||savedSessionOwner;
+  if (savedOwner && sessionStorage.getItem("roadshow-auth-flow") !== "invite" && profile?.is_active !== false && isNativeApp() && state?.snapshot && canReadSaved(state.snapshot,savedOwner,Date.now()) && savedRoute(location.pathname)) return <SavedContentGate owner={savedOwner}/>;
   if (loading) return <LoadingScreen />;
   if (user && sessionStorage.getItem("roadshow-auth-flow") === "invite") return <Navigate to="/update-password" replace />;
   if (!user) return <Navigate to="/login" replace />;
