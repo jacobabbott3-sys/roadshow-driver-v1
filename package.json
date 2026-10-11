@@ -9,7 +9,7 @@
     "dev": "vite",
     "build": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test src/lib/*.test.ts src/native/*.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/*.test.ts src/native/*.test.ts src/native/offline/*.test.ts",
     "test:ui": "vitest run",
     "preview": "vite preview",
     "test:native": "node --experimental-strip-types --test scripts/ios-build-pipeline.test.mjs",

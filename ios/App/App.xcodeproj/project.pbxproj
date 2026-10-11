@@ -33,6 +33,10 @@ B7000000000000000000000017 = {isa = PBXBuildFile; fileRef = B7000000000000000000
 B700000000000000000000000E = {isa = PBXBuildFile; fileRef = B7000000000000000000000004; };
 B7000000000000000000000019 = {isa = PBXBuildFile; fileRef = B7000000000000000000000005; };
 B7000000000000000000000031 = {isa = PBXBuildFile; fileRef = B7000000000000000000000028; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+D90000000000000000000001 = {isa = PBXBuildFile; fileRef = D80000000000000000000001; };
+D90000000000000000000002 = {isa = PBXBuildFile; fileRef = D80000000000000000000002; };
+D90000000000000000000003 = {isa = PBXBuildFile; fileRef = D80000000000000000000003; };
+D90000000000000000000004 = {isa = PBXBuildFile; fileRef = D80000000000000000000004; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +65,10 @@ B7000000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = source
 B7000000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/NativeShell/RoadshowWidgetsPlugin.swift"; sourceTree = SOURCE_ROOT; };
 B7000000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoadshowWidgets/RoadshowWidgets.swift"; sourceTree = SOURCE_ROOT; };
 B7000000000000000000000028 = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = RoadshowWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+D80000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/OfflineModels.swift"; sourceTree = SOURCE_ROOT; };
+D80000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/OfflineStore.swift"; sourceTree = SOURCE_ROOT; };
+D80000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/OfflineFileStore.swift"; sourceTree = SOURCE_ROOT; };
+D80000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Offline/RoadshowOfflinePlugin.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,6 +89,10 @@ B700000000000000000000002B = {isa = PBXFrameworksBuildPhase; buildActionMask = 2
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+D80000000000000000000004,
+D80000000000000000000003,
+D80000000000000000000002,
+D80000000000000000000001,
 B7000000000000000000000001,
 B7000000000000000000000002,
 B7000000000000000000000003,
@@ -223,6 +235,10 @@ B700000000000000000000002C = {isa = PBXResourcesBuildPhase; buildActionMask = 21
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+D90000000000000000000004,
+D90000000000000000000003,
+D90000000000000000000002,
+D90000000000000000000001,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 B700000000000000000000000B,
 B700000000000000000000000C,
