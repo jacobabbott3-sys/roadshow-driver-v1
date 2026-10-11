@@ -2,7 +2,7 @@ import { nextAssignment, assignmentDate } from "../lib/nextAssignment";
 import { ArrowRight, BriefcaseBusiness, CalendarDays, FolderOpen, MapPin, MessageCircle, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useAsync } from "../hooks/useAsync";
+import { useSavedQuery } from "../native/offline/useSavedRead";
 import { getContracts, statusLabel } from "../lib/driverData";
 import { ReleaseBadge } from "../components/ReleaseBadge";
 import { parseDateOnly } from "../lib/calendarDate";
@@ -17,7 +17,7 @@ const tiles = [
 
 export function HomePage() {
   const { profile } = useAuth();
-  const contracts = useAsync(getContracts, []);
+  const contracts = useSavedQuery(getContracts, [], snapshot=>Object.values(snapshot.contracts).map(s=>s.contract));
   const first = profile?.full_name?.split(" ")[0] || "there";
   const next = nextAssignment(contracts.data || []);
   const signing = next?.show.event_type === "signing";

@@ -197,3 +197,8 @@ html[data-native="ios"] .native-loading img { margin:auto; }
 html[data-native="ios"] .native-loading h1 { font-size:28px; font-weight:700; letter-spacing:0; }
 html[data-native="ios"] .native-loading p { color:var(--muted); margin:0; font-size:14px; }
 html[data-native="ios"] .native-loading .loader { width:20px; height:20px; border-width:2px; }
+
+.offline-freshness { display:flex; flex-wrap:wrap; gap:.4rem .8rem; align-items:center; padding:.6rem 1rem; color:var(--muted); font-size:.8rem; }
+.offline-freshness small { flex:1; }
+.offline-freshness button { color:var(--text); background:transparent; border:0; padding:.4rem; }
+.offline-shell .app-main { min-width:0; }

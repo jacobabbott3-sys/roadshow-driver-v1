@@ -4,14 +4,14 @@ import { Link, useParams } from "react-router-dom";
 import { BackButton } from "../components/BackButton";
 import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
-import { useAsync } from "../hooks/useAsync";
+import { useSavedQuery } from "../native/offline/useSavedRead";
 import { Contract, getContracts, getShowLinks } from "../lib/driverData";
 import { sortList, type SortMode } from "../lib/listControls";
 
-export function SigningGroupPage() {
-  const { showId = "" } = useParams();
+export function SigningGroupPage({groupId}:{groupId?:string}={}) {
+  const params=useParams();const showId=groupId||params.showId||"";
   const [sort, setSort] = useState<SortMode>("date");
-  const query = useAsync(async () => {
+  const query = useSavedQuery(async () => {
     const [contracts, links] = await Promise.all([getContracts(), getShowLinks()]);
     const byShow = new Map(contracts.filter((contract) => contract.show.event_type === "signing").map((contract) => [contract.show.id, contract]));
     const neighbors = new Map<string, string[]>();
@@ -31,7 +31,11 @@ export function SigningGroupPage() {
       for (const neighbor of neighbors.get(id) || []) if (!seen.has(neighbor)) queue.push(neighbor);
     }
     return group.sort((a, b) => (a.show.signing_at || a.show.starts_on).localeCompare(b.show.signing_at || b.show.starts_on));
-  }, [showId]);
+  }, [showId],snapshot=>{
+    const ids=new Set([showId]);let changed=true;
+    while(changed){changed=false;for(const link of snapshot.links)if(ids.has(link.show_id)||ids.has(link.linked_show_id)){const size=ids.size;ids.add(link.show_id);ids.add(link.linked_show_id);changed ||= ids.size!==size;}}
+    return Object.values(snapshot.contracts).map(s=>s.contract).filter(c=>ids.has(c.show.id)&&c.show.event_type==='signing');
+  });
   const title = query.data?.map((contract) => contract.show.artist || contract.show.name).join(" & ") || "Linked signings";
   const contracts = sortList(
     query.data || [],

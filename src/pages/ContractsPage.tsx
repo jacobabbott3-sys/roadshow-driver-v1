@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { PageState } from "../components/PageState";
 import { ListSearch } from "../components/ListSearch";
 import { SortButton } from "../components/SortButton";
-import { useAsync } from "../hooks/useAsync";
+import { useSavedQuery } from "../native/offline/useSavedRead";
 import { ChecklistProgress, Contract, getContractChecklistStatuses, getContracts, getShowLinks, scheduleDate, ShowLink, statusLabel } from "../lib/driverData";
 import { matchesListSearch, sortList, type SortMode } from "../lib/listControls";
 
@@ -13,12 +13,15 @@ type ContractGroup = { id: string; contracts: Contract[] };
 export function ContractsPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("date");
-  const query = useAsync(async () => {
+  const query = useSavedQuery(async () => {
     const [contracts, links] = await Promise.all([getContracts(), getShowLinks()]);
     const uniqueContracts = [...new Map(contracts.map((contract) => [contract.show.id, contract])).values()];
     const statuses = await getContractChecklistStatuses(uniqueContracts);
     return { groups: groupContracts(uniqueContracts, links), statuses };
-  }, []);
+  }, [], snapshot=>({groups:groupContracts(Object.values(snapshot.contracts).map(s=>s.contract),snapshot.links),statuses:Object.fromEntries(Object.values(snapshot.contracts).map(s=>{
+    const items=s.checklist.sections.flatMap(section=>section.items),completed=items.filter(i=>i.response?.completed).length;
+    return [s.contract.id,{label:items.length&&completed===items.length?'Checklist complete':s.checklist.sections.find(section=>section.items.some(i=>!i.response?.completed))?.title||'Waiting for checklist',completed,total:items.length,complete:items.length>0&&completed===items.length}];
+  }))}));
   const groups = query.data?.groups || [];
   const visibleGroups = sortList(
     groups.filter((group) => matchesListSearch(

@@ -1,3 +1,5 @@
+import { useOffline } from "../native/offline/context";
+import { useSavedQuery } from "../native/offline/useSavedRead";
 import { PhotoCapture } from "../native/PhotoCapture";
 import { isNativeApp } from "../lib/nativePlatform";
 import { FollowChecklist } from "../native/FollowChecklist";
@@ -35,16 +37,21 @@ import { supabase } from "../lib/supabase";
 import { launchConfetti } from "../lib/confetti";
 import { uploadContractPhoto, type UploadClient } from "../lib/imageUpload";
 type Tab = "info" | "checklist" | "photos" | "sign";
-export function ContractDetailPage() {
-  const { id = "" } = useParams(),
+export function ContractDetailPage({contractId}:{contractId?:string}={}) {
+  const params=useParams();const id=contractId||params.id||"";
+  const {state:offline,coordinator}=useOffline();
+  const auth=useAuth();
+  const canMutate=!coordinator||!!(offline?.details[id]?.canMutate&&auth.nativeProfileVerified&&auth.profile?.is_active&&!auth.loading);
+  const
     [searchParams] = useSearchParams(),
     { user } = useAuth(),
-    contract = useAsync(() => getContract(id), [id]),
-    checklist = useAsync(() => getChecklist(id), [id]),
-    photos = useAsync(() => getContractPhotos(id), [id]),
-    linkedSignings = useAsync(
+    contract = useSavedQuery(() => getContract(id), [id], s=>s.contracts[id]?.contract??null),
+    checklist = useSavedQuery(() => getChecklist(id), [id], s=>s.contracts[id]?.checklist??null),
+    photos = useAsync(() => canMutate ? getContractPhotos(id) : Promise.resolve([]), [id,canMutate]),
+    linkedSignings = useSavedQuery(
       () => contract.data?.show.id ? getLinkedSigningContracts(contract.data.show.id) : Promise.resolve([]),
       [contract.data?.show.id],
+      s=>Object.values(s.contracts).map(v=>v.contract).filter(c=>s.links.some(l=>(l.show_id===contract.data?.show.id&&l.linked_show_id===c.show.id)||(l.linked_show_id===contract.data?.show.id&&l.show_id===c.show.id))),
     );
   const [tab, setTab] = useState<Tab>(searchParams.get("tab")==="checklist"?"checklist":"info"),
     [busy, setBusy] = useState(""),
@@ -85,6 +92,7 @@ export function ContractDetailPage() {
     return bySlot;
   }, [photos.data]);
   async function toggle(itemId: string, value: boolean) {
+    if (!canMutate) return;
     if (!checklist.data?.id) return;
     const completesChecklist = value && items.length > 0 && !items.find((item) => item.id === itemId)?.response?.completed && done + 1 === items.length;
     setBusy(itemId);
@@ -101,6 +109,7 @@ export function ContractDetailPage() {
     }
   }
   async function sign() {
+    if (!canMutate) return;
     if (!signature.trim()) return;
     setBusy("sign");
     const { error } = await supabase.rpc("sign_my_contract", {
@@ -112,15 +121,18 @@ export function ContractDetailPage() {
     else {
       setMessage("Contract signed successfully.");
       await contract.refresh();
+      document.dispatchEvent(new Event("roadshow:contract-saved"));
     }
   }
   async function submitForReview() {
+    if (!canMutate) return;
     setBusy("submit");
     setMessage("");
     try {
       await submitChecklist(id);
       setMessage("Checklist submitted to the admin team for review.");
       await contract.refresh();
+      document.dispatchEvent(new Event("roadshow:contract-saved"));
       document.dispatchEvent(new Event("roadshow:checklist-saved"));
     } catch (error) {
       setMessage(
@@ -131,6 +143,7 @@ export function ContractDetailPage() {
     }
   }
   async function upload(file: File, slot: string) {
+    if (!canMutate) return;
     setBusy(slot);
     setMessage("");
     try {
@@ -198,7 +211,7 @@ export function ContractDetailPage() {
                 </small>
               </div>
             </header>
-            <FollowChecklist id={id} completed={done} total={items.length} />
+            {canMutate && <FollowChecklist id={id} completed={done} total={items.length} />}
             <div className="contract-tabs">
               {(
                 ([
@@ -291,7 +304,7 @@ export function ContractDetailPage() {
                   </p>
                 ) : (
                   <>
-                    {checklist.data.sections.map((section) => (
+                    {checklist.data.sections.map((section) => !canMutate ? <section className="checklist-section" key={section.id}><h3>{section.title}</h3>{section.items.map(item=><div className="checklist-item" key={item.id}><span>{item.response?.completed?'✓':'○'} {item.title}</span>{item.instructions&&<p>{item.instructions}</p>}{item.response?.note&&<p>{item.response.note}</p>}{item.response?.review_status&&<small>{statusLabel(item.response.review_status)} {item.response.review_note}</small>}</div>)}</section> : (
                       <ChecklistSectionView
                         key={section.id}
                         section={section}
@@ -300,7 +313,7 @@ export function ContractDetailPage() {
                         onToggle={toggle}
                       />
                     ))}
-                    {isSigning ? (
+                    {!canMutate ? <p className="muted">Connect and refresh to update this checklist.</p> : isSigning ? (
                       <p className={requiredComplete ? "success review-submitted" : "muted"}>{requiredComplete ? <><Check /> Signing checklist complete—no admin approval is required.</> : "Complete the checklist as the signing progresses."}</p>
                     ) : ["submitted", "under_review"].includes(
                       contract.data.status,
@@ -356,8 +369,8 @@ export function ContractDetailPage() {
                     return <div className={`photo-slot ${photo ? "has-photo" : ""}`} key={slot}>
                       {photo ? <ImageViewer src={photo.signed_url} alt={`${slot} view`} /> : <Camera />}
                       <strong>{slot}</strong>
-                      {isNativeApp() ? <PhotoCapture key={`${user?.id}:${id}:${slot}`} slot={slot} upload={async (file, onProgress) => {
-                        if (!user) throw new Error("Sign in again before uploading.");
+                      {!canMutate ? <p className="muted">Connect and refresh to take photos.</p> : isNativeApp() ? <PhotoCapture key={`${user?.id}:${id}:${slot}`} slot={slot} upload={async (file, onProgress) => {
+                        if (!user || !canMutate) throw new Error("Verify your account before uploading.");
                         await uploadContractPhoto({ contractId: id, userId: user.id, slot, file, onProgress }, { client: supabase as unknown as UploadClient });
                         void photos.refresh();
                       }} /> : <label className="photo-upload-action">
@@ -417,7 +430,7 @@ export function ContractDetailPage() {
                       {new Date(contract.data.signed_at).toLocaleString()}
                     </p>
                   </>
-                ) : (
+                ) : !canMutate ? <p className="muted">Connect and refresh to sign this contract.</p> : (
                   <>
                     <p className="muted">
                       Typing your full legal name records your acknowledgement

@@ -31,9 +31,10 @@ export class OfflineCoordinator {
  verify(owner:string,verifiedAt:number){if(this.state.owner===owner)this.verifiedAt=verifiedAt;}
  suspend(){this.verifiedAt=0;this.display(this.state.snapshot,'saved');}
  async deactivate(_reason:'signout'|'switch'|'inactive'|'session-removed'){
-  this.verifiedAt=0;this.pending=null;this.state=initial();this.emit();await this.serial(()=>this.plugin.clear());
+  void _reason;this.verifiedAt=0;this.pending=null;this.state=initial();this.emit();await this.serial(()=>this.plugin.clear());
  }
  refresh(_reason:'launch'|'resume'|'route'|'manual'|'mutation'|'periodic',_contractId?:string):Promise<void>{
+  void _reason;void _contractId;
   if(this.pending)return this.pending;
   if(!this.state.owner||!this.verifiedAt)return Promise.resolve();
   const {owner,generation}=this.state;this.display(this.state.snapshot,'saved',true);

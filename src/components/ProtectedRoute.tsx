@@ -1,3 +1,8 @@
+import { useOffline } from "../native/offline/context";
+import { canReadSaved } from "../native/offline/model";
+import { SavedContentGate } from "../native/offline/SavedContentGate";
+import { savedRoute } from "../native/offline/routes";
+import { useLocation } from "react-router-dom";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { InactiveAccountPage } from "../pages/InactiveAccountPage";
@@ -6,6 +11,8 @@ import { isNativeApp } from "../lib/nativePlatform";
 
 export function ProtectedRoute() {
   const { user, profile, loading, nativeProfileVerified, refreshProfile } = useAuth();
+  const {state}=useOffline(),location=useLocation();
+  if (user && sessionStorage.getItem("roadshow-auth-flow") !== "invite" && profile?.is_active !== false && isNativeApp() && state?.snapshot && canReadSaved(state.snapshot,user.id,Date.now()) && savedRoute(location.pathname)) return <SavedContentGate owner={user.id}/>;
   if (loading) return <LoadingScreen />;
   if (user && sessionStorage.getItem("roadshow-auth-flow") === "invite") return <Navigate to="/update-password" replace />;
   if (!user) return <Navigate to="/login" replace />;
