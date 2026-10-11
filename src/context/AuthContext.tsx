@@ -19,6 +19,8 @@ type AuthValue = {
   profile: Profile | null;
   loading: boolean;
   nativeProfileVerified: boolean;
+  sessionResolved: boolean;
+  profileVerification: "pending" | "verified" | "unavailable" | "inactive";
   error: string | null;
   signIn: (email: string, password: string, stayLoggedIn: boolean) => Promise<void>;
   signOut: () => Promise<void>;
@@ -40,6 +42,7 @@ function applyAppearance(theme: ThemePreference, color: ColorScheme) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [sessionResolved, setSessionResolved] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.session) sessionStorage.setItem("roadshow-session-active", "true");
       }
       setLoading(false);
+      setSessionResolved(true);
     });
     const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
     return () => data.subscription.unsubscribe();
@@ -131,6 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthValue>(() => ({
     session,
+    sessionResolved,
+    profileVerification: profile?.is_active === false ? "inactive" : loading || nativePending ? "pending" : verifiedUserId === session?.user.id ? "verified" : "unavailable",
     user: session?.user ?? null,
     profile,
     loading: loading || (isNativeApp() && nativePending),
@@ -165,7 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (updateError) throw updateError;
       await refreshProfile();
     },
-  }), [session, profile, loading, nativePending, verifiedUserId, error, refreshProfile]);
+  }), [session, sessionResolved, profile, loading, nativePending, verifiedUserId, error, refreshProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

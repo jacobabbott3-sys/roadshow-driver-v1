@@ -1,3 +1,4 @@
+import { OfflineBridge } from "./native/offline/OfflineBridge";
 import { WidgetBridge } from "./native/WidgetBridge";
 import { NativeShellBridge } from "./native/NativeShellBridge";
 import { lazy, Suspense } from "react";
@@ -39,6 +40,7 @@ export default function App() {
     <BrowserRouter>
       <NativeShellBridge>
       <WidgetBridge>
+      <OfflineBridge>
       <Suspense fallback={<LoadingScreen label="Opening screen…" />}>
         <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -88,6 +90,7 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+    </OfflineBridge>
     </WidgetBridge>
     </NativeShellBridge>
     </BrowserRouter>
