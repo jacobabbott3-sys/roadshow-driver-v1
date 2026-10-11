@@ -1,5 +1,7 @@
+import { isNativeApp } from "../lib/nativePlatform";
+import { useShellPresentation } from "../native/useShellPresentation";
 import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 type BackButtonProps = {
   label: string;
@@ -9,6 +11,10 @@ type BackButtonProps = {
 };
 
 export function BackButton({ label, to, onClick, className = "" }: BackButtonProps) {
+  const { ready } = useShellPresentation();
+  const { pathname } = useLocation();
+  const nativeHasBack = pathname !== '/' && !/^\/(login|forgot-password|update-password|auth)(\/|$)/.test(pathname);
+  if (to && isNativeApp() && ready && nativeHasBack) return null;
   const classes = `back-button ${className}`.trim();
   const content = <><ArrowLeft aria-hidden="true" /><span>{label}</span></>;
   if (to) return <Link className={classes} to={to}>{content}</Link>;

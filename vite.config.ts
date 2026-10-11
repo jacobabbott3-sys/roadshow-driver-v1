@@ -16,7 +16,18 @@ export default defineConfig(({ mode }) => {
     ? requestedVersion.replace(/[^0-9.]/g, '') || '5'
     : requestedVersion.replace(/^v/i, '').toUpperCase()
   return {
-    plugins: [react()],
+    plugins: [
+      // Native UI uses SF/system fonts; omit its otherwise blocking remote import.
+      ...(mode === 'ios' ? [{
+        name: 'native-system-fonts',
+        enforce: 'pre' as const,
+        transform(source: string, id: string) {
+          if (!id.endsWith('/src/styles.css')) return;
+          return source.replace(/^@import url\("https:\/\/fonts\.googleapis\.com[^\n]+\);\s*/, '');
+        },
+      }] : []),
+      react(),
+    ],
     build: { outDir: mode === 'ios' ? 'dist-ios' : 'dist' },
     test: {
       environment: 'jsdom',

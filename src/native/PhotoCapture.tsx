@@ -66,7 +66,7 @@ export function PhotoCapture({ slot, upload }: Props) {
 
   return <div className="native-photo-capture" role="group" aria-label={`${slot} photo`}>
     <p id={helpId} className="muted">{instructions[slot] || `Take a clear view of ${slot}.`}</p>
-    {preview && <img className="native-photo-preview" src={preview} alt={`${slot} photo preview`} />}
+    {file && preview && <img className="native-photo-preview" src={preview} alt={`${slot} photo preview`} />}
     <div className="native-photo-actions">
       <label className="photo-upload-action">
         <span>Take photo</span>

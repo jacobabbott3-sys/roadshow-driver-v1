@@ -326,3 +326,33 @@ security prompt, agreement, signing change or device unlock was required. The
 photo-capture assets from `2b6d2ea` were synced before this Run. Device behavior
 acceptance still awaits Jacob's camera/library/preview/cancel checks. Retry should
 only be exercised on a legitimate intended photo upload, not production fixtures.
+
+## Navigation and startup polish — October 10, 2026
+
+Route Back links hide when the native Back control is ready; web fallback,
+sign-in recovery links and local actions such as All chats remain available.
+LaunchScreen now uses the existing truck artwork with Roadshow Driver and native
+light/dark background colors. Native loading screens use the same artwork and
+retain accessible progress text; no minimum splash delay was added.
+
+The iOS build omits the Google Fonts CSS import because native presentation uses
+system fonts. Built-output inspection confirms it is absent from dist-ios and
+retained in the ordinary web build. Bundled code for the initial Home, Contracts,
+contract detail, Resources or Red Folder route is preloaded during account
+verification without mounting the page or fetching its protected data. This
+removes avoidable startup work; no measured cold-launch speedup is claimed.
+
+The full UI run exposed a photo-preview render race: Uploaded could appear one
+render before the old preview disappeared. Rendering now also requires an active
+selected File, so the preview disappears in the same render as success/discard.
+All 90 UI tests passed after that fix. The 63 unit and two native pipeline tests,
+web build and native sync passed; lint retained the three known warnings.
+
+Offline behavior remains unimplemented pending review of
+[the proposed design](superpowers/specs/2026-10-10-ios-offline-design.md).
+
+Unsigned device compilation passed with Xcode 27.2; no launch-storyboard errors
+or warnings were reported. Xcode Run then installed the updated app with existing
+signing and reported “Running App on Hoid.” No new security prompts were handled.
+Jacob still needs to assess launch appearance and perceived responsiveness on the
+phone; no before/after on-device launch benchmark has been recorded.

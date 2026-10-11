@@ -114,3 +114,9 @@ camera/library actions, preview/retake, explicit Use photo, upload confirmation,
 and retry of a failed photo while the contract view remains mounted. Drafts are
 memory-only and clear on leaving the contract, account re-verification, or app
 termination. Device acceptance is pending; the website photo flow is unchanged.
+
+Native route navigation suppresses duplicate web Back links while the iOS shell
+is ready. Recovery screens and local actions keep their controls. The personal
+app's launch and loading screens share the existing truck branding; its build uses
+system fonts without the website's remote font import. Offline contracts and
+selected resources are still proposed, not available in the installed app yet.

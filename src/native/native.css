@@ -191,3 +191,9 @@ html[data-native="ios"] .detail-panel[hidden] { display:none; }
 html[data-native="ios"] .native-photo-actions input { display:block; position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 html[data-native="ios"] .native-photo-actions label:focus-within { outline:2px solid currentColor; outline-offset:3px; }
 html[data-native="ios"] .native-photo-capture { padding:.5rem; box-sizing:border-box; }
+
+html[data-native="ios"] .native-loading { background:var(--cream); color:var(--ink); gap:18px; padding:24px; }
+html[data-native="ios"] .native-loading img { margin:auto; }
+html[data-native="ios"] .native-loading h1 { font-size:28px; font-weight:700; letter-spacing:0; }
+html[data-native="ios"] .native-loading p { color:var(--muted); margin:0; font-size:14px; }
+html[data-native="ios"] .native-loading .loader { width:20px; height:20px; border-width:2px; }
