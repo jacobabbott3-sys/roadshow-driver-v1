@@ -1,3 +1,5 @@
+import { PhotoCapture } from "../native/PhotoCapture";
+import { isNativeApp } from "../lib/nativePlatform";
 import { FollowChecklist } from "../native/FollowChecklist";
 import {
   Camera,
@@ -341,8 +343,8 @@ export function ContractDetailPage() {
                 )}
               </section>
             )}
-            {tab === "photos" && (
-              <section className="detail-panel">
+            {(tab === "photos" || isNativeApp()) && (
+              <section className="detail-panel" hidden={tab !== "photos"}>
                 <h2>Required photos</h2>
                 <p className="muted">
                   Upload a clear view from each side. Photos stay private to
@@ -354,11 +356,15 @@ export function ContractDetailPage() {
                     return <div className={`photo-slot ${photo ? "has-photo" : ""}`} key={slot}>
                       {photo ? <ImageViewer src={photo.signed_url} alt={`${slot} view`} /> : <Camera />}
                       <strong>{slot}</strong>
-                      <label className="photo-upload-action">
+                      {isNativeApp() ? <PhotoCapture key={`${user?.id}:${id}:${slot}`} slot={slot} upload={async (file, onProgress) => {
+                        if (!user) throw new Error("Sign in again before uploading.");
+                        await uploadContractPhoto({ contractId: id, userId: user.id, slot, file, onProgress }, { client: supabase as unknown as UploadClient });
+                        void photos.refresh();
+                      }} /> : <label className="photo-upload-action">
                         <span>{busy === slot ? `Uploading… ${uploadProgress[slot] || 0}%` : photo ? "Replace photo" : "Choose or take photo"}</span>
                         <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" disabled={busy === slot} onChange={(event) => { const input = event.currentTarget; const selected = input.files?.[0]; if (selected) void upload(selected, slot).finally(() => { input.value = ""; }); }} />
                         <Upload />
-                      </label>
+                      </label>}
                       {busy === slot && <progress className="photo-upload-progress" max="100" value={uploadProgress[slot] || 0} aria-label={`${slot} upload progress`} />}
                     </div>;
                   })}

@@ -178,3 +178,16 @@ html[data-native="ios"] .list-search input { background: transparent; }
 html[data-native="ios"] .tile-icon { background: color-mix(in srgb,var(--green) 12%,var(--paper)); }
 html[data-native="ios"] :is(input,textarea)::placeholder { color: var(--muted); opacity: 1; }
 html[data-native="ios"] .list-search:focus-within { outline: 3px solid var(--green); outline-offset: 2px; }
+
+/* Guided capture remains inside the existing required photo slots. */
+html[data-native="ios"] .native-photo-capture { width:100%; text-align:left; }
+html[data-native="ios"] .native-photo-capture p { margin: .5rem 0; }
+html[data-native="ios"] .native-photo-preview { width:100%; max-height:280px; object-fit:contain; border-radius:12px; }
+html[data-native="ios"] .native-photo-actions { display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0; }
+html[data-native="ios"] .native-photo-actions .photo-upload-action { position:relative; }
+html[data-native="ios"] .native-photo-capture progress { width:100%; }
+html[data-native="ios"] .native-photo-capture [role="status"]:empty { display:none; }
+html[data-native="ios"] .detail-panel[hidden] { display:none; }
+html[data-native="ios"] .native-photo-actions input { display:block; position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+html[data-native="ios"] .native-photo-actions label:focus-within { outline:2px solid currentColor; outline-offset:3px; }
+html[data-native="ios"] .native-photo-capture { padding:.5rem; box-sizing:border-box; }

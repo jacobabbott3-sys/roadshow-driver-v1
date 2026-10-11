@@ -286,3 +286,34 @@ Device installation: Xcode reported “Running App on Hoid” after Run with the
 embedded extension. Device Hub screen sharing stayed off to preserve software
 keyboard behavior. User acceptance of the widget gallery, owned-assignment Follow
 flow, Dynamic Island/Lock Screen and accessibility remains pending.
+
+
+## Smarter photo capture — local implementation, 2026-10-11
+
+Recovered shell/filesystem access on the existing `feat/ios-personal-public`
+checkout at `4bf6c35`. Xcode is usable with the documented per-command
+`DEVELOPER_DIR`; global tool selection still points to Command Line Tools.
+Existing project signing edits, icon edits and extra config XML files were retained.
+
+The approved personal-app photo flow keeps Front, Back, Side 1 and Side 2 in
+Photos. Each slot includes shot instructions, Take photo and Choose from library,
+a local preview with Retake/Use photo/Discard photo, upload stage progress,
+Uploaded confirmation and retry retaining the selected File after failure.
+Existing private upload/validation/cleanup services are reused. The browser flow
+is unchanged. No backend, signing, entitlement or dependency changes are required.
+Drafts survive contract-tab switches, but remain memory-only: leaving the route,
+account re-verification (which deliberately unmounts protected content), or app
+termination clears them. This is not a durable offline photo queue.
+
+Physical-device acceptance remains required: first camera permission, camera and
+library cancellation/HEIC conversion, preview/retake, background/account recheck,
+and normal authorized upload/retry. In particular, first camera authorization can
+trigger account re-verification; retaining a picker result across that transition
+is unverified. Do not create production photo fixtures or alter checklist answers
+for this test. Do not weaken the account gate to preserve a photo draft.
+
+Local verification: 63 unit tests, 84 UI tests (including four new capture tests),
+and two native pipeline tests passed. Web build, `ios:sync`, and unsigned generic
+iOS device compilation passed with Xcode 27.2 (27B5028f). Lint retained exactly
+three known warnings and no errors; native compilation retained the documented
+upstream plugin warnings. This update has not been installed or device-tested.

@@ -107,3 +107,10 @@ active-checklist Live Activity. They show only the signed-in user’s own assign
 with minimal local presentation data and stale/expired states. Progress refreshes
 while the app is active; no closed-app server updates are promised. Physical-device
 acceptance is tracked in [the build record](ios-personal-build.md).
+
+
+In the personal iPhone build, required photo slots include shot guidance, separate
+camera/library actions, preview/retake, explicit Use photo, upload confirmation,
+and retry of a failed photo while the contract view remains mounted. Drafts are
+memory-only and clear on leaving the contract, account re-verification, or app
+termination. Device acceptance is pending; the website photo flow is unchanged.
