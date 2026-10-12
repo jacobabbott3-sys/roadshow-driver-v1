@@ -158,3 +158,15 @@ and cancelled gestures keep the current screen. Tab roots do not swipe between
 tabs. Existing Back buttons remain. The gesture is disabled for dialogs, native
 sheets, keyboard entry and retained/failed/uploading photo drafts. It does not
 provide an interactive preview of the previous screen.
+
+### Personal Watch companion
+
+The first Watch companion is read-only: next assigned show, date, venue, checklist
+progress, and Last updated. It receives a small snapshot from the paired iPhone;
+there is no Watch login, backend connection, signing, checklist editing or upload.
+The copy is marked potentially stale after 30 minutes and hidden after six hours
+unless refreshed from newer phone data, matching the widget freshness limit.
+Signout/account changes clear or replace it when the update reaches the Watch.
+A disconnected Watch cannot immediately observe a phone signout or server
+revocation; the six-hour expiry remains the upper bound. Physical Watch installation
+and acceptance are still pending in the October 12 verification record.

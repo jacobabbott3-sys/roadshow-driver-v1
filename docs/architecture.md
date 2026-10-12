@@ -195,3 +195,29 @@ route history. Cancelled, reversed and predominantly vertical drags do nothing.
 PhotoCapture registers an owner-scoped blocker while an unsent photo exists;
 discard, successful upload or unmount removes it. No screenshots or extra WebViews
 are retained, and the existing account/role gate remains authoritative.
+
+### Personal Watch snapshot transport
+
+`WatchPhone` activates WatchConnectivity at phone startup and observes native
+offline-store configure/replace/clear notifications (including the native background
+reader's replacement). It projects only the explicit owner's saved assignments into
+`WatchSnapshot`: next nonfinal work by service/setup date, title, venue, formatted
+date, checklist counts and original fetched time. No Supabase token, credential,
+private URL, photo, checklist note, pay or full contract crosses this boundary.
+Authentication and source validation remain on iPhone. Invalid/expired sources
+produce a clearing envelope.
+
+Application context retains only the latest envelope; an immediate message also
+delivers it when reachable. Each phone update has a persisted monotonic revision.
+The Watch rejects older/equal revisions, including after account-switch/clear
+envelopes and restart. A separate persisted revision watermark prevents an old disk
+copy being reloaded after a failed newer write. The Watch's private snapshot file
+is protected until first unlock and its directory excluded from backup. Original
+fetched time is preserved across resends, stale at 30 minutes and expired by six
+hours (also bounded by the phone's account lease). Expired data is hidden on the
+Watch's periodic timeline. No backend access or new capability entitlement is added.
+
+The `RoadshowWatch` target is embedded in the personal iPhone app, requires watchOS
+11+, and depends on the iPhone. Personal team selection remains local to each
+checkout. Run `node scripts/test-watch-native.mjs` with the selected Xcode developer
+directory for synthetic transport/model checks.

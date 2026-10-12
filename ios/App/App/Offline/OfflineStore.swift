@@ -23,11 +23,13 @@ final class OfflineStore {
   if previous != owner {try clear()}
   self.owner=owner;self.generation=generation
   try Data(owner.utf8).write(to:root.appendingPathComponent("owner"),options:.atomic);try protect(root.appendingPathComponent("owner"))
+  NotificationCenter.default.post(name:Notification.Name("RoadshowOfflineChanged"),object:nil)
  }
  func require(_ generation:String)throws {guard owner != nil,self.generation==generation else{throw OfflineError.stale}}
  func clear()throws {
   owner=nil;generation=nil
   for url in try fm.contentsOfDirectory(at:root,includingPropertiesForKeys:nil){try fm.removeItem(at:url)}
+  NotificationCenter.default.post(name:Notification.Name("RoadshowOfflineChanged"),object:nil)
  }
  private var watermark:Double {Double((try? String(contentsOf:root.appendingPathComponent("watermark"),encoding:.utf8)) ?? "") ?? 0}
  private func mark(_ now:Double)throws {let url=root.appendingPathComponent("watermark");try Data(String(now).utf8).write(to:url,options:.atomic);try protect(url)}
@@ -53,6 +55,7 @@ final class OfflineStore {
   guard try usage()-old+data.count<=OfflinePolicy.limit else{throw OfflineError.full}
   try mark(now);try data.write(to:file,options:.atomic);try protect(file)
   try pruneFiles(snapshot:value)
+  NotificationCenter.default.post(name:Notification.Name("RoadshowOfflineChanged"),object:nil)
  }
  func usage()throws->Int {
   try fm.contentsOfDirectory(at:root,includingPropertiesForKeys:[.fileSizeKey]).reduce(0){sum,url in sum+((try? url.resourceValues(forKeys:[.fileSizeKey]).fileSize) ?? 0)}
