@@ -1,5 +1,30 @@
 # Beta 6A review and proposed rollout checklist
 
+## October 12 isolated web beta authorization
+
+The approved release uses isolated Supabase `exsquwjtqnirojntoxqv`, not production.
+Its reviewed schema, including queued-read fix `12cc178`, was installed October 8
+and verified through hosted catalog reads. The ledger has 12 entries representing
+27 source files; the final entry is `20261008193012 isolated_beta_remaining_16_12cc178`.
+Do not replay these migrations.
+
+Jacob approved publishing the fix, updated CI including six native concurrency
+regressions, and merging PR #12 into beta only. URL/key scope was confirmed for
+beta and the feature branch; preview labels are beta/6A. Jacob confirmed VAPID is
+Production-only, the beta domain tracks Preview beta, and Production tracks main.
+Actual deployed commit/backend verification remains required before authenticated
+acceptance. Vercel settings API reads returned 403.
+
+No production SQL, main/Public 5 changes, new Auth users, notifications, signing,
+test-contract writes, or uploads are authorized. The isolated backend has no
+deployed Edge Functions/webhooks/cron or push sender. Safe read-only navigation is
+authorized; further fixtures require bounded authorization. One confirmed active
+test admin exists; credentials remain with Jacob. Hosted and device acceptance
+below remain pending.
+
+The shared-backend rollout section below is historical preparation for a future
+separately authorized public release, not this isolated beta deployment.
+
 **Local preparation only. Nothing here authorizes live SQL, publication or deployment.**
 The [queued-read revocation fix](beta-6a-read-revocation-fix.md) records the
 October 8 local follow-up and native concurrency regressions; it does not clear

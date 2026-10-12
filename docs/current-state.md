@@ -1,5 +1,16 @@
 # Current release and development state
 
+## October 12 isolated web Beta 6A release handoff
+
+Jacob approved PR #12 plus reviewed queued-read fix `12cc178` for publication,
+updated CI, and merge into beta only. Isolated backend `exsquwjtqnirojntoxqv`
+already has the reviewed schema/fix (12 ledger entries covering 27 source files).
+No additional hosted migration is required. Production Supabase, main/Public 5,
+and outbound integrations remain outside this release. Deployment and hosted
+acceptance are not established by authorization. See the current override in the
+[Beta 6A checklist](releases/beta-6a-test-checklist.md); older shared-backend notes
+below do not describe the new isolated release target.
+
 Updated October 7, 2026. Historical deployment evidence below is dated October 5. Baseline source: `beta` at
 `016c4c15c7878c569ec768caf5eb38109cacba3c`. This is a repository-status record,
 not a claim that the matching database/deployment has been verified.
