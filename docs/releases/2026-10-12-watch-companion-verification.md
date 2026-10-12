@@ -54,3 +54,27 @@ if Developer Mode or another security action is requested.
 Existing iPhone signing/icon/config changes were preserved. The new target's local
 team selection is also kept out of the source commit. No remote publication or
 backend writes were performed.
+
+## Installation failure follow-up
+
+Jacob reports that Roadshow appears in the iPhone Watch app, but Install reverts
+back to Install with no displayed error. Read-only inspection confirmed shell
+access and Hoid connected; devicectl/xctrace still list no Watch destination.
+The supported pairing-list command returned an ArgumentParser validation error,
+so it did not establish pairing or watchOS version.
+
+The final embedded Watch bundle has matching companion/bundle identifiers,
+watchOS platform, device family 4, minimum watchOS 11, and valid signatures. Its
+embedded development profile contains exactly one ProvisionedDevices entry:
+Hoid's iPhone UDID. It contains no Watch UDID. This is a concrete device-coverage
+gap and the leading installation-failure hypothesis; no Watch installer rejection
+log has yet been captured, so it is not claimed as a confirmed sole root cause.
+A generic signed build was insufficient to establish Watch device eligibility.
+
+Xcode UI/Console inspection was blocked because the Mac is locked. No repeated
+installation, signing change, code change or security-setting change was attempted
+in this diagnosis. Next: unlock the Mac and keep the paired Watch nearby/unlocked,
+verify it appears as a destination, then use the already approved free-account
+profile workflow for that actual Watch. Pause separately if Developer Mode or any
+other new security approval is required. This does not establish that free signing
+is unsupported.
