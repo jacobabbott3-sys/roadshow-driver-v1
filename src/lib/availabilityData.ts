@@ -1,3 +1,4 @@
+import { saveConfirmedAgreementChange } from "./agreementData";
 import type {
   AvailabilityBatch,
   AvailabilityResponsePerson,
@@ -53,13 +54,10 @@ export async function replaceOpportunityAssignments(input: {
   driverIds: string[];
   externalNames: string[];
 }) {
-  const { error } = await supabase.rpc("admin_replace_opportunity_assignments", {
-    target_release_item: input.releaseItemId,
-    target_show_ids: [...new Set(input.showIds)],
-    target_driver_ids: [...new Set(input.driverIds)],
-    target_external_names: input.externalNames,
+  await saveConfirmedAgreementChange('assign',{
+    release_item_id: input.releaseItemId,show_ids: [...new Set(input.showIds)],
+    driver_ids: [...new Set(input.driverIds)],external_names:input.externalNames,
   });
-  if (error) throw error;
 }
 
 export async function withdrawReleaseItem(itemId: string) {

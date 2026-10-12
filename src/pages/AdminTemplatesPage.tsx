@@ -17,8 +17,8 @@ import {
 import { matchesListSearch } from "../lib/listControls";
 
 type Tab = "contract" | "checklist" | "toolbag";
-type DraftItem = { draftId: string; title: string; photo_required: boolean };
-type DraftSection = { draftId: string; title: string; items: DraftItem[] };
+type DraftItem = { draftId: string; id?:string; title: string; photo_required: boolean; required?:boolean; instructions?:string|null };
+type DraftSection = { draftId: string; id?:string; title: string; items: DraftItem[] };
 type ToolbagDraftItem = { draftId: string; name: string; quantity: number };
 type AsyncQuery<T> = { data: T | null; loading: boolean; error: string; refresh: () => Promise<void> };
 
@@ -128,9 +128,11 @@ function ChecklistTemplates({ query, search, onMessage }: { query: AsyncQuery<Aw
   }
   async function save(event: FormEvent) {
     event.preventDefault();
-    const clean = sections.map((section) => ({ title: section.title, items: section.items.filter((item) => item.title.trim()).map((item) => ({ title: item.title, photo_required: false })) }));
-    if (editing) await updateTemplate(editing, name, kind, clean); else await createTemplate(name, kind, clean);
-    reset(); setOpen(false); await query.refresh(); onMessage("Checklist template saved.");
+    const clean = sections.map((section) => ({ id:section.id,title: section.title, items: section.items.filter((item) => item.title.trim()).map((item) => ({id:item.id,title:item.title,photo_required:item.photo_required,required:item.required,instructions:item.instructions})) }));
+    try {
+      if (editing) await updateTemplate(editing, name, kind, clean); else await createTemplate(name, kind, clean);
+      reset(); setOpen(false); await query.refresh(); onMessage("Checklist template saved.");
+    } catch(error) {onMessage(error instanceof Error ? error.message : 'Unable to save checklist template.');}
   }
 
   return <>
@@ -165,7 +167,7 @@ function ChecklistTemplates({ query, search, onMessage }: { query: AsyncQuery<Aw
       <button type="button" className="text-button" onClick={() => setSections((current) => [...current, { draftId: draftId(), title: "", items: [newChecklistItem()] }])}>+ Add section</button>
       <button className="button primary"><Save /> Save template</button>
     </form>}
-    <section className="admin-section"><h2>Reusable checklists</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{!templates.length ? <div className="inline-empty">No checklist templates match “{search}”.</div> : templates.map((template) => <article className="template-row" key={template.id}><ClipboardCheck /><div><strong>{template.name}</strong><span>{template.kind} · {template.sections.length} sections</span></div><button className="icon-text-button" onClick={() => { setName(template.name); setKind(template.kind); setSections([...template.sections].sort((a, b) => a.position - b.position).map((section) => ({ draftId: draftId(), title: section.title, items: [...section.items].sort((a, b) => a.position - b.position).map((item) => newChecklistItem(item.title)) }))); setEditing(template.id); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
+    <section className="admin-section"><h2>Reusable checklists</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{!templates.length ? <div className="inline-empty">No checklist templates match “{search}”.</div> : templates.map((template) => <article className="template-row" key={template.id}><ClipboardCheck /><div><strong>{template.name}</strong><span>{template.kind} · {template.sections.length} sections</span></div><button className="icon-text-button" onClick={() => { setName(template.name); setKind(template.kind); setSections([...template.sections].sort((a, b) => a.position - b.position).map((section) => ({ ...section, draftId: draftId(), title: section.title, items: [...section.items].sort((a, b) => a.position - b.position).map((item) => ({...item,draftId:draftId()})) }))); setEditing(template.id); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
   </>;
 }
 

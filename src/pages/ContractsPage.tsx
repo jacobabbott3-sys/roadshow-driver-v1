@@ -33,7 +33,7 @@ export function ContractsPage() {
 
   return (
     <main className="page">
-      <header className="page-header"><div><p className="eyebrow">YOUR WORK</p><h1>Contracts & signings</h1><p>Assignments, schedules, checklists, and completed work.</p></div></header>
+      <header className="page-header"><div><p className="eyebrow">YOUR WORK</p><h1>Contracts & signings</h1><p>Assignments, schedules, checklists, and completed work.</p><Link to="/agreements">My agreement history</Link></div></header>
       <PageState loading={query.loading} error={query.error} empty={!groups.length}>
         <>
           <div className="list-toolbar">
@@ -63,7 +63,8 @@ export function ContractsPage() {
                   <h2>{title}</h2>
                   <p><MapPin />{venue}</p>
                   <p className="work-date"><CalendarDays />{workDate}</p>
-                  <p className="contract-current-status">Current status: <strong>{groupStatus}</strong></p>
+                  {group.contracts.some(c=>!c.current_agreement_id || !c.signed_at || !c.admin_signed_at) && <p className="notice">Current agreement acceptance pending.</p>}
+                  <p className="contract-current-status">Checklist status: <strong>{groupStatus}</strong></p>
                 </div>
                 <ArrowRight />
               </Link>
