@@ -121,3 +121,12 @@ role or access changes discard the previous review and consent, and late
 responses cannot update a replacement review. Existing beta history, revision
 confirmation and current-acceptance gates remain; backend compatibility and live
 acceptance are not established by local UI tests.
+
+### Checklist template draft identities
+
+New sections and items in checklist edits receive persistent UUIDs when added.
+Renaming, reordering, and retrying a canceled confirmation retain those IDs;
+deleting and re-adding creates a different identity even at the same position.
+Existing item IDs and their flags/instructions remain intact. This prevents the
+repository API's missing-ID position fallback from treating a replacement as an
+existing completed item. Live restored-beta compatibility remains unverified.

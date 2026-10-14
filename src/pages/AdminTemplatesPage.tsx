@@ -17,14 +17,15 @@ import {
 import { matchesListSearch } from "../lib/listControls";
 
 type Tab = "contract" | "checklist" | "toolbag";
-type DraftItem = { draftId: string; id?:string; title: string; photo_required: boolean; required?:boolean; instructions?:string|null };
-type DraftSection = { draftId: string; id?:string; title: string; items: DraftItem[] };
+type DraftItem = { draftId: string; id:string; title: string; photo_required: boolean; required?:boolean; instructions?:string|null };
+type DraftSection = { draftId: string; id:string; title: string; items: DraftItem[] };
 type ToolbagDraftItem = { draftId: string; name: string; quantity: number };
 type AsyncQuery<T> = { data: T | null; loading: boolean; error: string; refresh: () => Promise<void> };
 
 function draftId() { return `${Date.now()}-${Math.random().toString(36).slice(2)}`; }
-function newChecklistItem(title = ""): DraftItem { return { draftId: draftId(), title, photo_required: false }; }
-function initialSections(): DraftSection[] { return [{ draftId: draftId(), title: "Load Truck", items: [newChecklistItem()] }]; }
+function newChecklistItem(title = ""): DraftItem { return { draftId: draftId(), id: crypto.randomUUID(), title, photo_required: false }; }
+function newChecklistSection(title = ""): DraftSection { return { draftId: draftId(), id: crypto.randomUUID(), title, items: [newChecklistItem()] }; }
+function initialSections(): DraftSection[] { return [newChecklistSection("Load Truck")]; }
 function newToolbagItem(name = "", quantity = 1): ToolbagDraftItem { return { draftId: draftId(), name, quantity }; }
 function move<T>(items: T[], from: number, to: number) {
   if (from === to || to < 0 || to >= items.length) return items;
@@ -164,7 +165,7 @@ function ChecklistTemplates({ query, search, onMessage }: { query: AsyncQuery<Aw
         </div>)}
         <button type="button" className="text-button" onClick={() => updateSection(sectionIndex, { items: [...section.items, newChecklistItem()] })}>+ Add item</button>
       </div>)}
-      <button type="button" className="text-button" onClick={() => setSections((current) => [...current, { draftId: draftId(), title: "", items: [newChecklistItem()] }])}>+ Add section</button>
+      <button type="button" className="text-button" onClick={() => setSections((current) => [...current, newChecklistSection()])}>+ Add section</button>
       <button className="button primary"><Save /> Save template</button>
     </form>}
     <section className="admin-section"><h2>Reusable checklists</h2><PageState loading={query.loading} error={query.error} empty={!query.data?.length}>{!templates.length ? <div className="inline-empty">No checklist templates match “{search}”.</div> : templates.map((template) => <article className="template-row" key={template.id}><ClipboardCheck /><div><strong>{template.name}</strong><span>{template.kind} · {template.sections.length} sections</span></div><button className="icon-text-button" onClick={() => { setName(template.name); setKind(template.kind); setSections([...template.sections].sort((a, b) => a.position - b.position).map((section) => ({ ...section, draftId: draftId(), title: section.title, items: [...section.items].sort((a, b) => a.position - b.position).map((item) => ({...item,draftId:draftId()})) }))); setEditing(template.id); setOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil /> Edit</button></article>)}</PageState></section>
