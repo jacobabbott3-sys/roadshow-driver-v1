@@ -170,3 +170,16 @@ Signout/account changes clear or replace it when the update reaches the Watch.
 A disconnected Watch cannot immediately observe a phone signout or server
 revocation; the six-hour expiry remains the upper bound. Physical Watch installation
 and acceptance are still pending in the October 12 verification record.
+
+## Local driver agreement review candidate (October 14, 2026)
+
+The Contract tab now loads the existing versioned agreement review only when
+online mutation access is verified. Drivers review that version's full terms,
+pay, linked work and checklist requirements, type their legal name, and explicitly
+acknowledge it before accepting the displayed version ID. Legacy signatures are
+shown as historical evidence, not acceptance of the current version. Rejected
+acceptance clears acknowledgment and refreshes the review; changing versions or
+contracts also clears the name. Signing assignments expose the Contract tab too.
+
+This frontend-only review candidate does not fix checklist submission or admin
+signing/editing compatibility. It has not been published or installed.

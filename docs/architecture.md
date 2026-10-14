@@ -221,3 +221,19 @@ The `RoadshowWatch` target is embedded in the personal iPhone app, requires watc
 11+, and depends on the iPhone. Personal team selection remains local to each
 checkout. Run `node scripts/test-watch-native.mjs` with the selected Xcode developer
 directory for synthetic transport/model checks.
+
+### Isolated driver agreement compatibility candidate (October 14, 2026)
+
+The driver review port uses only `get_contract_agreement(target_contract)` and
+`accept_contract_agreement(target_contract, expected_version, acceptance_role,
+legal_name)`. Source contracts were inspected at beta commit
+`a02f5521b703931b3dfa6747e6bd1d79af3d5772`, in the agreement storage and signing
+migration definitions. Those definitions are evidence for the client interface,
+not proof of the hosted database's effective state.
+
+The review getter can issue an agreement and is mounted only from verified live
+Contract review, never a native saved/offline presentation or background reader.
+The port introduces no acceptance-gate/revision RPC, archived-checklist query,
+current-agreement column query, schema change or permission change. It replaces
+the driver's old signing RPC rather than falling back to it on error. Existing
+admin signature mutations and checklist submission remain outside this candidate.

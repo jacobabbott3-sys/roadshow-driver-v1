@@ -34,6 +34,7 @@ import {
   type ContractPhoto,
   type ChecklistSection,
 } from "../lib/driverData";
+import { AgreementSigning } from "../components/AgreementSigning";
 import { supabase } from "../lib/supabase";
 import { launchConfetti } from "../lib/confetti";
 import { uploadContractPhoto, type UploadClient } from "../lib/imageUpload";
@@ -58,7 +59,6 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
   const [tab, setTab] = useState<Tab>(searchParams.get("tab")==="checklist"?"checklist":"info"),
     [busy, setBusy] = useState(""),
     [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}),
-    [signature, setSignature] = useState(""),
     [message, setMessage] = useState("");
   const items = useMemo(
       () => checklist.data?.sections.flatMap((s) => s.items) || [],
@@ -108,22 +108,6 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
       await checklist.refresh();
     } finally {
       setBusy("");
-    }
-  }
-  async function sign() {
-    if (!canMutate) return;
-    if (!signature.trim()) return;
-    setBusy("sign");
-    const { error } = await supabase.rpc("sign_my_contract", {
-      contract_id: id,
-      signer_name: signature.trim(),
-    });
-    setBusy("");
-    if (error) setMessage(error.message);
-    else {
-      setMessage("Contract signed successfully.");
-      await contract.refresh();
-      document.dispatchEvent(new Event("roadshow:contract-saved"));
     }
   }
   async function submitForReview() {
@@ -221,7 +205,7 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
                   ["checklist", Check, "Checklist"],
                   ["photos", Camera, "Photos"],
                   ["sign", FileSignature, "Contract"],
-                ] as const).filter(([key]) => !isSigning || key === "info" || key === "checklist")
+                ] as const).filter(([key]) => !isSigning || key === "info" || key === "checklist" || key === "sign")
               ).map(([key, Icon, label]) => (
                 <button
                   className={tab === key ? "active" : ""}
@@ -388,82 +372,13 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
                 </div>
               </section>
             )}
-            {tab === "sign" && (
-              <section className="detail-panel sign-panel">
-                <FileSignature />
-                <h2>
-                  {contract.data.signed_at
-                    ? "Contract signed"
-                    : "Review and sign contract"}
-                </h2>
-                <div className="contract-terms">
-                  {contract.data.document_path&&<DownloadControl file={{kind:"contract-document",recordId:id,contractId:id}} title="Contract document"/>}
-                  <p className="eyebrow">PUBLISHED TERMS</p>
-                  {contract.data.terms ? (
-                    <p>{contract.data.terms}</p>
-                  ) : (
-                    <p className="muted">
-                      Contract terms have not been published yet. Contact your
-                      administrator before signing.
-                    </p>
-                  )}
-                </div>
-                <div className="signature-status-grid">
-                  <div className={contract.data.signed_at ? "complete" : ""}>
-                    <span>Driver signature</span>
-                    <strong>
-                      {contract.data.signature_name || "Waiting for driver"}
-                    </strong>
-                  </div>
-                  <div
-                    className={contract.data.admin_signed_at ? "complete" : ""}
-                  >
-                    <span>Admin signature</span>
-                    <strong>
-                      {contract.data.admin_signature_name ||
-                        "Waiting for administrator"}
-                    </strong>
-                  </div>
-                </div>
-                {contract.data.signed_at ? (
-                  <>
-                    <p>
-                      Signed by <strong>{contract.data.signature_name}</strong>
-                    </p>
-                    <p className="success">
-                      <Check /> Signed{" "}
-                      {new Date(contract.data.signed_at).toLocaleString()}
-                    </p>
-                  </>
-                ) : !canMutate ? <p className="muted">Connect and refresh to sign this contract.</p> : (
-                  <>
-                    <p className="muted">
-                      Typing your full legal name records your acknowledgement
-                      of the published terms above.
-                    </p>
-                    <label>
-                      Full legal name
-                      <input
-                        value={signature}
-                        onChange={(e) => setSignature(e.target.value)}
-                        placeholder="Your full name"
-                      />
-                    </label>
-                    <button
-                      className="button primary"
-                      disabled={
-                        !signature.trim() ||
-                        busy === "sign" ||
-                        !contract.data.terms
-                      }
-                      onClick={() => void sign()}
-                    >
-                      {busy === "sign" ? "Signing…" : "Accept terms and sign"}
-                    </button>
-                  </>
-                )}
-              </section>
-            )}
+            {tab === "sign" && <section className="detail-panel">
+              {contract.data.document_path && <DownloadControl file={{kind:"contract-document",recordId:id,contractId:id}} title="Contract document"/>}
+              <AgreementSigning enabled={canMutate} contractId={id} onSigned={async()=>{
+                await contract.refresh();
+                document.dispatchEvent(new Event("roadshow:contract-saved"));
+              }}/>
+            </section>}
           </>
         )}
       </PageState>
