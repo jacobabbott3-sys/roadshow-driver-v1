@@ -111,3 +111,52 @@ on later migrations. The reviewer performed read-only source review, not live or
 device testing. The implementer reran the full UI suite, build and lint, with the
 results above; the 79 unit and 2 native pipeline passes are from the initial run.
 This review does not approve publication or establish hosted compatibility.
+
+## Whole-candidate compatibility assessment after reported database test
+
+Assessed application source at `31e04022d0c80339517f14c3e3b33497ff11ffbb`,
+including inherited web/native code, against local baseline definitions plus the
+two agreement definitions. The parent task reports independently reading a new
+production ledger entry `fix_submit_my_checklist_agreement_context`, version
+`20261014024529`, and its function definition. Jacob's independent agent reports
+a production database-level rollback test covering driver agreement load/sign,
+eight required items, submission, admin signing, legacy-signing rejection and
+post-acceptance terms-edit rejection. No frontend build/commit, real driver
+session, browser flow or installed app was tested by that report. This task did
+not query hosted data or execute any database function. The new evidence updates
+the earlier database-submission uncertainty; it does not establish app integration.
+
+| Surface/dependency | New patch or inherited | Local compatibility finding | Release assessment |
+| --- | --- | --- | --- |
+| Driver agreement review/accept | New patch | Only `get_contract_agreement(target_contract)` and `accept_contract_agreement(target_contract, expected_version, acceptance_role, legal_name)`; response fields match the two source definitions. | Source-compatible; mocked tests pass, actual app/session untested. |
+| Archived checklist columns | Inherited checklist readers unchanged | No `archived` queries in candidate TS/TSX or native background readers. Uses baseline sections/items fields. | No later archival-schema dependency found. |
+| Agreement notification fields | Inherited notifications unchanged | No `agreement_notice_key`. `communications.ts` reads baseline notification fields and calls baseline `ensure_my_due_notifications`. | No agreement-notices migration dependency found; live grants/behavior unverified. |
+| Current acceptance helpers | New review plus inherited checklist controls | No `current_driver_acceptance`, `contract_acceptance_gate` or current-agreement column query. Checklist submission UI still checks `signed_at`. | No later acceptance-gates dependency; do not claim current-version-aware checklist gating. |
+| Preview/commit/revision APIs | Inherited admin editing unchanged | No `preview_agreement_change` or `commit_agreement_change`. Older save, assignment and template paths remain. Agreement field/show edits can conflict with installed agreement guards or cause acceptance rejection; no reviewed-revision UI exists here. | Whole-app workflow compatibility remains unresolved; no bypass or backend replacement proposed. |
+| Onboarding | Inherited Auth/Profile | No onboarding RPC or onboarding-column reference. Uses Supabase Auth and baseline explicit profile fields. | No later onboarding dependency found; real Auth/session integration untested. |
+| Checklist submit | Inherited `driverData.ts:243` | Calls `submit_my_checklist` with `target_contract_id`. Parent reports the repaired function retains active-account, required-item and assignment/signature checks. Client has no new schema dependency. | Reported database-level success; this candidate's browser/native submission flow still untested. |
+| Admin signing | Inherited `adminData.ts:369`, `AdminShowsPage.tsx:274` | Still directly updates `admin_signature_name` and `admin_signed_at` after the show-save operation. ContractDetailPage does not expose the reusable component's admin role. Direct writes conflict with the agreement guard. | **Release blocker for a complete app repair.** Database RPC admin-signing success does not cover this path. The show save may complete before its separate signature request fails. |
+| Native saved views/Watch/widgets | Inherited | Baseline snapshot v1 and explicit baseline columns; no agreement issuance in background readers. Patched signing mounts only in verified live review. | No later-schema dependency found; installed binary is unchanged and not validated by these tests. |
+| Remaining RPCs/tables | Inherited | Inventoried all 31 literal runtime RPC names in `src`; every name has a definition in baseline migration source plus the two agreement files. Reviewed direct table reads/writes and native REST reader. | No additional named missing-RPC dependency found; source existence is not proof of production grants, effective replacements, RLS or complete behavior. |
+
+The new driver patch itself remains a feasible frontend-only compatibility unit.
+It cannot be labeled a complete integrated recovery release while the inherited
+admin-signing path is incompatible. A separately scoped frontend change could
+route explicit admin review through the existing versioned acceptance API and
+remove the legacy direct-write path; that change is not present or tested here.
+Agreement editing/reassignment behavior also needs a defined, independently
+reviewed scope rather than assuming later migrations are available.
+
+A safe local mock check for this candidate is:
+
+```sh
+npm run test:ui -- src/components/AgreementSigning.test.tsx src/components/AgreementCopy.test.tsx src/lib/agreementData.test.tsx src/pages/ContractDetailAgreement.test.tsx
+```
+
+These 20 tests mock the issuing/accepting APIs and prove only the covered client
+behavior. A future mock integration test should drive the actual admin route and
+fail on any direct signature-field write; the existing component-level admin-role
+test does not establish that the application routes admins through it. No new tests
+or application changes were made for this documentation-only audit. Do not treat
+the reported database rollback test as frontend end-to-end acceptance. Publication
+remains on hold pending a tested, compatible integrated release.
