@@ -1,12 +1,14 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
+import type { AgreementReview } from '../lib/agreementTypes';
 import { AgreementSigning } from './AgreementSigning';
 import { getContractAgreement, acceptContractAgreement } from '../lib/agreementData';
 
 vi.mock('../lib/agreementData',()=>({getContractAgreement:vi.fn(),acceptContractAgreement:vi.fn()}));
 const content={contract:{kind:'setup',service_date:'2026-11-01',service_time:null,contract_pay:0,bonus_pay:null,terms:'Exact full text',document_path:null},work:{name:'Reviewed work'},linked_show_ids:[],checklist:[]};
-const review=(id:string)=>({version:{id,version_number:1,created_at:'2026-10-07',content},signatures:[],legacy_missing:true,legacy_evidence:{signature_name:'Legacy name',signed_at:'2026-10-01T12:00:00Z',admin_signature_name:null,admin_signed_at:null}});
+const review=(id:string):AgreementReview=>({version:{id,version_number:1,created_at:'2026-10-07',content},signatures:[],legacy_missing:true,legacy_evidence:{signature_name:'Legacy name',signed_at:'2026-10-01T12:00:00Z',admin_signature_name:null,admin_signed_at:null}});
 beforeEach(()=>{vi.mocked(getContractAgreement).mockReset();vi.mocked(acceptContractAgreement).mockReset();vi.mocked(acceptContractAgreement).mockResolvedValue('signature');});
 test('requires fresh acknowledgment after switching contracts',async()=>{
   vi.mocked(getContractAgreement).mockImplementation(async id=>review(id));
@@ -105,5 +107,52 @@ test('failed initial review offers no acceptance controls',async()=>{
  render(<AgreementSigning contractId="contract" onSigned={async()=>{}}/>);
  await screen.findByText('Assigned contract access required');
  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+ expect(acceptContractAgreement).not.toHaveBeenCalled();
+});
+
+for (const outcome of ['resolve','reject'] as const) test(`late ${outcome} after online access is revoked does not refresh or notify`,async()=>{
+ vi.mocked(getContractAgreement).mockResolvedValue(review('displayed'));
+ let finish!:()=>void;
+ vi.mocked(acceptContractAgreement).mockImplementation(()=>new Promise<string>((resolve,reject)=>{
+  finish=()=>outcome==='resolve'?resolve('receipt'):reject(new Error('Late rejection'));
+ }));
+ const onSigned=vi.fn().mockResolvedValue(undefined);
+ const view=render(<AgreementSigning contractId="contract" onSigned={onSigned}/>);
+ await screen.findByText('Exact full text');
+ fireEvent.change(screen.getByLabelText('Full legal name'),{target:{value:'Driver Name'}});
+ fireEvent.click(screen.getByRole('checkbox'));
+ fireEvent.click(screen.getByRole('button',{name:'Accept this version and sign'}));
+ view.rerender(<AgreementSigning enabled={false} contractId="contract" onSigned={onSigned}/>);
+ await act(async()=>finish());
+ expect(getContractAgreement).toHaveBeenCalledTimes(1);
+ expect(onSigned).not.toHaveBeenCalled();
+ expect(screen.getByText('Connect and refresh to review the current agreement.')).toBeVisible();
+});
+
+test('a superseded initial review cannot replace a newer review or its consent',async()=>{
+ let stale!:(value:ReturnType<typeof review>)=>void;
+ const newer={...review('new'),version:{...review('new').version,version_number:2,content:{...content,contract:{...content.contract,terms:'Newer issued terms'}}}};
+ vi.mocked(getContractAgreement).mockImplementationOnce(()=>new Promise(resolve=>{stale=resolve;})).mockResolvedValue(newer);
+ render(<StrictMode><AgreementSigning contractId="contract" onSigned={async()=>{}}/></StrictMode>);
+ await screen.findByText('Newer issued terms');
+ fireEvent.change(screen.getByLabelText('Full legal name'),{target:{value:'Driver Name'}});
+ fireEvent.click(screen.getByRole('checkbox'));
+ await act(async()=>stale(review('old')));
+ expect(screen.getByText('Newer issued terms')).toBeVisible();
+ expect(screen.queryByText('Exact full text')).not.toBeInTheDocument();
+ expect(screen.getByRole('checkbox')).toBeChecked();
+ fireEvent.click(screen.getByRole('button',{name:'Accept this version and sign'}));
+ await waitFor(()=>expect(acceptContractAgreement).toHaveBeenCalledExactlyOnceWith('contract','new','driver','Driver Name'));
+});
+
+for (const terms of [null,'']) test(`missing terms (${String(terms)}) preserve the publication prerequisite`,async()=>{
+ const fixture=review('missing-terms');fixture.version.content={...content,contract:{...content.contract,terms}};
+ vi.mocked(getContractAgreement).mockResolvedValue(fixture);
+ render(<AgreementSigning contractId="contract" onSigned={async()=>{}}/>);
+ await screen.findByText('Contract terms have not been published yet. Contact your administrator before signing.');
+ fireEvent.change(screen.getByLabelText('Full legal name'),{target:{value:'Driver Name'}});
+ fireEvent.click(screen.getByRole('checkbox'));
+ const button=screen.getByRole('button',{name:'Accept this version and sign'});
+ expect(button).toBeDisabled();fireEvent.click(button);
  expect(acceptContractAgreement).not.toHaveBeenCalled();
 });

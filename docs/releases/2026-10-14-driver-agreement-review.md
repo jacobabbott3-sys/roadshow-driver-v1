@@ -42,7 +42,7 @@ was called during this task. All regression tests use fixtures/mocks.
 ## Verification
 
 - `npm test`: 79 passed.
-- `npm run test:ui`: 44 files, 130 tests passed, including 15 agreement regressions.
+- `npm run test:ui`: 44 files, 135 tests passed, including 20 agreement regressions.
 - `npm run build`: passed (TypeScript and Vite).
 - `npm run lint`: zero errors, the three documented baseline warnings.
 - `npm run test:native`: 2 passed.
@@ -86,3 +86,28 @@ app or promote the broader Public 6 candidate based on these local checks alone.
 No blocked migration was retried or replaced, and no SQL workaround was created.
 Publication remains on hold until an independently reviewed integrated recovery
 plan is approved.
+
+
+## Independent local code review follow-up
+
+A separate reviewer inspected exact candidate commit
+`56c0cb60181c822e6c1495d942611de32fb9cd13` and the source definitions above.
+They identified three P2 frontend findings: acceptance continuations could invoke
+the issuing getter after review unmounted/disabled; the shared async hook could
+let an older response replace a newer review; and the port dropped the prior
+missing-terms signing prerequisite.
+
+The follow-up replaces only the agreement loader with a latest-request guard,
+invalidates request/lifecycle scopes on cleanup, checks the scope before any
+acceptance follow-up getter/callback, and restores the prerequisite against the
+displayed version's terms. Five additional mocked regressions cover late success
+and rejection after disabling, StrictMode response ordering, and null/empty terms.
+The three lifecycle/ordering cases failed before the fix and passed afterward.
+
+The independent reviewer rechecked the follow-up diff and confirmed all three
+findings resolved, with no new actionable findings. They confirmed the displayed
+and accepted version are drawn from the same object and found no hidden dependency
+on later migrations. The reviewer performed read-only source review, not live or
+device testing. The implementer reran the full UI suite, build and lint, with the
+results above; the 79 unit and 2 native pipeline passes are from the initial run.
+This review does not approve publication or establish hosted compatibility.
