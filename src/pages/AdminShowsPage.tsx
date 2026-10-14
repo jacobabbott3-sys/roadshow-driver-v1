@@ -17,7 +17,6 @@ import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import {
-  adminSignContract,
   deleteShow,
   getContractTemplates,
   getShowsAdmin,
@@ -63,7 +62,6 @@ type FormState = {
   contract_pay: string;
   bonus_pay: string;
   terms: string;
-  admin_signature_name: string;
 };
 const blank: FormState = {
   name: "",
@@ -93,7 +91,6 @@ const blank: FormState = {
   contract_pay: "",
   bonus_pay: "",
   terms: "",
-  admin_signature_name: "",
 };
 const draftKey = "roadshow-admin-show-draft";
 function savedDraft() {
@@ -209,7 +206,6 @@ export function AdminShowsPage() {
       contract_pay: contract?.contract_pay?.toString() || "",
       bonus_pay: contract?.bonus_pay?.toString() || "",
       terms: contract?.terms || "",
-      admin_signature_name: contract?.admin_signature_name || "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -254,7 +250,7 @@ export function AdminShowsPage() {
         lodging_notes: form.lodging_included ? form.lodging_notes || null : null,
       };
       const existingContract = shows.data?.find((show) => show.id === editing)?.contracts[0];
-      const contractId = await saveShowContractAtomic({
+      await saveShowContractAtomic({
         show_id: editing,
         contract_id: form.contract_id || null,
         ...showInput,
@@ -268,8 +264,6 @@ export function AdminShowsPage() {
         terms: form.terms || null,
         template_id: form.template_id || null,
       });
-      if (form.admin_signature_name.trim())
-        await adminSignContract(contractId, form.admin_signature_name.trim());
       closeForm();
       setMessage("Show and contract saved.");
       await shows.refresh();
@@ -538,20 +532,7 @@ export function AdminShowsPage() {
               placeholder="Terms the driver must review before signing…"
             />
           </label>
-          <label className="terms-editor">
-            Admin signature
-            <input
-              value={form.admin_signature_name}
-              onChange={(e) =>
-                setForm({ ...form, admin_signature_name: e.target.value })
-              }
-              placeholder="Admin's full legal name"
-            />
-            <small>
-              The driver can begin work after their signature; the admin
-              signature can be added before or afterward.
-            </small>
-          </label>
+          <p className="notice">Save changes, then use Review and sign agreement to accept the issued version.</p>
           <button className="button primary" disabled={busy}>
             {busy ? "Saving…" : "Save show and contract"}
           </button>
@@ -582,6 +563,7 @@ export function AdminShowsPage() {
                     </p>
                   </div>
                   <div className="show-card-actions">
+                    {contract && <Link className="button" to={`/admin/contracts/${contract.id}/agreement`}>Review and sign agreement</Link>}
                     <button onClick={() => setAssigning(show)} disabled={!contract}>
                       <UsersRound /> Assign user(s)
                     </button>

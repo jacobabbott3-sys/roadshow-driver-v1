@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { getContractAcceptanceGate, reviewAdminAcceptance, saveConfirmedAgreementChange } from './agreementData';
+import { getContractAcceptanceGate, saveConfirmedAgreementChange } from './agreementData';
 import { getChecklist, type Contract, type Show } from "./driverData";
 import type { Profile } from "../types";
 import { release } from "./release";
@@ -368,9 +368,6 @@ export async function updateLinkedSigningAssignments(showIds: string[], driverId
   const { data, error } = await supabase.from("contracts").select("id").in("show_id", [...connected]);
   if (error) throw error;
   for (const contract of data || []) await updateContractAssignments(contract.id, driverIds);
-}
-export async function adminSignContract(id: string, name: string) {
-  await reviewAdminAcceptance(id,name);
 }
 export async function updateUser(
   id: string,

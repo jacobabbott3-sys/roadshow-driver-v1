@@ -10,7 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { getContractAcceptanceGate } from "../lib/agreementData";
 import { AgreementSigning } from "../components/AgreementSigning";
 import { PageState } from "../components/PageState";
@@ -34,10 +34,19 @@ import { supabase } from "../lib/supabase";
 import { launchConfetti } from "../lib/confetti";
 import { uploadContractPhoto, type UploadClient } from "../lib/imageUpload";
 type Tab = "info" | "checklist" | "photos" | "sign";
-export function ContractDetailPage() {
+export function ContractDetailPage({adminReview=false}:{adminReview?:boolean}={}) {
+  const {id=""}=useParams();
+  const [searchParams]=useSearchParams();
+  const {user,profile,loading}=useAuth();
+  if (!adminReview && searchParams.get("review")==="admin") return <Navigate to={`/admin/contracts/${id}/agreement`} replace/>;
+  const active=!!user && profile?.id===user.id && profile.is_active && !loading;
+  if (!active || (adminReview && profile?.role!=="admin")) return <p className="notice">An active account is required to review this agreement.</p>;
+  return <ContractDetailContent key={`${id}:${user.id}:${profile.role}:${adminReview}`} adminReview={adminReview}/>;
+}
+function ContractDetailContent({adminReview}:{adminReview:boolean}) {
   const { id = "" } = useParams(),
     [searchParams] = useSearchParams(),
-    { user,profile } = useAuth(),
+    { user } = useAuth(),
     contract = useAsync(() => getContract(id), [id]),
     acceptance = useAsync(()=>getContractAcceptanceGate(id),[id,contract.data?.signed_at]),
     checklist = useAsync(() => getChecklist(id), [id]),
@@ -46,7 +55,7 @@ export function ContractDetailPage() {
       () => contract.data?.show.id ? getLinkedSigningContracts(contract.data.show.id) : Promise.resolve([]),
       [contract.data?.show.id],
     );
-  const [tab, setTab] = useState<Tab>(searchParams.get("review") === "admin" ? "sign" : "info"),
+  const [tab, setTab] = useState<Tab>(adminReview ? "sign" : "info"),
     [busy, setBusy] = useState(""),
     [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}),
     [message, setMessage] = useState("");
@@ -187,7 +196,7 @@ export function ContractDetailPage() {
                   ["checklist", Check, "Checklist"],
                   ["photos", Camera, "Photos"],
                   ["sign", FileSignature, "Contract"],
-                ] as const).filter(([key]) => !isSigning || key === "info" || key === "checklist")
+                ] as const).filter(([key]) => !isSigning || key === "info" || key === "checklist" || key === "sign")
               ).map(([key, Icon, label]) => (
                 <button
                   className={tab === key ? "active" : ""}
@@ -348,7 +357,7 @@ export function ContractDetailPage() {
                 </div>
               </section>
             )}
-            {tab === "sign" && <AgreementSigning contractId={id} acceptanceRole={profile?.role === "admin" && searchParams.get("review") === "admin" ? "admin" : "driver"} onSigned={contract.refresh} />}
+            {tab === "sign" && <AgreementSigning contractId={id} acceptanceRole={adminReview ? "admin" : "driver"} onSigned={async()=>{await Promise.all([contract.refresh(),acceptance.refresh()]);}} />}
           </>
         )}
       </PageState>
