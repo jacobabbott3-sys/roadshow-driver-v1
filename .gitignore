@@ -16,3 +16,5 @@ supabase/.temp
 dist-ios/
 ios/**/DerivedData/
 ios/**/xcuserdata/
+.vercel
+.env*

@@ -1,0 +1,19 @@
+# Source-only web deployment; build remotely using Production project settings.
+/*
+!/src
+!/public
+!/scripts
+!/tests
+/tests/*
+!/tests/fixtures
+!/index.html
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/tsconfig.app.json
+!/tsconfig.node.json
+!/vite.config.ts
+!/vercel.json
+!/.nvmrc
+# Recreated by postinstall from the installed react-pdf/pdfjs dependencies.
+/public/pdfjs-assets
