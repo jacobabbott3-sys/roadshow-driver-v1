@@ -366,16 +366,6 @@ export async function updateLinkedSigningAssignments(showIds: string[], driverId
   if (error) throw error;
   for (const contract of data || []) await updateContractAssignments(contract.id, driverIds);
 }
-export async function adminSignContract(id: string, name: string) {
-  const { error } = await supabase
-    .from("contracts")
-    .update({
-      admin_signature_name: name,
-      admin_signed_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-  if (error) throw error;
-}
 export async function updateUser(
   id: string,
   role: "driver" | "admin",

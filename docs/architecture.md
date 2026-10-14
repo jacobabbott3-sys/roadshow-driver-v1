@@ -235,5 +235,8 @@ The review getter can issue an agreement and is mounted only from verified live
 Contract review, never a native saved/offline presentation or background reader.
 The port introduces no acceptance-gate/revision RPC, archived-checklist query,
 current-agreement column query, schema change or permission change. It replaces
-the driver's old signing RPC rather than falling back to it on error. Existing
-admin signature mutations and checklist submission remain outside this candidate.
+the driver's old signing RPC rather than falling back to it on error. The admin follow-up removes direct signature mutations and routes explicit admin
+review through the same APIs at `/admin/contracts/:id/agreement`, inside the
+existing ProtectedRoute/AdminRoute hierarchy. The component also checks active
+admin state before mounting agreement review; driver routes retain driver-role
+acceptance. Checklist submission and contract editing/reassignment are unchanged.

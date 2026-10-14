@@ -181,5 +181,9 @@ shown as historical evidence, not acceptance of the current version. Rejected
 acceptance clears acknowledgment and refreshes the review; changing versions or
 contracts also clears the name. Signing assignments expose the Contract tab too.
 
-This frontend-only review candidate does not fix checklist submission or admin
-signing/editing compatibility. It has not been published or installed.
+Administrators use Review and sign agreement from Shows & Contracts or Signings
+for an explicit admin-role review of the issued version. Saving show changes does
+not sign; the old signature input and direct signature-field writes are removed.
+
+This frontend-only review candidate does not establish checklist submission or
+admin editing/reassignment compatibility. It has not been published or installed.

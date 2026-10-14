@@ -6,6 +6,11 @@ import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { LoadingScreen } from "./components/LoadingScreen";
 
 describe("route loading", () => {
+  it("places explicit admin agreement review inside the existing admin route guard", () => {
+    const source = readFileSync(`${process.cwd()}/src/App.tsx`, "utf8");
+    const adminRoutes = source.split('<Route element={<AdminRoute />}>')[1].split('</Route>')[0];
+    expect(adminRoutes).toContain('<Route path="admin/contracts/:id/agreement" element={<ContractDetailPage adminReview />} />');
+  });
   it("keeps protected and admin route modules out of the eager entry bundle", () => {
     const source = readFileSync(`${process.cwd()}/src/App.tsx`, "utf8");
     expect(source).toContain("lazy(() => import(\"./pages/HomePage\")");

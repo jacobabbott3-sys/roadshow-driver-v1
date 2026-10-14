@@ -39,7 +39,7 @@ import { supabase } from "../lib/supabase";
 import { launchConfetti } from "../lib/confetti";
 import { uploadContractPhoto, type UploadClient } from "../lib/imageUpload";
 type Tab = "info" | "checklist" | "photos" | "sign";
-export function ContractDetailPage({contractId}:{contractId?:string}={}) {
+export function ContractDetailPage({contractId,adminReview=false}:{contractId?:string;adminReview?:boolean}={}) {
   const params=useParams();const id=contractId||params.id||"";
   const {state:offline,coordinator}=useOffline();
   const auth=useAuth();
@@ -56,7 +56,7 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
       s=>Object.values(s.contracts).map(v=>v.contract).filter(c=>s.links.some(l=>(l.show_id===contract.data?.show.id&&l.linked_show_id===c.show.id)||(l.linked_show_id===contract.data?.show.id&&l.show_id===c.show.id))),
       "linked-signings",
     );
-  const [tab, setTab] = useState<Tab>(searchParams.get("tab")==="checklist"?"checklist":"info"),
+  const [tab, setTab] = useState<Tab>(adminReview?"sign":searchParams.get("tab")==="checklist"?"checklist":"info"),
     [busy, setBusy] = useState(""),
     [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}),
     [message, setMessage] = useState("");
@@ -85,7 +85,7 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
           (items.length ? "Ready to submit" : "Waiting for checklist"),
     checklistLocked = !isSigning && ["submitted", "under_review", "approved"].includes(contract.data?.status || "");
   const linkedTab = searchParams.get("tab");
-  useEffect(() => { setTab(linkedTab === "checklist" ? "checklist" : "info"); }, [id, linkedTab]);
+  useEffect(() => { setTab(adminReview ? "sign" : linkedTab === "checklist" ? "checklist" : "info"); }, [id, linkedTab, adminReview]);
   const signingGroupId = searchParams.get("group");
   const linkedGroupId = signingGroupId || contract.data?.show.id || "";
   const latestPhotos = useMemo(() => {
@@ -374,7 +374,7 @@ export function ContractDetailPage({contractId}:{contractId?:string}={}) {
             )}
             {tab === "sign" && <section className="detail-panel">
               {contract.data.document_path && <DownloadControl file={{kind:"contract-document",recordId:id,contractId:id}} title="Contract document"/>}
-              <AgreementSigning enabled={canMutate} contractId={id} onSigned={async()=>{
+              <AgreementSigning enabled={canMutate && (!adminReview || (!!auth.user && auth.profile?.role === "admin" && auth.profile.is_active && !auth.loading))} contractId={id} acceptanceRole={adminReview ? "admin" : "driver"} onSigned={async()=>{
                 await contract.refresh();
                 document.dispatchEvent(new Event("roadshow:contract-saved"));
               }}/>

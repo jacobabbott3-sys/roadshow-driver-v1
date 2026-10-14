@@ -69,6 +69,7 @@ export default function App() {
               <Route path="admin/shows" element={<AdminShowsPage />} />
               <Route path="admin/shows/publish" element={<AdminPublishContractsPage />} />
               <Route path="admin/signings" element={<AdminSigningsPage />} />
+              <Route path="admin/contracts/:id/agreement" element={<ContractDetailPage adminReview />} />
               <Route path="admin/templates" element={<AdminTemplatesPage />} />
               <Route
                 path="admin/checklists"

@@ -1,4 +1,13 @@
-# Driver agreement frontend review — local only
+# Driver and admin agreement frontend review — local only
+
+## Current status after admin integration
+
+The latest local follow-up adds explicit admin acceptance using the existing
+versioned review UI and removes the legacy direct signature-write path. It resolves
+the admin-signing blocker identified in the earlier whole-candidate assessment
+below. Historical statements about that blocker describe the earlier commit;
+see the final section for current scope, verification and remaining requirements.
+No publication or live signing has occurred.
 
 ## Feasibility and base
 
@@ -42,7 +51,7 @@ was called during this task. All regression tests use fixtures/mocks.
 ## Verification
 
 - `npm test`: 79 passed.
-- `npm run test:ui`: 44 files, 135 tests passed, including 20 agreement regressions.
+- `npm run test:ui`: 45 files, 150 tests passed, including driver/admin agreement regressions.
 - `npm run build`: passed (TypeScript and Vite).
 - `npm run lint`: zero errors, the three documented baseline warnings.
 - `npm run test:native`: 2 passed.
@@ -160,3 +169,76 @@ test does not establish that the application routes admins through it. No new te
 or application changes were made for this documentation-only audit. Do not treat
 the reported database rollback test as frontend end-to-end acceptance. Publication
 remains on hold pending a tested, compatible integrated release.
+
+
+## Admin integration follow-up — current application candidate
+
+- Both Shows & Contracts and Signings now link to
+  `/admin/contracts/:id/agreement`, under the existing active-admin route guard.
+  This reuses ContractDetailPage with an explicit admin-review prop, opens the
+  Contract tab and passes `acceptanceRole="admin"` to AgreementSigning. An additional
+  active-admin/user/loading check gates the review component, alongside the
+  existing verified-live native mutation guard. Driver routes remain driver-role.
+- The administrator sees the issued agreement content/version and must enter a
+  legal name and explicitly acknowledge it. The existing displayed-version binding,
+  changed-version consent reset, missing-terms guard and late-response protections
+  apply to admin acceptance too. No silent signing or fallback is introduced.
+- Removed `adminSignContract`, the edit-form signature input/state and its automatic
+  post-save call. The show-save payload and all unrelated save/edit/assignment
+  behavior are unchanged. Old drafts may retain an inert extra signature-name
+  property, but it is neither used for signing nor included in the save payload.
+- No new RPC, column, schema, permission or dependency is required. The earlier
+  inventory of 31 existing RPC names still applies. The reported database-only
+  repair/test remains external evidence, not an app integration test.
+
+New role/route/entry/save tests were written first. They failed against the earlier
+candidate for absent review links, absent admin-role review and the old signature
+input/direct-write save path, then passed after implementation. Additional mocked
+regressions cover actual AdminRoute enforcement, stale admin rejection with new
+content and fresh consent, API error display, late success/rejection after role
+revocation, and legacy saved drafts without implicit signature writes. Existing
+driver tests remain intact.
+
+A separate reviewer inspected the admin integration diff from `f73532f` and found
+no actionable findings. They confirmed active-admin gating, explicit role/version
+binding, no direct signature writes, inert legacy draft fields and no dependency
+on later migrations. This was a read-only source review, not a live test.
+
+Fresh verification after the admin change:
+
+- `npm test`: 79 passed.
+- `npm run test:ui`: 45 files, 150 tests passed.
+- `npm run test:native`: 2 passed.
+- `npm run build`: TypeScript and Vite passed.
+- `npm run lint`: zero errors, exactly the three baseline warnings.
+- `git diff --check`: passed.
+
+No installation was performed; the previously documented copied-dependency and
+npm-version caveat still applies. Local logs are retained beside the worktree.
+
+### Current compatibility and remaining acceptance requirements
+
+| Area | Current status |
+| --- | --- |
+| Driver exact-version signing | Locally implemented and mocked; actual session flow unverified. |
+| Admin exact-version signing | Direct-write blocker removed; explicit guarded version acceptance locally implemented and mocked. |
+| Missing later-schema fields/APIs | None introduced by either signing change. |
+| Checklist submission | Existing call unchanged; database-level repair/success reported externally, application flow unverified. |
+| Admin editing/reassignment/revisions | Unchanged inherited workflows; can still conflict with agreement guards. No preview/commit integration or backend substitute added. |
+| Native installed app | Unchanged old bundle; local source/mocked checks do not update or validate it. |
+
+Before any publication, the independently reviewed recovery plan must identify
+this exact candidate/build and target backend and verify the actual app sequence:
+active assigned driver reviews/signs the displayed version, completes required
+items and submits the checklist, then an active admin uses the new review route
+to accept the displayed version. Include stale-version/API-error handling and
+unauthorized/inactive access rejection. The database rollback report alone does
+not cover these screens or session/routing behavior. Outstanding edit/reassignment
+limitations must be explicitly resolved or accepted in the release scope; these
+local signing fixes are not a claim of complete app repair.
+
+For a fixture-only client check, include `src/pages/AdminAgreementEntry.test.tsx`
+and `src/pages/ContractDetailAgreement.test.tsx` with the agreement component/API
+tests in the earlier mock command. For native release acceptance, a separately
+approved package and physical-device check are still needed; nothing was installed,
+pushed or deployed here. No database code or workaround was created.
