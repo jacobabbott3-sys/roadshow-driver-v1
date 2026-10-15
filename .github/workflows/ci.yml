@@ -35,6 +35,10 @@ jobs:
         run: npm ci
       - name: Unit tests
         run: npm test
+      - name: Contract notice mock tests
+        run: npm run test:contract-notices
+      - name: Contract Edge typecheck
+        run: npx --yes deno@2.5.4 check --frozen --config supabase/functions/contract-notices/deno.json --lock supabase/functions/contract-notices/deno.lock supabase/functions/contract-notices/index.ts
       - name: UI tests
         run: npm run test:ui
       - name: Disposable PostgreSQL authorization tests

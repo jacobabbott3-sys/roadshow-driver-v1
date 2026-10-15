@@ -127,3 +127,7 @@ The Edge handler excludes agreement notice kinds before creating push clients.
 is neither live Supabase nor multi-session concurrency evidence. SQL and Edge/UI
 rollout must be coordinated with separately approved public compatibility because
 beta/public share one backend. See the [rollout proposal](releases/beta-6a-test-checklist.md).
+
+Manual signed-contract email source is isolated behind disabled flags; see
+[manual notice design and activation gates](email/manual-contract-notices.md).
+It has no signing/edit/cancellation trigger and no real-recipient sending mode.
