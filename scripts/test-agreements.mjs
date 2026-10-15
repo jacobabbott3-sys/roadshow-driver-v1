@@ -15,6 +15,8 @@ try {
       await db.exec(await readFile(new URL('../supabase/tests/agreement-data.sql', import.meta.url), 'utf8')); seeded=true;
     }
     if (file.startsWith('20261007') && Number(file.slice(11,12)) > Number(process.env.AGREEMENT_MIGRATIONS || migrationLimit)) continue;
+    // Post-6A hardening and cancellation migrations build on the full 6A chain.
+    if (file.startsWith('20261015') && Number(process.env.AGREEMENT_MIGRATIONS || migrationLimit) < 7) continue;
     // PGlite supplies gen_random_uuid natively; pgcrypto is unavailable here.
     const sql = (await readFile(new URL(file, dir), 'utf8')).replace('create extension if not exists pgcrypto;', '');
     try { await db.exec(sql); } catch (error) { throw new Error(`${file}: ${error.message}`); }
@@ -97,7 +99,11 @@ try {
       await deny('select public.admin_save_signing($1::jsonb)',[JSON.stringify({artist:'New synthetic',signing_at:'2026-11-01T12:00:00Z',setup_at:'2026-11-01T10:00:00Z',linked_show_ids:['20000000-0000-0000-0000-000000000004']})],/review linked/i);
       const payload={release_item_id:null,show_ids:['20000000-0000-0000-0000-000000000001'],driver_ids:[driver],external_names:null};
       const [preview]=await q("select public.preview_agreement_change('assign',$1::jsonb) result",[JSON.stringify(payload)]);
-      ok(preview.result.consequences.length,0,'nonsigner removal retains acceptance');
+      // Removing any driver from an issued agreement needs explicit confirmation, but a
+      // non-signer's removal must not reissue the agreement or discard the accepted version.
+      ok(preview.result.consequences.length,1,'nonsigner removal requires explicit confirmation');
+      ok(preview.result.consequences[0].reissue,false,'nonsigner removal does not reissue');
+      ok(preview.result.consequences[0].removed_driver_ids.length,1,'nonsigner removal names the removed driver');
       await q("select public.commit_agreement_change('assign',$1::jsonb,$2) result",[JSON.stringify(payload),preview.result.token]);
       ok((await q('select public.get_contract_agreement($1) result',[contract]))[0].result.version.id,version,'same accepted version');
       const removed={...payload,driver_ids:[other]};

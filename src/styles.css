@@ -2466,6 +2466,7 @@ h2 {
   font-size: .68rem;
   font-weight: 800;
 }
+.contract-publication-status.cancelled { background: #fdecec; color: #a12a2a; font-weight: 700; }
 .contract-publication-status.not_published { background: var(--soft); color: var(--muted); }
 .contract-publication-status.published_open { background: #e8f2ff; color: #265c91; }
 .contract-publication-status.published_assigned { background: #e1f2e7; color: #25613b; }

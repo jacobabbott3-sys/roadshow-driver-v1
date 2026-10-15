@@ -109,3 +109,24 @@ current driver acceptance. Removal/revision notices are in-app only. All hotel
 fields, stay dates, details-unlock timing and admin notes remain operational.
 This is prepared local behavior, not a claim of deployment; see the
 [Beta 6A checklist](releases/beta-6a-test-checklist.md).
+
+
+### Local beta frontend review guards (October 14, 2026)
+
+Shows & Contracts and Signings offer a separate **Review and sign agreement**
+route for active administrators. Saving a show no longer starts acceptance using
+a stored admin name. The reviewer enters a legal name and acknowledges the
+displayed version; missing published terms block acceptance. Contract, account,
+role or access changes discard the previous review and consent, and late
+responses cannot update a replacement review. Existing beta history, revision
+confirmation and current-acceptance gates remain; backend compatibility and live
+acceptance are not established by local UI tests.
+
+### Checklist template draft identities
+
+New sections and items in checklist edits receive persistent UUIDs when added.
+Renaming, reordering, and retrying a canceled confirmation retain those IDs;
+deleting and re-adding creates a different identity even at the same position.
+Existing item IDs and their flags/instructions remain intact. This prevents the
+repository API's missing-ID position fallback from treating a replacement as an
+existing completed item. Live restored-beta compatibility remains unverified.
