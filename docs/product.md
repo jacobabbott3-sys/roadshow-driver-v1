@@ -130,3 +130,8 @@ deleting and re-adding creates a different identity even at the same position.
 Existing item IDs and their flags/instructions remain intact. This prevents the
 repository API's missing-ID position fallback from treating a replacement as an
 existing completed item. Live restored-beta compatibility remains unverified.
+
+A disabled proposal adds explicit signed-contract email review with Send, Skip,
+and Send later (deferred intent, never scheduled delivery). See the
+[manual notice design](email/manual-contract-notices.md). Notices are informational;
+payment readiness remains separate.
