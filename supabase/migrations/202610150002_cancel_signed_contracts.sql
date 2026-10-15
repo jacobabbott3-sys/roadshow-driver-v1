@@ -11,6 +11,11 @@ alter table public.contracts
 create policy contracts_hide_cancelled on public.contracts as restrictive for select to authenticated
   using (cancelled_at is null or public.is_admin());
 
+-- Mirror of the contract flag so show listings (driver availability etc.) can hide cancelled work.
+alter table public.shows add column cancelled_at timestamptz;
+create policy shows_hide_cancelled on public.shows as restrictive for select to authenticated
+  using (cancelled_at is null or public.is_admin());
+
 create function roadshow_private.guard_cancelled_contract() returns trigger
 language plpgsql security definer set search_path='' as $$
 begin
@@ -51,6 +56,7 @@ begin
  perform roadshow_private.begin_agreement_change();
  update public.contracts set cancelled_at=now(),cancelled_by=auth.uid(),cancel_reason=nullif(trim(coalesce(cancel_note,'')),''),updated_at=now() where id=c.id;
  update public.agreement_assignment_periods set ended_at=now() where contract_id=c.id and ended_at is null;
+ update public.shows set cancelled_at=now() where id=c.show_id and cancelled_at is null;
  insert into public.notifications(recipient_id,title,body,link,kind,contract_id,agreement_notice_key)
  select p.id,'Assignment cancelled','This assignment was cancelled. Any agreement you accepted remains in your agreement history.',
   '/agreements','agreement_removed',null::uuid,'cancelled:'||c.id::text

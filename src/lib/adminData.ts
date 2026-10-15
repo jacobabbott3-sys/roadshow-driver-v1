@@ -75,7 +75,8 @@ export async function getDashboardStats() {
   let reviewsQuery = supabase
       .from("contracts")
       .select("*,show:shows!inner(is_test)", { count: "exact", head: true })
-      .in("status", ["submitted", "under_review"]);
+      .in("status", ["submitted", "under_review"])
+      .is("cancelled_at", null);
   if (release.channel !== "beta") {
     showsQuery = showsQuery.eq("is_test", false);
     signingsQuery = signingsQuery.eq("is_test", false);
@@ -144,7 +145,7 @@ export async function getShowsAdmin() {
     )
     .order("starts_on", { ascending: true });
   if (error) throw error;
-  const shows = (data as AdminShow[]).filter((show) => !show.contracts?.some((contract) => contract.cancelled_at));
+  const shows = data as AdminShow[];
   return release.channel === "beta" ? shows : shows.filter((show) => !show.is_test);
 }
 export async function createShow(
@@ -388,6 +389,7 @@ export async function getReviews() {
     .select(
       "id,kind,status,submitted_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name)",
     )
+    .is("cancelled_at", null)
     .in("status", ["submitted", "under_review"])
     .order("service_date");
   if (error) throw error;
@@ -410,6 +412,7 @@ export async function getReviewHistory() {
       "id,kind,status,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name)",
     )
     .not("reviewed_at", "is", null)
+    .is("cancelled_at", null)
     .order("service_date");
   if (error) throw error;
   return (data || []).filter(

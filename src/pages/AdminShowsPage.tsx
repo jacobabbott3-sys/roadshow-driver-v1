@@ -547,6 +547,7 @@ export function AdminShowsPage() {
           {!filteredShows.length && <div className="inline-empty">No contracts match the current search and publication filter.</div>}
           {filteredShows.map((show) => {
             const contract = show.contracts[0];
+            const cancelled = Boolean(contract?.cancelled_at);
             const publicationState = publicationStateForShow(show.id, publishedAvailability.data || []);
             return (
               <article className="admin-show-card" key={show.id}>
@@ -563,26 +564,34 @@ export function AdminShowsPage() {
                     </p>
                   </div>
                   <div className="show-card-actions">
-                    {contract && <Link className="button" to={`/admin/contracts/${contract.id}/agreement`}>Review and sign agreement</Link>}
-                    <button onClick={() => setAssigning(show)} disabled={!contract}>
-                      <UsersRound /> Assign user(s)
-                    </button>
-                    <button onClick={() => loadEdit(show)}>
-                      <Pencil /> Edit
-                    </button>
-                    <button
-                      className="delete-action"
-                      onClick={() => setDeleting(show)}
-                    >
-                      <Trash2 /> Delete
-                    </button>
+                    {contract && <Link className="button" to={`/admin/contracts/${contract.id}/agreement`}>{cancelled ? "View signed agreement" : "Review and sign agreement"}</Link>}
+                    {!cancelled && (
+                      <>
+                        <button onClick={() => setAssigning(show)} disabled={!contract}>
+                          <UsersRound /> Assign user(s)
+                        </button>
+                        <button onClick={() => loadEdit(show)}>
+                          <Pencil /> Edit
+                        </button>
+                        <button
+                          className="delete-action"
+                          onClick={() => setDeleting(show)}
+                        >
+                          <Trash2 /> Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
                 {contract ? (
                   <div className="contract-summary">
                     <BriefcaseBusiness />
                     <span>
-                      <small className={`contract-publication-status ${publicationState}`}>{publicationStateLabel(publicationState)}</small>
+                      {cancelled ? (
+                        <small className="contract-publication-status cancelled">Cancelled</small>
+                      ) : (
+                        <small className={`contract-publication-status ${publicationState}`}>{publicationStateLabel(publicationState)}</small>
+                      )}
                       <strong>{statusLabel(contract.kind)} contract</strong>
                       <small>
                         {formatWorkDate(contract.service_date)}{contract.service_time ? ` at ${formatTime(contract.service_time)}` : ""} ·{" "}
