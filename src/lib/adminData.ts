@@ -75,7 +75,8 @@ export async function getDashboardStats() {
   let reviewsQuery = supabase
       .from("contracts")
       .select("*,show:shows!inner(is_test)", { count: "exact", head: true })
-      .in("status", ["submitted", "under_review"]);
+      .in("status", ["submitted", "under_review"])
+      .is("cancelled_at", null);
   if (release.channel !== "beta") {
     showsQuery = showsQuery.eq("is_test", false);
     signingsQuery = signingsQuery.eq("is_test", false);
@@ -114,6 +115,7 @@ export type AdminContract = {
   service_date: string;
   service_time: string | null;
   status: string;
+  cancelled_at?: string | null;
   driver_id: string | null;
   contract_pay: number | null;
   bonus_pay: number | null;
@@ -139,7 +141,7 @@ export async function getShowsAdmin() {
   const { data, error } = await supabase
     .from("shows")
     .select(
-      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id),contract_external_assignees(id,display_name,position))",
+      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,cancelled_at,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id),contract_external_assignees(id,display_name,position))",
     )
     .order("starts_on", { ascending: true });
   if (error) throw error;
@@ -387,6 +389,7 @@ export async function getReviews() {
     .select(
       "id,kind,status,submitted_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name)",
     )
+    .is("cancelled_at", null)
     .in("status", ["submitted", "under_review"])
     .order("service_date");
   if (error) throw error;
@@ -409,6 +412,7 @@ export async function getReviewHistory() {
       "id,kind,status,submitted_at,reviewed_at,admin_note,show:shows(*),driver:profiles!contracts_driver_id_fkey(id,full_name),reviewer:profiles!contracts_reviewed_by_fkey(id,full_name)",
     )
     .not("reviewed_at", "is", null)
+    .is("cancelled_at", null)
     .order("service_date");
   if (error) throw error;
   return (data || []).filter(
@@ -593,9 +597,11 @@ export async function updateShow(id: string, input: Partial<Show>) {
   const { error } = await supabase.from("shows").update(input).eq("id", id);
   if (error) throw error;
 }
-export async function deleteShow(id: string) {
-  const { error } = await supabase.from("shows").delete().eq("id", id);
+/** Deletes work with no agreement evidence; cancels (and keeps the signed record of) work that has any. */
+export async function deleteShow(id: string): Promise<"deleted" | "cancelled"> {
+  const { data, error } = await supabase.rpc("admin_delete_or_cancel_show", { target_show: id });
   if (error) throw error;
+  return data === "cancelled" ? "cancelled" : "deleted";
 }
 export async function getShowChecklistAssignments() {
   const { data, error } = await supabase

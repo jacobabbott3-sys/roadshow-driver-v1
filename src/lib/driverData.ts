@@ -114,6 +114,7 @@ export async function getContracts() {
     .select(
       "id,kind,service_date,service_time,status,contract_pay,bonus_pay,document_path,terms,current_agreement_id,signed_at,signature_name,admin_signed_at,admin_signature_name,admin_note,show:shows(*)",
     )
+    .is("cancelled_at", null)
     .order("service_date");
   if (error) throw error;
   const contracts = (data || []) as unknown as Contract[];
@@ -251,6 +252,7 @@ export async function getAvailability(userId: string) {
     supabase
     .from("shows")
     .select("*")
+    .is("cancelled_at", null)
     .gte("ends_on", localDateKey())
     .order("starts_on"),
     supabase.rpc("get_public_show_availability"),
