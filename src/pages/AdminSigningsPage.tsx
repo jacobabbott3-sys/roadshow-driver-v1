@@ -117,7 +117,7 @@ export function AdminSigningsPage() {
   async function remove() {
     if (!deleting) return;
     setBusy(true);
-    try { await deleteShow(deleting.id); setDeleting(null); setMessage("Signing deleted."); await shows.refresh(); }
+    try { const outcome = await deleteShow(deleting.id); setDeleting(null); setMessage(outcome === "cancelled" ? "Signing cancelled. Its signed agreement record was kept." : "Signing deleted."); await shows.refresh(); }
     catch (error) { setMessage(error instanceof Error ? error.message : "Unable to delete signing."); }
     finally { setBusy(false); }
   }
@@ -157,7 +157,7 @@ export function AdminSigningsPage() {
         onClose={() => setAssigning(null)}
         onSaved={async () => { await Promise.all([shows.refresh(), publishedAvailability.refresh()]); setMessage("Assignments updated."); setAssigning(null); }}
       />}
-      {deleting && <div className="modal-backdrop"><section className="confirm-modal" role="dialog" aria-modal="true"><span className="danger-icon"><Trash2 /></span><h2>Delete this signing?</h2><p>This removes its assignments and checklist progress.</p><div><button onClick={() => setDeleting(null)}>Cancel</button><button className="confirm-delete" onClick={() => void remove()} disabled={busy}>{busy ? "Deleting…" : "Delete signing"}</button></div></section></div>}
+      {deleting && <div className="modal-backdrop"><section className="confirm-modal" role="dialog" aria-modal="true"><span className="danger-icon"><Trash2 /></span><h2>Delete this signing?</h2><p>This removes its assignments and checklist progress. If a signed agreement exists, the signing is cancelled instead and the signed record is kept.</p><div><button onClick={() => setDeleting(null)}>Cancel</button><button className="confirm-delete" onClick={() => void remove()} disabled={busy}>{busy ? "Deleting…" : "Delete signing"}</button></div></section></div>}
     </main>
   );
 }

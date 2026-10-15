@@ -277,14 +277,14 @@ export function AdminShowsPage() {
     if (!deleting) return;
     setBusy(true);
     try {
-      await deleteShow(deleting.id);
+      const outcome = await deleteShow(deleting.id);
       setDeleting(null);
       if (editing === deleting.id) {
         setOpen(false);
         setEditing(null);
         setForm(blank);
       }
-      setMessage("Show deleted.");
+      setMessage(outcome === "cancelled" ? "Show cancelled. Its signed agreement record was kept." : "Show deleted.");
       await shows.refresh();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Unable to delete show.");

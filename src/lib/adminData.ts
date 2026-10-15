@@ -114,6 +114,7 @@ export type AdminContract = {
   service_date: string;
   service_time: string | null;
   status: string;
+  cancelled_at?: string | null;
   driver_id: string | null;
   contract_pay: number | null;
   bonus_pay: number | null;
@@ -139,11 +140,11 @@ export async function getShowsAdmin() {
   const { data, error } = await supabase
     .from("shows")
     .select(
-      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id),contract_external_assignees(id,display_name,position))",
+      "*,show_checklist_templates(kind,template_id),contracts(id,kind,service_date,service_time,status,driver_id,contract_pay,bonus_pay,terms,admin_signed_at,admin_signature_name,cancelled_at,contract_drivers(driver_id,is_trainee,driver:profiles(full_name,role)),contract_checklists(template_id),contract_external_assignees(id,display_name,position))",
     )
     .order("starts_on", { ascending: true });
   if (error) throw error;
-  const shows = data as AdminShow[];
+  const shows = (data as AdminShow[]).filter((show) => !show.contracts?.some((contract) => contract.cancelled_at));
   return release.channel === "beta" ? shows : shows.filter((show) => !show.is_test);
 }
 export async function createShow(
@@ -593,9 +594,11 @@ export async function updateShow(id: string, input: Partial<Show>) {
   const { error } = await supabase.from("shows").update(input).eq("id", id);
   if (error) throw error;
 }
-export async function deleteShow(id: string) {
-  const { error } = await supabase.from("shows").delete().eq("id", id);
+/** Deletes work with no agreement evidence; cancels (and keeps the signed record of) work that has any. */
+export async function deleteShow(id: string): Promise<"deleted" | "cancelled"> {
+  const { data, error } = await supabase.rpc("admin_delete_or_cancel_show", { target_show: id });
   if (error) throw error;
+  return data === "cancelled" ? "cancelled" : "deleted";
 }
 export async function getShowChecklistAssignments() {
   const { data, error } = await supabase
