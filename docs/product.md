@@ -130,3 +130,12 @@ deleting and re-adding creates a different identity even at the same position.
 Existing item IDs and their flags/instructions remain intact. This prevents the
 repository API's missing-ID position fallback from treating a replacement as an
 existing completed item. Live restored-beta compatibility remains unverified.
+
+### Account recovery draft increment (October 15, 2026)
+
+Recovery requests use stable Roadshow hostnames, prevent duplicate pending
+submissions and distinguish request acceptance from email delivery. Invitation
+and recovery links enter password setup; invalid link types are rejected.
+Users' Active/Inactive control describes operational access, not invitation
+acceptance. Account creation/resend/status endpoints and signed-contract email
+remain separate deferred work; see the [scope and acceptance plan](plans/2026-10-15-user-management-email.md).

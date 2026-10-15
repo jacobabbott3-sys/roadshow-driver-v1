@@ -1,5 +1,5 @@
 import { LockKeyhole } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
@@ -12,21 +12,28 @@ export function UpdatePasswordPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    sessionStorage.removeItem("roadshow-auth-flow");
-  }, []);
+  const inFlight = useRef(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (inFlight.current) return;
     if (password.length < 8) return setError("Use at least 8 characters.");
     if (password !== confirm) return setError("Passwords do not match.");
     if (!user) return setError("This secure link is no longer active. Request a new invitation or password-reset email.");
+    inFlight.current = true;
     setBusy(true);
     setError("");
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    setBusy(false);
-    if (updateError) setError(updateError.message);
-    else navigate("/", { replace: true });
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      sessionStorage.removeItem("roadshow-auth-flow");
+      navigate("/", { replace: true });
+    } catch {
+      setError("We couldn’t save your password. Try again, or request a new reset link if your session has expired.");
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
   }
 
   return (
