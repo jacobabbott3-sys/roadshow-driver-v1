@@ -133,7 +133,8 @@ beta/public share one backend. See the [rollout proposal](releases/beta-6a-test-
 The October 15 frontend increment uses exact stable callback origins, validates
 invite/recovery link types at runtime, and handles PASSWORD_RECOVERY routing.
 Session-storage flow markers are navigation hints only; Supabase remains the
-password/session authority. This introduces no admin Auth API or application
-email sender. The exact feature branch has automatic Vercel Git deployments
+password/session authority. This introduces no live admin Auth API or application
+email sender. A separate server-only account service core is default-off and
+tested with injected synthetic adapters; it is not wired to a deployed endpoint. The exact feature branch has automatic Vercel Git deployments
 disabled. See the [account/email design](plans/2026-10-15-user-management-email.md)
 for prerequisites and the separately deferred signed-contract notice.

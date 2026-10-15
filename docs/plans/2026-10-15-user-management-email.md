@@ -146,3 +146,67 @@ tests retain final-active-admin assertions. No live authorization claim follows.
 SQL/concurrency suites were not rerun locally because no SQL changed; existing
 CI includes them. CI result, hosted preview, mobile behavior, real Auth redirects,
 SMTP delivery and provider acceptance remain separate evidence, not local passes.
+
+## Follow-up: implemented disabled server core
+
+`server/adminAccounts.ts` now implements list/create/resend/recover orchestration
+with injected server adapters. It is outside the frontend bundle, has no HTTP
+listener, no Supabase/provider client and no live credentials. Both feature and
+mail gates default off. It refuses the known production project and any backend
+that differs from the explicitly approved beta identity. No live target has
+been configured by this change.
+
+Implemented controls: fresh active-admin/session checks, bounded minimal account
+projection, distinct activity/invitation/delivery states, create-as-driver only,
+exact test-recipient allowlist, fixed beta callbacks, rate-limit adapter boundary,
+atomic claim adapter boundary, reauthorization and target recheck after claim,
+completed-request replay, same-key conflict handling, retry only after an explicit
+transient rejection, and uncertain-result reconciliation instead of blind resend.
+A durable-store failure never returns success. Unknown delivery remains unknown.
+
+The in-memory test adapter is synthetic only. Actual durable uniqueness/leases,
+Auth account creation/resend semantics, rate limits and provider idempotency are
+adapter obligations, not proven by these tests. A live adapter must atomically
+serialize recipient operations, retain uncertain outcomes (including across new
+request IDs), and prevent lost acknowledgements from causing duplicate mail.
+Create must reject existing accounts, never silently resend or promote. HTTP
+method/CORS/body-size handling and server secret loading are not wired yet.
+Rechecks narrow stale-access windows but cannot make Auth/provider operations
+transactional with profile changes; that race needs explicit adapter acceptance.
+
+### Approval boundaries
+
+| Step | Status |
+| --- | --- |
+| Reversible source-only core, UI and mock tests; draft PR to beta | Already authorized; implemented here |
+| Additional source-only server adapter/UI code, disabled and mock-tested | Already authorized; can continue without live mutations |
+| Live deployment or connection to a beta account endpoint | Needs explicit approval and verified isolated beta identity/adapter review |
+| Provision credentials, persistent access, Auth/security/redirect settings | Needs approval through the relevant secure channel; no secrets in chat/client |
+| Apply a new durable request/outbox schema | Needs separately reviewed migration approval; no migration in this turn |
+| Send test invitations/recovery | Needs named approved synthetic recipients, test-mail approval and sandbox verification |
+| Activate real/automatic account email delivery | Needs explicit activation approval after acceptance; remains disabled |
+| Signed-contract notice implementation | Separate increment; no sender or agreement changes in PR #18 |
+| Production merge/deploy | Not authorized |
+
+### Recipient decisions for review
+
+Account invitations/recovery: the core permits only explicitly allowlisted test
+addresses, blocks inactive-account sends, and never accepts a caller-provided
+recipient for resend/recovery. New accounts default to driver. Live recipients
+and any inactive-account recovery exception require a separate decision.
+
+Signed-contract notices: intended audience is all admins plus
+`accounting@havenlight.com`, deduplicated per current signed version/recipient.
+Before activation, decide (1) include inactive admins or active admins only;
+(2) send a new informational notice for each fully signed revision, and whether
+cancellation/revision after delivery needs a follow-up. No choice is assumed.
+The notice must explicitly say it is not payment authorization. Real accounting
+and admin mailboxes cannot be beta test recipients without specific approval.
+
+CI for the initial frontend commit `237a5d8` passed: run 38798022864, including
+existing SQL and native concurrency jobs. Subsequent server-core validation is
+recorded in the PR; that earlier result does not validate later commits.
+
+Follow-up local verification: 67 unit/server tests passed (16 server-core tests),
+99 UI tests passed, build including server/test TypeScript passed, lint zero
+errors and the same three warnings. No live adapters or mail were exercised.
