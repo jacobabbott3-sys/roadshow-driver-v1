@@ -1,4 +1,4 @@
-/** Server-only orchestration. No live adapter or HTTP endpoint is wired in this increment. */
+/** Server-only orchestration. Activation defaults off; deployment is separate. */
 export type Account = {
   id: string; email: string; fullName: string | null; role: 'driver' | 'admin';
   active: boolean; invitedAt: string | null; confirmedAt: string | null;
@@ -97,7 +97,7 @@ export function createAccountService(ports: AccountPorts, policy: AccountPolicy 
       const fingerprint = JSON.stringify(command);
       const claim = await ports.claim(actor.id, body.requestId, fingerprint, command.email);
       if (claim.kind === 'replay') return claim.result;
-      if (claim.kind !== 'acquired') return result(409, claim.kind === 'uncertain' ? 'Previous outcome is unknown. Reconcile before retrying.' : 'Request is already pending or conflicts with a previous request.');
+      if (claim.kind !== 'acquired') return result(409, claim.kind === 'uncertain' ? 'Previous outcome is unknown. Reconcile before retrying.' : 'Request is pending, rate-limited, or conflicts with a previous request. Wait at least a minute before a new request.');
       let response: Result;
       let state: 'complete' | 'retryable' | 'uncertain' = 'complete';
       try {
@@ -117,7 +117,7 @@ export function createAccountService(ports: AccountPorts, policy: AccountPolicy 
           const outcome = await ports.perform(command, `${actor.id}:${body.requestId}`);
           response = outcome.kind === 'accepted'
             ? { status: 202, body: { requestId: body.requestId, emailRequestStatus: 'accepted', emailDeliveryStatus: 'unknown' } }
-            : result(503, 'Email request was rejected. Delivery was not confirmed.');
+            : { status: 503, body: { message: 'Email request was rejected. Delivery was not confirmed. You may try a new request after one minute.', retryAllowed: true } };
           if (outcome.kind === 'rejected' && outcome.retryable) state = 'retryable';
         }
       } catch {

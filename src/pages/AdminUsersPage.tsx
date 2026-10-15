@@ -1,3 +1,4 @@
+import { AdminAccountControls } from "../components/AdminAccountControls";
 import { Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
 import { useState } from "react";
 import { AdminHeader } from "../components/AdminNav";
@@ -37,6 +38,7 @@ export function AdminUsersPage() {
         description="Manage driver access and roles. Active means operational access, not invitation acceptance."
         backTo="/admin"
       />
+      <AdminAccountControls />
       <ListSearch value={search} onChange={setSearch} placeholder="Search names, roles, or phone numbers" label="Search users" resultCount={users?.length || 0} />
       <PageState
         loading={query.loading}
