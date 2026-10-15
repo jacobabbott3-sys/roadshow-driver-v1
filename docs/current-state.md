@@ -1,6 +1,17 @@
 # Current release and development state
 
-Updated October 5, 2026. Baseline source: `beta` at
+## October 12 isolated web Beta 6A release handoff
+
+Jacob approved PR #12 plus reviewed queued-read fix `12cc178` for publication,
+updated CI, and merge into beta only. Isolated backend `exsquwjtqnirojntoxqv`
+already has the reviewed schema/fix (12 ledger entries covering 27 source files).
+No additional hosted migration is required. Production Supabase, main/Public 5,
+and outbound integrations remain outside this release. Deployment and hosted
+acceptance are not established by authorization. See the current override in the
+[Beta 6A checklist](releases/beta-6a-test-checklist.md); older shared-backend notes
+below do not describe the new isolated release target.
+
+Updated October 7, 2026. Historical deployment evidence below is dated October 5. Baseline source: `beta` at
 `016c4c15c7878c569ec768caf5eb38109cacba3c`. This is a repository-status record,
 not a claim that the matching database/deployment has been verified.
 
@@ -75,6 +86,37 @@ and the [Beta 5A checklist](releases/beta-5a-test-checklist.md).
 
 ## Verification baseline and known issues
 
+### October 6 notification-permission hardening, prepared for review
+
+The additive `20261006152001_restrict_due_work_notification_execution.sql`
+migration removes browser/public execution of the global due-work notification
+writer. It is prepared for review and **has not been applied to a live database**.
+The source baseline for this patch is beta
+`5c49d1487df9c1a746457d9a54e6f315a697e732`.
+
+Read-only production catalog checks on October 6 found explicit execution grants
+to `PUBLIC`, `anon`, `authenticated`, and `service_role`; the function is owned by
+`postgres` and uses `SECURITY DEFINER`. The active `roadshow-daily-work-alerts`
+cron job calls it as `postgres` at `0 14 * * *`; October 4–6 executions succeeded.
+The proposed revoke preserves that scheduler and the existing service-role grant.
+The frontend calls a different, user-scoped RPC, `ensure_my_due_notifications()`.
+
+The SQL assertions in `supabase/verification/due_work_notification_permissions.sql`
+are read-only catalog checks and require no pgTAP installation. They do not invoke
+notification writers. Local preparation passed 46 unit tests, 40 UI tests,
+production build, and lint with zero errors and the same three existing warnings
+using Node 24.19.0/npm 11.5.2. An isolated PGlite 0.5.8 test with synthetic rows
+reproduced unauthorized execution before the revoke, then verified denied client
+calls, preserved postgres/service-role calls, deduplication, and the unchanged
+personal-notification RPC. This is focused PostgreSQL behavior coverage, not live
+Supabase Auth/RLS, pg_cron, webhook, or device acceptance. Live application,
+post-application grant checks, and the next normal scheduler result remain
+separate review/approval and verification steps. Do not change global/default
+function grants, replay historical migrations, or use production notifications
+as test fixtures.
+
+### Existing application baseline
+
 Node 24.19.0 / npm 11.5.2 in the cloud checkout: baseline UI tests 35/35 and
 production build pass. The initial UTC unit run failed two Mountain-time fixture
 tests; making their timezone explicit allows all 44 unit tests to pass without
@@ -115,3 +157,39 @@ single-page reader. Use the previous/next-page controls; this is a deferred mino
 review finding, not a blocker for in-app viewing.
 
 Evidence and unfinished account steps: [cloud verification](releases/cloud-development-verification.md).
+
+## Beta 6A prepared locally — October 7
+
+Current remote beta is `c439a0fe43b202667436decd6b17861e5a5bd1e0`; main/Public 5
+is `950a2628a517ce067b0167382e5aafe4fd02b9ea`. They were verified before and after
+local work and remain unchanged. `feat/beta-6a-agreement-reconstruction` contains
+scoped dependency fixes and reconstructed agreement versions/acceptance, reviewed
+revisions, private receipts/notices and operational gates. Prepared beta fallback
+is 6A; deployed Beta 5A and Public 5 are not changed by this local branch.
+
+All five October 7 migration files are **unapplied review artifacts**. Beta/public
+share Supabase, and fail-closed old signing APIs require a separately approved
+compatible public rollout. No push/PR/deployment or live backend/settings change
+occurred. Automatic-preview settings could not be read (Vercel 403); publication
+is held. [Verification](releases/beta-6a-verification.md),
+[rollout/acceptance checklist](releases/beta-6a-test-checklist.md),
+[draft PR](releases/beta-6a-draft-pr.md), and
+[Mac reconciliation](releases/beta-6a-reconstruction.md) contain the exact scope,
+review findings and limits. Historical October 5/6 evidence above is not new
+Beta 6A acceptance.
+
+### Publication authorization
+
+On October 7 (Denver), Jacob approved pushing the reconstructed feature branch
+and opening a draft PR into beta, including any automatic Vercel preview using
+the shared Supabase backend. This supersedes the preparation-time publication
+hold above. Project-settings read remains blocked by403; no live migrations,
+merging, public release, settings or data changes are authorized.
+
+### October 8 queued-read follow-up
+
+A separate local review branch prepares an activity recheck after agreement-read
+locks and six native concurrency regressions. See the
+[fix record](releases/beta-6a-read-revocation-fix.md). The shared hosted agreement
+schema remains absent, and deployed `web-push` lacks the new in-app-only exclusion.
+This follow-up does not authorize publication or change deployed versions.

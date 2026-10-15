@@ -199,3 +199,25 @@ app, and perform tiny emergency text edits. Use a desktop browser for normal
 coding, database migrations, security work, and conflict resolution. Initial
 rollout is complete only after [another-desktop acceptance](releases/cloud-development-verification.md)
 with the original laptop off.
+
+## Disposable agreement SQL verification
+
+Run `npm run test:sql` after `npm ci` with Node 24/npm 11.5.2. It creates an
+in-memory PGlite database and replays SQL against synthetic roles/data only.
+No backend URL, credentials or live Supabase stack is used. The non-deploying
+CI runs this check alongside existing unit/UI/build/lint checks. Stage selection
+uses `AGREEMENT_STAGE`; see [evidence](releases/beta-6a-verification.md).
+Do not equate single-session success with concurrency or hosted Auth/storage
+acceptance. Never replace unavailable isolated tests with the shared live backend.
+
+Run `npm run test:sql:concurrency` with Python 3 and Docker for the native
+multi-session queued-read regressions. The command creates a disposable,
+network-isolated PostgreSQL container with synthetic fixtures, exposes no ports,
+and removes its container/volume after testing. CI runs the same command; missing
+Docker is a failed prerequisite, not a skipped pass. See the
+[revocation fix record](releases/beta-6a-read-revocation-fix.md) for scope and limits.
+
+Before publishing this reconstruction branch, verify automatic Vercel previews
+and obtain specific approval when they can use shared live Supabase. Keep the
+prepared patch and draft PR local when verification is blocked; do not change
+deployment settings to bypass the boundary.

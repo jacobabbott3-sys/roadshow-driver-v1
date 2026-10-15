@@ -79,6 +79,20 @@ The app and database are ready for web push, but each Supabase/Vercel environmen
 
 Users can then turn device notifications on and choose new-contract-batch, assignment, work-day, and message alerts from **Profile**. Browser permission is requested only when they press the enable button. Publishing still creates an in-app notification when a user turns off device push for new batches.
 
+`create_due_work_notifications()` is a backend scheduler operation, not a browser
+RPC. The additive `20261006152001_restrict_due_work_notification_execution.sql`
+migration removes `PUBLIC`, `anon`, and `authenticated` execution while preserving
+the existing `postgres` owner and `service_role` access. Keep the cron job running
+as `postgres`; the app separately calls the user-scoped
+`ensure_my_due_notifications()`.
+
+This migration needs review and separate approval before live application. After
+applying it to the intended environment, run the read-only catalog assertions in
+`supabase/verification/due_work_notification_permissions.sql` and inspect the next
+scheduled job result. The assertions need no pgTAP extension and do not invoke
+notification writers. Do not invoke the global writer against live data merely
+to test permissions: it can insert notifications and trigger device pushes.
+
 ## Fix invitation and password-reset links
 
 In Supabase, open **Authentication → URL Configuration**:

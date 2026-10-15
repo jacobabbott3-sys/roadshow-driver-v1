@@ -13,7 +13,7 @@ export function ProtectedRoute() {
 }
 
 export function AdminRoute() {
-  const { profile, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   if (loading) return <LoadingScreen />;
-  return profile?.is_active && profile.role === "admin" ? <Outlet /> : <Navigate to="/" replace />;
+  return user && profile?.id === user.id && profile.is_active && profile.role === "admin" ? <Outlet /> : <Navigate to="/" replace />;
 }

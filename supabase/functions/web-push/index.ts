@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
+import { isInAppOnlyNotification } from './notification-policy.ts';
 
 type WebhookPayload = {
   table: "messages" | "notifications";
@@ -22,6 +23,10 @@ Deno.serve(async (request) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const payload = (await request.json()) as WebhookPayload;
+  if (payload.table === 'notifications' && isInAppOnlyNotification(payload.record.kind)) {
+    return Response.json({ sent: 0, skipped: true });
+  }
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const publicKey = Deno.env.get("VAPID_PUBLIC_KEY");
@@ -31,7 +36,6 @@ Deno.serve(async (request) => {
     return new Response("Missing server configuration", { status: 500 });
   }
 
-  const payload = (await request.json()) as WebhookPayload;
   const record = payload.record;
   const supabase = createClient(supabaseUrl, serviceKey);
   const { data: preferences } = await supabase

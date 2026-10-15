@@ -2466,6 +2466,7 @@ h2 {
   font-size: .68rem;
   font-weight: 800;
 }
+.contract-publication-status.cancelled { background: #fdecec; color: #a12a2a; font-weight: 700; }
 .contract-publication-status.not_published { background: var(--soft); color: var(--muted); }
 .contract-publication-status.published_open { background: #e8f2ff; color: #265c91; }
 .contract-publication-status.published_assigned { background: #e1f2e7; color: #25613b; }
@@ -3431,3 +3432,10 @@ h2 {
   .sort-menu { width: 100%; }
   .show-list-toolbar .sort-control { margin-left: 0; }
 }
+/* Agreement copies keep full text readable on desktop and phone. */
+.agreement-dialog { width:min(48rem,calc(100vw - 2rem)); max-height:calc(100dvh - 2rem); overflow:auto; border:1px solid var(--border,#ddd); border-radius:1rem; padding:1.5rem; color:inherit; background:var(--surface,#fff); }
+.agreement-dialog::backdrop { background:rgb(0 0 0 / 55%); }
+.agreement-copy { overflow-wrap:anywhere; }
+.agreement-copy dl>div { display:flex; flex-wrap:wrap; gap:.5rem; margin:.35rem 0; }
+.agreement-copy dt { font-weight:600; }
+.agreement-copy dd { margin:0; }

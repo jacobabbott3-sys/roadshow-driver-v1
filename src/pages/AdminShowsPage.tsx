@@ -17,7 +17,6 @@ import { PageState } from "../components/PageState";
 import { SortButton } from "../components/SortButton";
 import { useAsync } from "../hooks/useAsync";
 import {
-  adminSignContract,
   deleteShow,
   getContractTemplates,
   getShowsAdmin,
@@ -63,7 +62,6 @@ type FormState = {
   contract_pay: string;
   bonus_pay: string;
   terms: string;
-  admin_signature_name: string;
 };
 const blank: FormState = {
   name: "",
@@ -93,7 +91,6 @@ const blank: FormState = {
   contract_pay: "",
   bonus_pay: "",
   terms: "",
-  admin_signature_name: "",
 };
 const draftKey = "roadshow-admin-show-draft";
 function savedDraft() {
@@ -209,7 +206,6 @@ export function AdminShowsPage() {
       contract_pay: contract?.contract_pay?.toString() || "",
       bonus_pay: contract?.bonus_pay?.toString() || "",
       terms: contract?.terms || "",
-      admin_signature_name: contract?.admin_signature_name || "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -254,7 +250,7 @@ export function AdminShowsPage() {
         lodging_notes: form.lodging_included ? form.lodging_notes || null : null,
       };
       const existingContract = shows.data?.find((show) => show.id === editing)?.contracts[0];
-      const contractId = await saveShowContractAtomic({
+      await saveShowContractAtomic({
         show_id: editing,
         contract_id: form.contract_id || null,
         ...showInput,
@@ -268,8 +264,6 @@ export function AdminShowsPage() {
         terms: form.terms || null,
         template_id: form.template_id || null,
       });
-      if (form.admin_signature_name.trim())
-        await adminSignContract(contractId, form.admin_signature_name.trim());
       closeForm();
       setMessage("Show and contract saved.");
       await shows.refresh();
@@ -283,14 +277,14 @@ export function AdminShowsPage() {
     if (!deleting) return;
     setBusy(true);
     try {
-      await deleteShow(deleting.id);
+      const outcome = await deleteShow(deleting.id);
       setDeleting(null);
       if (editing === deleting.id) {
         setOpen(false);
         setEditing(null);
         setForm(blank);
       }
-      setMessage("Show deleted.");
+      setMessage(outcome === "cancelled" ? "Show cancelled. Its signed agreement record was kept." : "Show deleted.");
       await shows.refresh();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Unable to delete show.");
@@ -299,7 +293,7 @@ export function AdminShowsPage() {
     }
   }
   const matchingTemplates =
-    templates.data?.filter((t) => t.kind === form.kind) || [];
+    templates.data?.filter((t) => t.kind === form.kind && (t.active || t.id === form.template_id)) || [];
   const regularShows = shows.data?.filter((show) => show.event_type !== "signing") || [];
   const matchingShows = regularShows.filter((show) =>
     matchesListSearch(search, show.name, show.city, show.state, show.address, show.contracts[0]?.service_date, show.starts_on, show.ends_on) &&
@@ -538,20 +532,7 @@ export function AdminShowsPage() {
               placeholder="Terms the driver must review before signing…"
             />
           </label>
-          <label className="terms-editor">
-            Admin signature
-            <input
-              value={form.admin_signature_name}
-              onChange={(e) =>
-                setForm({ ...form, admin_signature_name: e.target.value })
-              }
-              placeholder="Admin's full legal name"
-            />
-            <small>
-              The driver can begin work after their signature; the admin
-              signature can be added before or afterward.
-            </small>
-          </label>
+          <p className="notice">Save changes, then use Review and sign agreement to accept the issued version.</p>
           <button className="button primary" disabled={busy}>
             {busy ? "Saving…" : "Save show and contract"}
           </button>
@@ -566,6 +547,7 @@ export function AdminShowsPage() {
           {!filteredShows.length && <div className="inline-empty">No contracts match the current search and publication filter.</div>}
           {filteredShows.map((show) => {
             const contract = show.contracts[0];
+            const cancelled = Boolean(contract?.cancelled_at);
             const publicationState = publicationStateForShow(show.id, publishedAvailability.data || []);
             return (
               <article className="admin-show-card" key={show.id}>
@@ -582,25 +564,34 @@ export function AdminShowsPage() {
                     </p>
                   </div>
                   <div className="show-card-actions">
-                    <button onClick={() => setAssigning(show)} disabled={!contract}>
-                      <UsersRound /> Assign user(s)
-                    </button>
-                    <button onClick={() => loadEdit(show)}>
-                      <Pencil /> Edit
-                    </button>
-                    <button
-                      className="delete-action"
-                      onClick={() => setDeleting(show)}
-                    >
-                      <Trash2 /> Delete
-                    </button>
+                    {contract && <Link className="button" to={`/admin/contracts/${contract.id}/agreement`}>{cancelled ? "View signed agreement" : "Review and sign agreement"}</Link>}
+                    {!cancelled && (
+                      <>
+                        <button onClick={() => setAssigning(show)} disabled={!contract}>
+                          <UsersRound /> Assign user(s)
+                        </button>
+                        <button onClick={() => loadEdit(show)}>
+                          <Pencil /> Edit
+                        </button>
+                        <button
+                          className="delete-action"
+                          onClick={() => setDeleting(show)}
+                        >
+                          <Trash2 /> Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
                 {contract ? (
                   <div className="contract-summary">
                     <BriefcaseBusiness />
                     <span>
-                      <small className={`contract-publication-status ${publicationState}`}>{publicationStateLabel(publicationState)}</small>
+                      {cancelled ? (
+                        <small className="contract-publication-status cancelled">Cancelled</small>
+                      ) : (
+                        <small className={`contract-publication-status ${publicationState}`}>{publicationStateLabel(publicationState)}</small>
+                      )}
                       <strong>{statusLabel(contract.kind)} contract</strong>
                       <small>
                         {formatWorkDate(contract.service_date)}{contract.service_time ? ` at ${formatTime(contract.service_time)}` : ""} ·{" "}

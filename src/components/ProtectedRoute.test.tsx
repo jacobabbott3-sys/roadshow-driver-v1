@@ -45,3 +45,9 @@ function renderProtected(element: React.ReactNode) {
     </MemoryRouter>,
   );
 }
+
+for (const user of [null,{id:'different-user'}]) it('rejects an admin profile that does not belong to the session',async()=>{
+ auth.user=user;auth.profile={id:'user-1',role:'admin',is_active:true};auth.loading=false;
+ render(<MemoryRouter initialEntries={['/admin']}><Routes><Route path="/" element={<p>Denied</p>}/><Route element={<AdminRoute/>}><Route path="/admin" element={<p>Admin content</p>}/></Route></Routes></MemoryRouter>);
+ expect(await screen.findByText('Denied')).toBeVisible();expect(screen.queryByText('Admin content')).not.toBeInTheDocument();
+});
