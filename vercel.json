@@ -7,7 +7,9 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "feat/user-account-safety": false
+      "feat/user-account-safety": false,
+      "feat/manual-contract-notices": false,
+      "integration/beta-account-notices": false
     }
   }
 }

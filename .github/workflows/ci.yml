@@ -35,6 +35,10 @@ jobs:
         run: npm ci
       - name: Unit tests
         run: npm test
+      - name: Contract notice mock tests
+        run: npm run test:contract-notices
+      - name: Contract Edge typecheck
+        run: npx --yes deno@2.5.4 check --frozen --config supabase/functions/contract-notices/deno.json --lock supabase/functions/contract-notices/deno.lock supabase/functions/contract-notices/index.ts
       - name: UI tests
         run: npm run test:ui
       - name: Disposable PostgreSQL authorization tests
@@ -45,5 +49,12 @@ jobs:
         run: npx --yes deno@2.5.4 check --frozen --config supabase/functions/admin-accounts/deno.json supabase/functions/admin-accounts/index.ts
       - name: Production build
         run: npm run build
+      - name: Existing beta target build (synthetic key, no network)
+        run: npm run build
+        env:
+          VERCEL_GIT_COMMIT_REF: beta
+          VITE_RELEASE_CHANNEL: beta
+          VITE_SUPABASE_URL: https://exsquwjtqnirojntoxqv.supabase.co
+          VITE_SUPABASE_ANON_KEY: synthetic-build-only
       - name: Lint
         run: npm run lint

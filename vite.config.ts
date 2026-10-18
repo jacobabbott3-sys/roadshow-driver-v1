@@ -1,3 +1,4 @@
+import { assertBetaBuildTarget } from './src/lib/betaTarget'
 import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
@@ -6,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const branch = env.VERCEL_GIT_COMMIT_REF || ''
   const channel = env.VITE_RELEASE_CHANNEL || (branch === 'beta' ? 'beta' : 'public')
+  assertBetaBuildTarget(branch, channel, env.VITE_SUPABASE_URL)
   const requestedVersion = env.VITE_RELEASE_VERSION || (channel === 'beta' ? '6A' : '5')
   const version = channel === 'public'
     ? requestedVersion.replace(/[^0-9.]/g, '') || '5'

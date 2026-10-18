@@ -60,3 +60,8 @@ References: [cloud design](superpowers/specs/2026-10-01-cloud-development-design
 - Publication is held while automatic Vercel preview settings cannot be verified
   (403). Shared backend/live rollout and public compatibility need separate
   review/authorization. No earlier release backup waiver extends to this SQL work.
+
+- Signed-contract notice proposal: manual review/confirmation only, active admins
+  plus accounting as intended recipients, same-current-version signatures required.
+  Send later never schedules mail. Initial source supports a separate test inbox
+  only; activation and real-recipient delivery require separate approval.

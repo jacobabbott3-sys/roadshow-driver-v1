@@ -1,7 +1,10 @@
+import { browserTargetAllowed } from './betaTarget'
 import { passwordFlow } from './authFlow'
 import { createClient } from '@supabase/supabase-js'
-const url = import.meta.env.VITE_SUPABASE_URL
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+const configuredUrl = import.meta.env.VITE_SUPABASE_URL
+const allowed = browserTargetAllowed(typeof window === 'undefined' ? '' : window.location.hostname, configuredUrl)
+const url = allowed ? configuredUrl : undefined
+const key = allowed ? import.meta.env.VITE_SUPABASE_ANON_KEY : undefined
 export const isSupabaseConfigured = Boolean(url && key)
 
 // Supabase email links can return invitation or recovery sessions in the hash.

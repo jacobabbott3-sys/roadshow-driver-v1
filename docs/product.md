@@ -148,3 +148,8 @@ beta test recipients. No live activation or outgoing mail has occurred.
 
 Signed-contract email remains separate. See the
 [scope, design and approval record](plans/2026-10-15-user-management-email.md).
+
+A disabled proposal adds explicit signed-contract email review with Send, Skip,
+and Send later (deferred intent, never scheduled delivery). See the
+[manual notice design](email/manual-contract-notices.md). Notices are informational;
+payment readiness remains separate.

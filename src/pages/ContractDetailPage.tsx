@@ -12,6 +12,7 @@ import {
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { getContractAcceptanceGate } from "../lib/agreementData";
+import { ContractNoticeReview } from "../components/ContractNoticeReview";
 import { AgreementSigning } from "../components/AgreementSigning";
 import { PageState } from "../components/PageState";
 import { ImageViewer } from "../components/ImageViewer";
@@ -358,6 +359,7 @@ function ContractDetailContent({adminReview}:{adminReview:boolean}) {
               </section>
             )}
             {tab === "sign" && <AgreementSigning contractId={id} acceptanceRole={adminReview ? "admin" : "driver"} onSigned={async()=>{await Promise.all([contract.refresh(),acceptance.refresh()]);}} />}
+            {tab === "sign" && adminReview && <ContractNoticeReview contractId={id} />}
           </>
         )}
       </PageState>

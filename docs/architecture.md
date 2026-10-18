@@ -147,3 +147,7 @@ included. This feature branch has automatic Vercel deployment disabled.
 See [configuration](../server/README.md) and the
 [account/email plan](plans/2026-10-15-user-management-email.md) for activation
 requirements, review evidence and the separate signed-contract notice proposal.
+
+Manual signed-contract email source is isolated behind disabled flags; see
+[manual notice design and activation gates](email/manual-contract-notices.md).
+It has no signing/edit/cancellation trigger and no real-recipient sending mode.
