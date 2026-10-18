@@ -25,7 +25,7 @@ The known Vercel denial blocks deployment verification, not source integration. 
 
 ## Integration verification
 
-Local: 80 unit/server tests, 119 UI tests, 14 notice tests, 88 synthetic SQL
+Local: 80 unit/server tests, 121 UI tests, 14 notice tests, 88 synthetic SQL
 checks and six disposable PostgreSQL concurrency tests passed. Normal and beta
 builds passed; the beta build used a synthetic browser key and no live calls.
 Both frozen-lock Deno Edge typechecks passed. Lint: zero errors, unchanged three

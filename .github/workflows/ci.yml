@@ -39,8 +39,10 @@ jobs:
         run: npm run test:contract-notices
       - name: Contract Edge typecheck
         run: npx --yes deno@2.5.4 check --frozen --config supabase/functions/contract-notices/deno.json --lock supabase/functions/contract-notices/deno.lock supabase/functions/contract-notices/index.ts
-      - name: UI tests
+      - name: Offline beta UI tests
         run: npm run test:ui
+        env:
+          VITE_RELEASE_CHANNEL: beta
       - name: Disposable PostgreSQL authorization tests
         run: npm run test:sql
       - name: Native PostgreSQL concurrency regressions
