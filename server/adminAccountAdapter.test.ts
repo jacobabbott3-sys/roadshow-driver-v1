@@ -108,3 +108,17 @@ test('session adapter requires Auth-verified user and nonempty session identity'
   assert.deepEqual(await f.ports.verifySession(token(claims)),{id:user.id});
   for(const changed of [{...claims,session_id:null},{...claims,sub:'other'},{...claims,role:'service_role'},{...claims,session_id:'00000000-0000-0000-0000-000000000000'}])assert.equal(await f.ports.verifySession(token(changed)),null);
 });
+
+for (const action of ['create', 'resend', 'recover'] as const) {
+  test(`${action} email labels subject and body as BETA TEST and retains recipient and callback`, async () => {
+    const f = fixture();
+    const input = action === 'create' ? command : { action, userId: user.id, email: command.email, redirectTo: command.redirectTo };
+    await f.ports.perform(input, 'synthetic-label-check');
+    const sent = f.calls.find(call => call.url.hostname === 'api.resend.com')!;
+    assert.match(String(sent.body?.subject), /^\[BETA TEST\] Roadshow Driver /);
+    assert.match(String(sent.body?.text), /^BETA TEST — Synthetic account testing only\./);
+    assert.deepEqual(sent.body?.to, ['test@example.test']);
+    assert.match(String(sent.body?.text), /https:\/\/beta\.roadshowdriver\.com\/auth\/confirm\?/);
+    assert.match(String(sent.body?.text), new RegExp(`type=${action === 'recover' ? 'recovery' : 'invite'}`));
+  });
+}
