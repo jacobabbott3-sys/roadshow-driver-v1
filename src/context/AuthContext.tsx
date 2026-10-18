@@ -1,3 +1,4 @@
+import { passwordRecoveryRedirect } from "../lib/authFlow";
 import type { Session, User } from "@supabase/supabase-js";
 import {
   createContext,
@@ -76,7 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    const { data } = supabase.auth.onAuthStateChange((event, next) => {
+      if (event === "PASSWORD_RECOVERY") {
+        sessionStorage.setItem("roadshow-auth-flow", "recovery");
+        sessionStorage.setItem("roadshow-session-active", "true");
+      }
+      if (event === "SIGNED_OUT") sessionStorage.removeItem("roadshow-auth-flow");
+      setSession(next);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -113,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     resetPassword: async (email) => {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
+        redirectTo: passwordRecoveryRedirect(window.location.origin),
       });
       if (resetError) throw resetError;
     },

@@ -41,6 +41,8 @@ jobs:
         run: npm run test:sql
       - name: Native PostgreSQL concurrency regressions
         run: npm run test:sql:concurrency
+      - name: Account Edge Function typecheck
+        run: npx --yes deno@2.5.4 check --frozen --config supabase/functions/admin-accounts/deno.json supabase/functions/admin-accounts/index.ts
       - name: Production build
         run: npm run build
       - name: Lint
