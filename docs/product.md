@@ -130,3 +130,26 @@ deleting and re-adding creates a different identity even at the same position.
 Existing item IDs and their flags/instructions remain intact. This prevents the
 repository API's missing-ID position fallback from treating a replacement as an
 existing completed item. Live restored-beta compatibility remains unverified.
+
+### Account-management draft increment (October 15, 2026)
+
+Recovery requests use stable Roadshow hostnames, prevent duplicate pending
+submissions and distinguish request acceptance from delivery. Invitation/recovery
+links enter password setup; invalid link types are rejected.
+
+A default-off Users panel offers create-driver/invite, resend invitation, password
+recovery and paginated account email/status. Active/Inactive remains operational
+access, separate from invited/confirmed/unknown status. Email delivery is unknown;
+provider acceptance never means inbox delivery. Failed requests preserve inputs;
+uncertain retries retain operation IDs and require reconciliation. Server rate
+limits restrict new requests to one per actor/recipient per minute. Existing
+role/activity controls are unchanged. All new account email is limited to approved
+beta test recipients. No live activation or outgoing mail has occurred.
+
+Signed-contract email remains separate. See the
+[scope, design and approval record](plans/2026-10-15-user-management-email.md).
+
+A disabled proposal adds explicit signed-contract email review with Send, Skip,
+and Send later (deferred intent, never scheduled delivery). See the
+[manual notice design](email/manual-contract-notices.md). Notices are informational;
+payment readiness remains separate.

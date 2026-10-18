@@ -127,3 +127,27 @@ The Edge handler excludes agreement notice kinds before creating push clients.
 is neither live Supabase nor multi-session concurrency evidence. SQL and Edge/UI
 rollout must be coordinated with separately approved public compatibility because
 beta/public share one backend. See the [rollout proposal](releases/beta-6a-test-checklist.md).
+
+## Draft account-management boundary
+
+The October 15 increment validates stable recovery callbacks, invite/recovery
+link types and PASSWORD_RECOVERY routing. Session-storage markers are navigation
+hints, not authorization. The Users account panel is hidden behind a default-off
+browser flag; existing role/activity updates retain their original RPC.
+
+Server-only account orchestration, Supabase Auth/Resend adapters and an Edge
+Function entrypoint are source-complete but undeployed. Separate server feature
+and mail flags default off. Fresh active-admin authorization, fixed beta callbacks,
+exact test recipients and durable operation/recipient constraints protect requests.
+The proposed RLS request table has not been applied and adds no grants. Server
+secrets and generated tokens never enter the browser. Actual delivery is unknown
+without separately authenticated provider feedback. No signed-contract sender is
+included. This feature branch has automatic Vercel deployment disabled.
+
+See [configuration](../server/README.md) and the
+[account/email plan](plans/2026-10-15-user-management-email.md) for activation
+requirements, review evidence and the separate signed-contract notice proposal.
+
+Manual signed-contract email source is isolated behind disabled flags; see
+[manual notice design and activation gates](email/manual-contract-notices.md).
+It has no signing/edit/cancellation trigger and no real-recipient sending mode.

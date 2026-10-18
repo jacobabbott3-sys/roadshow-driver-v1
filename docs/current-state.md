@@ -1,3 +1,9 @@
+## October 18 cloud beta integration
+
+PR18 and PR19 source is reconciled for the existing beta branch with activation
+disabled. The existing test project is confirmed healthy; endpoint and request-store
+setup remain missing. See [integration and activation record](releases/2026-10-18-beta-email-integration.md).
+
 # Current release and development state
 
 ## October 12 isolated web Beta 6A release handoff

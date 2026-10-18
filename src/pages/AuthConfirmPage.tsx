@@ -1,6 +1,6 @@
-import type { EmailOtpType } from "@supabase/supabase-js";
+import { passwordFlow } from "../lib/authFlow";
 import { CheckCircle2, Link2Off, LoaderCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
@@ -8,35 +8,52 @@ export function AuthConfirmPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState<"working" | "success" | "error">("working");
-  const [message, setMessage] = useState("Verifying your secure invitation…");
+  const [message, setMessage] = useState("Verifying your secure account link…");
+
+  const verification = useRef<{ key: string; request: ReturnType<typeof supabase.auth.verifyOtp> } | null>(null);
 
   useEffect(() => {
+    let active = true;
     const tokenHash = params.get("token_hash");
-    const type = (params.get("type") || "invite") as EmailOtpType;
-    if (!tokenHash) {
+    const type = passwordFlow(params.get("type"));
+    if (!tokenHash || !type) {
       setStatus("error");
-      setMessage("This invitation link is incomplete. Ask an administrator to send a new invitation.");
+      setMessage("This account link is incomplete or unsupported. Request a new invitation or password-reset email.");
       return;
     }
-    void supabase.auth.verifyOtp({ token_hash: tokenHash, type }).then(({ error }) => {
-      if (error) {
+    // Reuse the pending exchange across StrictMode effect replay; OTPs are single-use.
+    const key = `${type}:${tokenHash}`;
+    if (verification.current?.key !== key) {
+      verification.current = { key, request: supabase.auth.verifyOtp({ token_hash: tokenHash, type }) };
+    }
+    setStatus("working");
+    setMessage("Verifying your secure account link…");
+    void verification.current.request.then(({ data, error }) => {
+      if (!active) return;
+      if (error || !data.session) {
         setStatus("error");
-        setMessage(error.message.includes("expired") ? "This invitation has expired. Ask an administrator to send a new one." : error.message);
+        setMessage("This account link is invalid or expired. Request a new invitation or password-reset email.");
         return;
       }
       sessionStorage.setItem("roadshow-session-active", "true");
+      sessionStorage.setItem("roadshow-auth-flow", type);
       setStatus("success");
-      setMessage("Invitation accepted. Opening password setup…");
-      window.setTimeout(() => navigate("/update-password", { replace: true }), 500);
+      setMessage("Link accepted. Opening password setup…");
+      navigate("/update-password", { replace: true });
+    }).catch(() => {
+      if (!active) return;
+      setStatus("error");
+      setMessage("We couldn’t verify this account link. Please reopen it or request a new email.");
     });
+    return () => { active = false; };
   }, [navigate, params]);
 
   return (
     <main className="center-page auth-simple">
       <section className="auth-card auth-confirm-card">
         {status === "working" ? <LoaderCircle className="confirm-spinner" /> : status === "success" ? <CheckCircle2 className="confirm-success" /> : <Link2Off className="confirm-error" />}
-        <p className="eyebrow">ACCOUNT INVITATION</p>
-        <h2>{status === "error" ? "We couldn’t open this invitation" : "Setting up your account"}</h2>
+        <p className="eyebrow">SECURE ACCOUNT</p>
+        <h2>{status === "error" ? "We couldn’t open this account link" : "Setting up your account"}</h2>
         <p className={status === "error" ? "error" : "muted"}>{message}</p>
       </section>
     </main>
