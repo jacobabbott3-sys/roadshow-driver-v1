@@ -6,7 +6,7 @@ An active admin explicitly opens **Review signed-contract email** on the admin a
 
 Intended recipients are all active admins plus accounting@havenlight.com, normalized and deduplicated. Missing active admin emails fail closed. Both required signatures must reference the same current, noncancelled agreement version; the driver must retain the corresponding open assignment. These facts, the active admin session and the recipient/message fingerprint are rechecked before each delivery and after claiming it. This is an informational signed-contract notice, **not payment authorization**. Payment readiness is communicated separately.
 
-This increment deliberately implements only test-inbox delivery. Actual recipients cannot be selected by the browser. Every test email goes to a separately configured inbox that must differ from every intended address; each message identifies its intended recipient. The endpoint accepts only the stable beta origin and an explicitly approved nonproduction Supabase project, rejects the known production project, and defaults off. Browser code has no service-role or provider key. Only the server reads Auth email addresses.
+This increment deliberately implements only test-inbox delivery. Actual recipients cannot be selected by the browser. Every test email goes to the fixed approved inbox shipping@havenlight.com, which may also appear among intended admin recipients; each message identifies its intended recipient. The endpoint accepts only the stable beta origin and an explicitly approved nonproduction Supabase project, rejects the known production project, and defaults off. Browser code has no service-role or provider key. Only the server reads Auth email addresses.
 
 ## Idempotency and failures
 
@@ -31,3 +31,12 @@ SQL checks and 6 native PostgreSQL concurrency tests passed. Build and pinned
 Deno 2.5.4 Edge typecheck passed. Lint has zero errors and the existing three
 warnings. Independent source review found no actionable issues. CI results are
 recorded in the draft PR. Live beta and real inbox acceptance are not performed.
+
+## October 19 recipient correction
+
+The test service and adapter independently require shipping@havenlight.com. Other
+configured destinations fail closed, even when they are outside the intended list.
+Actual provider To is fixed to that inbox, with no CC/BCC. Shipping may also be an
+intended admin recipient; intended addresses remain review metadata, never routing.
+Both source-level activation holds remain in place. No Supabase redeployment,
+settings changes, account changes or email is included in this source correction.

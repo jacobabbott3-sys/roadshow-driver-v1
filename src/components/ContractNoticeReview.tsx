@@ -35,7 +35,7 @@ function Review({ contractId }: { contractId: string }) {
     {preview && <div role="dialog" aria-label="Confirm signed-contract email">
       <p>Intended recipients: {preview.notice.recipients.join(', ')}</p>
       <p><strong>TEST ONLY — actual destination: {preview.notice.testRecipient}</strong></p>
-      <p>One test message per intended recipient. Intended recipients will not be contacted.</p>
+      <p>One test message per intended recipient. All test messages go only to shipping@havenlight.com, including when it is also an intended recipient.</p>
       <h4>{preview.notice.subject}</h4><pre style={{ whiteSpace: 'pre-wrap' }}>{preview.notice.message}</pre>
       <p>Send later saves your decision only. Reopen a fresh review and confirm Send; nothing is scheduled or queued.</p>
       {!preview.mailEnabled && <p>Sending is disabled.</p>}

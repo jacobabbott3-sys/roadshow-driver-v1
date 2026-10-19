@@ -13,7 +13,7 @@ function harness() {
     claimDelivery:async(n,r)=>{const key=n.versionId+r, state=deliveries.get(key);if(state==='accepted')return 'accepted';if(state && state!=='rejected')return 'blocked';deliveries.set(key,'pending');return 'acquired';},
     finishDelivery:async(n,r,s)=>{deliveries.set(n.versionId+r,s);}, send:async()=>{sends++;return 'accepted';},
   };
-  const run=createNoticeService(ports,{enabled:true,mailEnabled:true,testRecipient:'sandbox@example.net'},()=>time);
+  const run=createNoticeService(ports,{enabled:true,mailEnabled:true,testRecipient:'shipping@havenlight.com'},()=>time);
   const prepare=async()=>{const r=await run('token',{action:'prepare',contractId:'c'});assert.equal(r.status,200);return r.body.reviewId;};
   return {snapshot,ports,run,prepare,reviews,deliveries,get sends(){return sends;},revoke(){authorized=false;},expire(){time=700000;}};
 }
@@ -25,7 +25,7 @@ test('prepare, Skip and Send later never claim or send; later requires fresh rev
 });
 test('both signing orders yield same notice; active recipients deduplicated',async()=>{
  const h=harness(),a=[{email:'ADMIN@example.com',active:true},{email:'admin@example.com',active:true},{email:'inactive@example.com',active:false}];
- const n=await buildNotice(h.snapshot,a,'sandbox@example.net');h.snapshot.signatures.reverse();assert.deepEqual(await buildNotice(h.snapshot,a,'sandbox@example.net'),n);assert.deepEqual(n.recipients,['accounting@havenlight.com','admin@example.com']);assert.match(n.message,/not payment authorization/);
+ const n=await buildNotice(h.snapshot,a,'shipping@havenlight.com');h.snapshot.signatures.reverse();assert.deepEqual(await buildNotice(h.snapshot,a,'shipping@havenlight.com'),n);assert.deepEqual(n.recipients,['accounting@havenlight.com','admin@example.com']);assert.match(n.message,/not payment authorization/);
 });
 test('missing, wrong version, duplicate signatures, cancelled and reassigned evidence fail closed',async()=>{
  for(const mutate of [(s:Snapshot)=>s.signatures.pop(),(s:Snapshot)=>s.signatures[0].versionId='old',(s:Snapshot)=>s.signatures.push(s.signatures[0]),(s:Snapshot)=>s.currentVersionId='new',(s:Snapshot)=>s.cancelled=true,(s:Snapshot)=>s.driverEligible=false]){const h=harness();mutate(h.snapshot);assert.equal((await h.run('token',{action:'prepare',contractId:'c'})).status,409);assert.equal(h.sends,0);}
@@ -48,4 +48,12 @@ test('definite rejection can retry only after a new review',async()=>{
 });
 test('foreign review and client supplied recipient rejected',async()=>{
  const h=harness(),id=await h.prepare();h.reviews.get(id as string)!.actorId='someone-else';assert.equal((await h.run('token',{action:'send',reviewId:id,confirmed:true})).status,404);assert.equal((await h.run('token',{action:'prepare',contractId:'c',to:'evil@example.com'})).status,400);
+});
+
+test('approved shipping inbox may also be an intended admin; other destinations fail closed', async()=>{
+ const h=harness();const admins=[{email:'shipping@havenlight.com',active:true}];
+ const notice=await buildNotice(h.snapshot,admins,' SHIPPING@HAVENLIGHT.COM ');
+ assert.equal(notice.testRecipient,'shipping@havenlight.com');
+ assert.ok(notice.recipients.includes('shipping@havenlight.com'));
+ for(const inbox of ['other@example.com','accounting@havenlight.com','','shipping+test@havenlight.com']) await assert.rejects(buildNotice(h.snapshot,admins,inbox));
 });

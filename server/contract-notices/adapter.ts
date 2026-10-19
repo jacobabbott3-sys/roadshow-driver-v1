@@ -1,9 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { digest, type Notice, type Policy, type Ports, type Review } from './service.ts';
+import { approvedTestInbox, digest, type Notice, type Policy, type Ports, type Review } from './service.ts';
 type Config = { projectId: string; approvedProjectId: string; apiKey: string; from: string };
 export function createNoticePorts(client: SupabaseClient, policy: Policy, config: Config, fetcher: typeof fetch = fetch): Ports {
   const scope = `test:${policy.testRecipient.trim().toLowerCase()}`;
-  const payload = (notice: Notice, recipient: string) => ({ from: config.from, to: [notice.testRecipient],
+  const payload = (notice: Notice, recipient: string) => ({ from: config.from, to: [approvedTestInbox],
     subject: `[BETA TEST] ${notice.subject}`, text: `TEST ONLY — intended recipient: ${recipient}\n\n${notice.message}` });
   const matchingDelivery = (notice: Notice, recipient: string) => client.from('contract_notice_deliveries')
     .select('state,payload_hash').eq('environment_scope', scope).eq('version_id', notice.versionId).eq('recipient', recipient).maybeSingle();
@@ -86,13 +86,14 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
       if (error || data.length !== 1) throw new Error('Delivery outcome unavailable');
     },
     send: async (notice, recipient) => {
-      // This increment has NO live-recipient mode. Every send targets the separate
-      // test inbox shown during confirmation; actual admin/accounting addresses
+      // This increment has NO live-recipient mode. Every send targets the approved
+      // shipping test inbox shown during confirmation; actual admin/accounting addresses
       // appear only as intended recipients in the review and test message.
       if (!policy.enabled || !policy.mailEnabled || !config.apiKey || !config.from
         || config.projectId !== config.approvedProjectId || config.projectId === 'myraoovepjwhkafzdppq'
-        || notice.testRecipient !== policy.testRecipient.trim().toLowerCase()
-        || notice.recipients.includes(notice.testRecipient) || !notice.recipients.includes(recipient)) throw new Error('Mail disabled');
+        || notice.testRecipient !== approvedTestInbox
+        || policy.testRecipient.trim().toLowerCase() !== approvedTestInbox
+        || !notice.recipients.includes(recipient)) throw new Error('Mail disabled');
       const key = await digest([scope, notice.versionId, recipient]);
       const sent = await fetcher('https://api.resend.com/emails', { method: 'POST',
         headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `contract-notice-${key}` },

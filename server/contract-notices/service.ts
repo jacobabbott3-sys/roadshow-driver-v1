@@ -1,3 +1,4 @@
+export const approvedTestInbox = 'shipping@havenlight.com';
 export type Signature = { id: string; versionId: string; role: 'driver' | 'admin'; name: string; signedAt: string };
 export type Snapshot = { contractId: string; currentVersionId: string | null; versionId: string; versionNumber: number;
   workLabel: string; cancelled: boolean; driverEligible: boolean; signatures: Signature[] };
@@ -39,7 +40,7 @@ export async function buildNotice(snapshot: Snapshot, admins: AdminRecipient[], 
   const recipients = [...new Set([...admins.filter(a => a.active).map(a => normalize(a.email)), 'accounting@havenlight.com'])].sort();
   if (recipients.some(email => !validEmail(email))) throw new Error('An active administrator has no valid email address.');
   const testRecipient = normalize(testInbox);
-  if (!validEmail(testRecipient) || recipients.includes(testRecipient)) throw new Error('A separate approved test inbox is required.');
+  if (testRecipient !== approvedTestInbox) throw new Error('Only the approved shipping test inbox is permitted.');
   const subject = `Agreement fully signed — ${snapshot.workLabel} — version ${snapshot.versionNumber}`;
   const message = `${snapshot.workLabel}\nAgreement version ${snapshot.versionNumber} (${snapshot.versionId}) has both required signatures.\nDriver: ${driver[0].name} (${driver[0].signedAt})\nAdministrator: ${admin[0].name} (${admin[0].signedAt})\n\nThis is an informational signed-contract notice, not payment authorization. Payment readiness will be communicated separately.\n\nReview the current agreement: https://beta.roadshowdriver.com/admin/contracts/${encodeURIComponent(snapshot.contractId)}/agreement\nA later revision or cancellation may change the current agreement. This notice records the version identified above.`;
   const details = { contractId: snapshot.contractId, versionId: snapshot.versionId, versionNumber: snapshot.versionNumber, recipients, testRecipient, subject, message };
