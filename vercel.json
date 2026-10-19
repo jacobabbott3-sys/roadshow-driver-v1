@@ -10,7 +10,8 @@
       "feat/user-account-safety": false,
       "feat/manual-contract-notices": false,
       "integration/beta-account-notices": false,
-      "fix/beta-account-email-labels": false
+      "fix/beta-account-email-labels": false,
+      "fix/beta-contract-test-recipient": false
     }
   }
 }
