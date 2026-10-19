@@ -98,8 +98,8 @@ export function createSupabaseAccountPorts(client: SupabaseClient, policy: Accou
       link.searchParams.set('type', type);
       const sent = await fetcher('https://api.resend.com/emails', { method: 'POST',
         headers: { Authorization: `Bearer ${config.resendKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': operationKey },
-        body: JSON.stringify({ from: config.from, to: [command.email], subject: type === 'invite' ? 'Roadshow Driver invitation' : 'Roadshow Driver password recovery',
-          text: `Open your secure Roadshow Driver account link:\n${link.toString()}\nIf you did not expect this email, contact your administrator.` }),
+        body: JSON.stringify({ from: config.from, to: [command.email], subject: type === 'invite' ? '[BETA TEST] Roadshow Driver invitation' : '[BETA TEST] Roadshow Driver password recovery',
+          text: `BETA TEST — Synthetic account testing only.\nThis message is for the approved beta test inbox.\n\nOpen your secure Roadshow Driver account link:\n${link.toString()}\nIf you did not expect this email, contact your administrator.` }),
         signal: AbortSignal.timeout(15000) });
       if (sent.ok) return { kind: 'accepted' };
       // 5xx/timeout may follow provider acceptance. Never regenerate/retry blindly.
