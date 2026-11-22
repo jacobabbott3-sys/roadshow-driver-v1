@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { ContractNoticeSettings } from "../components/ContractNoticeSettings";
 import { AdminHeader } from "../components/AdminNav";
 import { PageState } from "../components/PageState";
 import { useAsync } from "../hooks/useAsync";
@@ -100,6 +101,7 @@ export function AdminPage() {
           </div>
         </section>
       )}
+      {release.channel === "beta" && <ContractNoticeSettings />}
       <section className="admin-section">
         <div className="section-row">
           <div>

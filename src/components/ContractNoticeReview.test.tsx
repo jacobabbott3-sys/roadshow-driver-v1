@@ -24,3 +24,32 @@ it('new session discards old preview and does not make an automatic request',asy
 it('server disabled delivery cannot be confirmed',async()=>{
  mocks.invoke.mockResolvedValue({data:{...preview,mailEnabled:false},error:null});render(<ContractNoticeReview contractId="c"/>);fireEvent.click(screen.getByText('Review signed-contract email'));await screen.findByRole('dialog');expect((screen.getByText('Send test email') as HTMLButtonElement).disabled).toBe(true);
 });
+it('requires a refreshed preview and sends only the rotated review ID',async()=>{
+ const body='  José,\n\nDraft update.  ';
+ render(<ContractNoticeReview contractId="c"/>);
+ fireEvent.click(screen.getByText('Review signed-contract email'));await screen.findByRole('dialog');
+ fireEvent.click(screen.getByText('Edit email body'));
+ expect((screen.getByText('Send test email') as HTMLButtonElement).disabled).toBe(true);
+ fireEvent.change(screen.getByRole('textbox'),{target:{value:body}});
+ mocks.invoke.mockResolvedValue({data:{...preview,reviewId:'rotated',notice:{...preview.notice,message:body}},error:null});
+ fireEvent.click(screen.getByText('Update preview'));
+ await screen.findByText('Edit email body');
+ expect(screen.getByLabelText('Email body preview').textContent).toBe(body);
+ expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'edit-body',reviewId:'r',message:body}});
+ mocks.invoke.mockResolvedValue({data:{message:'Accepted'},error:null});
+ fireEvent.click(screen.getByText('Send test email'));await screen.findByText('Accepted');
+ expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'send',reviewId:'rotated',confirmed:true}});
+});
+it('keeps the typed draft when Update preview fails, and does not allow stale Send',async()=>{
+ render(<ContractNoticeReview contractId="c"/>);
+ fireEvent.click(screen.getByText('Review signed-contract email'));await screen.findByRole('dialog');
+ fireEvent.click(screen.getByText('Edit email body'));
+ fireEvent.change(screen.getByRole('textbox'),{target:{value:'My draft\n'}});
+ mocks.invoke.mockResolvedValue({error:Error('temporary failure')});
+ fireEvent.click(screen.getByText('Update preview'));
+ await screen.findByText(/Your draft is still here/);
+ expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('My draft\n');
+ expect(screen.queryByText('Discard edits')).toBeNull();
+ expect((screen.getByText('Send test email') as HTMLButtonElement).disabled).toBe(true);
+ expect(screen.getByText('Open fresh review')).toBeTruthy();
+});

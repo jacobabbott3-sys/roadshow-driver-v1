@@ -359,7 +359,7 @@ function ContractDetailContent({adminReview}:{adminReview:boolean}) {
               </section>
             )}
             {tab === "sign" && <AgreementSigning contractId={id} acceptanceRole={adminReview ? "admin" : "driver"} onSigned={async()=>{await Promise.all([contract.refresh(),acceptance.refresh()]);}} />}
-            {tab === "sign" && adminReview && <ContractNoticeReview contractId={id} />}
+            {tab === "sign" && adminReview && contract.data?.show?.is_test === true && contract.data.show.test_owner === user?.id && <ContractNoticeReview contractId={id} />}
           </>
         )}
       </PageState>
