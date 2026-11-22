@@ -162,3 +162,25 @@ test('pinned retry is exact and explicit; accepted and uncertain payloads do not
   assert.equal(calls,mode==='rejected'?2:1);
  }
 });
+test('frozen Settings uses one envelope per address; partial uncertainty never replays',async()=>{
+ const h=harness(), first='a@example.test', second='b@example.test', third='c@example.test';
+ await h.ports.saveSettings({revision:0,recipients:[third,second,first]},'actor');
+ const attempts:string[]=[];
+ h.ports.send=async(_notice,to)=>{attempts.push(to);if(to===second)throw Error('ambiguous');return 'accepted';};
+ const run=createNoticeService(h.ports,{enabled:true,mailEnabled:true,testRecipient:'shipping@havenlight.com',deliveryMode:'approved-fixture-settings',permitsTest:async()=>true},()=>0);
+ assert.equal((await run('token',{action:'prepare',contractId:'c'})).status,409);
+ const protocol='fictional-settings-delivery-v1';
+ const prepare=()=>run('token',{action:'prepare',contractId:'c',deliveryProtocol:protocol});
+ const send=(reviewId:unknown)=>run('token',{action:'send',reviewId,confirmed:true,deliveryProtocol:protocol});
+ const stale=await prepare();
+ assert.equal((await run('token',{action:'send',reviewId:stale.body.reviewId,confirmed:true})).status,409);
+ assert.equal((await run('token',{action:'edit-body',reviewId:stale.body.reviewId,message:'old cached client'})).status,409);
+ await h.ports.saveSettings({revision:1,recipients:[third,second,first]},'actor');
+ assert.equal((await send(stale.body.reviewId)).status,409);assert.deepEqual(attempts,[]);
+ const started=await prepare();
+ assert.deepEqual((started.body.notice as {recipients:string[]}).recipients,[first,second,third]);
+ const partial=await send(started.body.reviewId);
+ assert.equal(partial.status,409);assert.equal(partial.body.accepted,1);assert.deepEqual(attempts,[first,second]);
+ const retry=await send((await prepare()).body.reviewId);
+ assert.equal(retry.status,409);assert.equal(retry.body.alreadyAccepted,1);assert.deepEqual(attempts,[first,second]);
+});

@@ -32,7 +32,9 @@ export function createContractNoticeEndpoint(env: (name: string) => string | und
       const testRecipient = env('CONTRACT_NOTICE_TEST_INBOX') ?? '';
       const apiKey = env('CONTRACT_NOTICE_RESEND_API_KEY') ?? '';
       const from = env('CONTRACT_NOTICE_FROM') ?? '';
-      const policy: Policy = { enabled: true, mailEnabled: pin !== null && !!apiKey && !!from && testRecipient.trim().toLowerCase() === approvedTestInbox, testRecipient,
+      const policy: Policy = { enabled: true, mailEnabled: pin !== null && !!apiKey && !!from && testRecipient.trim().toLowerCase() === approvedTestInbox, testRecipient, deliveryMode: pin === null ? undefined : 'approved-fixture-settings',
+        blockedTestReason: notice => pin?.allowPriorShippingAccepted && notice.recipients.includes(approvedTestInbox)
+          ? `This fictional agreement was already sent to ${approvedTestInbox}. Remove that address from Settings and reopen the review to send to other addresses.` : undefined,
         isPinnedTarget: (contractId, actorId) => !!pin && pin.contractId === contractId && pin.actorId === actorId,
         permitsTest: (notice, actor, now) => pin ? matchesSingleTestPin(pin, notice, actor, now) : Promise.resolve(false) };
       const ports = createNoticePorts(makeClient(`https://${project}.supabase.co`, secret), policy,

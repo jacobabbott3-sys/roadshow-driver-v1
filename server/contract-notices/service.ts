@@ -1,3 +1,4 @@
+import { settingsDeliveryProtocol } from './noticeTypes.ts';
 import { generateReceipt } from './receipt.ts';
 import type { Notice, RecipientSettings } from './noticeTypes.ts';
 export type { Notice, RecipientSettings } from './noticeTypes.ts';
@@ -21,7 +22,7 @@ export type Ports = {
   finishDelivery: (notice: Notice, recipient: string, state: 'accepted' | 'rejected' | 'uncertain') => Promise<void>;
   send: (notice: Notice, recipient: string, attachment: string, actorId?: string) => Promise<'accepted' | 'rejected'>;
 };
-export type Policy = { enabled: boolean; mailEnabled: boolean; testRecipient: string; isPinnedTarget?: (contractId: string, actorId: string) => boolean; permitsTest?: (notice: Notice, actorId: string, now: number) => Promise<boolean> };
+export type Policy = { enabled: boolean; mailEnabled: boolean; testRecipient: string; deliveryMode?: 'approved-fixture-settings'; isPinnedTarget?: (contractId: string, actorId: string) => boolean; blockedTestReason?: (notice: Notice) => string | undefined; permitsTest?: (notice: Notice, actorId: string, now: number) => Promise<boolean> };
 const disabled: Policy = { enabled: false, mailEnabled: false, testRecipient: '' };
 const hasControls = (value: string) => Array.from(value).some(char => {
   const cp = char.codePointAt(0)!;
@@ -55,7 +56,7 @@ export async function digest(value: unknown) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)));
   return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
 }
-export async function buildNotice(snapshot: Snapshot, settings: RecipientSettings, testInbox: string): Promise<Notice & {attachment: string}> {
+export async function buildNotice(snapshot: Snapshot, settings: RecipientSettings, testInbox: string, deliveryMode?: Notice['deliveryMode']): Promise<Notice & {attachment: string}> {
   const driver = snapshot.signatures.filter(s => s.role === 'driver');
   const admin = snapshot.signatures.filter(s => s.role === 'admin');
   if (!snapshot.currentVersionId || snapshot.currentVersionId !== snapshot.versionId || snapshot.cancelled
@@ -75,31 +76,40 @@ export async function buildNotice(snapshot: Snapshot, settings: RecipientSetting
   const attachment = generateReceipt(snapshot.contents, String(snapshot.versionNumber), [driver[0], admin[0]], { contractId: snapshot.contractId, versionId: snapshot.versionId });
   const details = { contractId: snapshot.contractId, versionId: snapshot.versionId, versionNumber: snapshot.versionNumber,
     recipients, testRecipient, subject, message, attachmentName: 'signed-agreement-receipt.pdf', attachmentDigest: await digest(attachment) };
-  return { ...details, attachment, fingerprint: await digest({ details, revision: settings.revision, signatures: [driver[0], admin[0]] }) };
+  const { recipients: _recipients, ...evidence } = details;
+  void _recipients;
+  const evidenceFingerprint = await digest({ evidence, signatures: [driver[0], admin[0]] });
+  return { ...details, ...(deliveryMode ? { deliveryMode } : {}), evidenceFingerprint, attachment, fingerprint: await digest({ details, deliveryMode, revision: settings.revision, signatures: [driver[0], admin[0]] }) };
 }
 export function createNoticeService(ports: Ports, policy: Policy = disabled, now = Date.now) {
   async function permitted(notice: Notice, actorId: string) {
-    return policy.mailEnabled && (!policy.permitsTest || await policy.permitsTest(notice, actorId, now()));
+    return policy.mailEnabled && !policy.blockedTestReason?.(notice) && (!policy.permitsTest || await policy.permitsTest(notice, actorId, now()));
   }
   async function fresh(contractId: string, actorId: string) {
     const snapshot = await ports.snapshot(contractId);
     if (snapshot.testOwner !== actorId) throw new Error('Only your synthetic beta test agreement is allowed.');
-    return buildNotice(snapshot, await ports.settings(), policy.testRecipient);
+    return buildNotice(snapshot, await ports.settings(), policy.testRecipient, policy.deliveryMode);
   }
   async function verified(token: string, actorId: string, notice: Notice) {
     if (await ports.authorize(token) !== actorId) return null;
     const current = await fresh(notice.contractId, actorId).catch(() => null);
-    return current?.fingerprint === notice.fingerprint ? current : null;
+    return current?.fingerprint === notice.fingerprint
+      && current.deliveryMode === notice.deliveryMode
+      && JSON.stringify(current.recipients) === JSON.stringify(notice.recipients) ? current : null;
   }
   return async (token: string, input: unknown): Promise<Result> => {
     if (!policy.enabled) return response(503, 'Contract email is disabled.');
     let accepted = 0;
-    const alreadyAccepted = 0;
+    let alreadyAccepted = 0;
     try {
       const actorId = token ? await ports.authorize(token) : null;
       if (!actorId) return response(403, 'A current active administrator session is required.');
       if (!input || typeof input !== 'object' || Array.isArray(input)) return response(400, 'Invalid request.');
       const body = input as Record<string, unknown>;
+      const protocolAction = ['test-eligible', 'prepare', 'edit-body', 'send'].includes(String(body.action));
+      if (protocolAction && (policy.deliveryMode === 'approved-fixture-settings' || Object.hasOwn(body, 'deliveryProtocol'))
+        && body.deliveryProtocol !== settingsDeliveryProtocol)
+        return response(409, 'Reload the updated beta screen before reviewing or sending to Settings destinations.');
       if (body.action === 'settings-get' && Object.keys(body).length === 1) {
         return response(200, 'Default recipients loaded.', { settings: await ports.settings() });
       }
@@ -115,21 +125,21 @@ export function createNoticeService(ports: Ports, policy: Policy = disabled, now
         return response(200, 'Default recipients saved.', { settings: { recipients, revision } });
       }
       if (body.action === 'test-eligible') {
-        if (Object.keys(body).length !== 2 || typeof body.contractId !== 'string') return response(400, 'Invalid eligibility request.');
+        if (Object.keys(body).some(key => !['action', 'contractId', 'deliveryProtocol'].includes(key)) || typeof body.contractId !== 'string') return response(400, 'Invalid eligibility request.');
         if (!policy.isPinnedTarget?.(body.contractId, actorId)) return response(200, 'Test eligibility checked.', { eligible: false });
         const notice = await fresh(body.contractId, actorId).catch(() => null);
-        return response(200, 'Test eligibility checked.', { eligible: !!notice && await permitted(notice, actorId) });
+        return response(200, 'Test eligibility checked.', { eligible: !!notice && policy.mailEnabled && (!policy.permitsTest || await policy.permitsTest(notice, actorId, now())) });
       }
       if (body.action === 'prepare') {
-        if (Object.keys(body).some(key => !['action', 'contractId'].includes(key)) || typeof body.contractId !== 'string' || !body.contractId || body.contractId.length > 128) return response(400, 'Invalid review request.');
+        if (Object.keys(body).some(key => !['action', 'contractId', 'deliveryProtocol'].includes(key)) || typeof body.contractId !== 'string' || !body.contractId || body.contractId.length > 128) return response(400, 'Invalid review request.');
         let notice: Notice;
         try { const { attachment: _attachment, ...reviewNotice } = await fresh(body.contractId, actorId); void _attachment; notice = reviewNotice; } catch { return response(409, 'Notice unavailable. Verify current signatures, assignment, cancellation and recipients before reviewing again.'); }
         const review: Review = { id: crypto.randomUUID(), actorId, expiresAt: now() + 10 * 60 * 1000, notice, state: 'reviewed' };
         await ports.saveReview(review);
-        return { status: 200, body: { reviewId: review.id, expiresAt: review.expiresAt, notice, mailEnabled: await permitted(notice, actorId) } };
+        return { status: 200, body: { reviewId: review.id, expiresAt: review.expiresAt, notice, mailEnabled: await permitted(notice, actorId), mailBlockReason: policy.blockedTestReason?.(notice) } };
       }
       if (body.action === 'edit-body') {
-        if (Object.keys(body).some(key => !['action', 'reviewId', 'message'].includes(key))
+        if (Object.keys(body).some(key => !['action', 'reviewId', 'message', 'deliveryProtocol'].includes(key))
           || typeof body.reviewId !== 'string' || typeof body.message !== 'string' || !body.message.trim()
           || body.message.length > 3000 || new TextEncoder().encode(body.message).length > 9000 || hasControls(body.message.replaceAll('\n', '').replaceAll('\t', ''))
           || Array.from(body.message).some(char => { const cp = char.codePointAt(0)!; return cp >= 55296 && cp <= 57343; })) return response(400, 'Enter a nonempty plain-text email body up to 3,000 characters.');
@@ -140,10 +150,10 @@ export function createNoticeService(ports: Ports, policy: Policy = disabled, now
         if (!await ports.decideReview(old.id, actorId, 'stale')) return response(409, 'This review is already decided.');
         const updated: Review = { ...old, id: crypto.randomUUID(), state: 'reviewed', notice: { ...old.notice, message: body.message } };
         await ports.saveReview(updated);
-        return { status: 200, body: { reviewId: updated.id, expiresAt: updated.expiresAt, notice: updated.notice, mailEnabled: await permitted(updated.notice, actorId) } };
+        return { status: 200, body: { reviewId: updated.id, expiresAt: updated.expiresAt, notice: updated.notice, mailEnabled: await permitted(updated.notice, actorId), mailBlockReason: policy.blockedTestReason?.(updated.notice) } };
       }
       if (!['send', 'skip', 'later'].includes(String(body.action)) || typeof body.reviewId !== 'string'
-        || Object.keys(body).some(key => !['action', 'reviewId', 'confirmed'].includes(key))) return response(400, 'Invalid decision.');
+        || Object.keys(body).some(key => !['action', 'reviewId', 'confirmed', 'deliveryProtocol'].includes(key))) return response(400, 'Invalid decision.');
       const review = await ports.getReview(body.reviewId);
       if (!review || review.actorId !== actorId) return response(404, 'Review not found.');
       if (body.action !== 'send') {
@@ -151,11 +161,11 @@ export function createNoticeService(ports: Ports, policy: Policy = disabled, now
         return response(200, body.action === 'skip' ? 'Skipped. No email was sent or queued.' : 'Saved for later. Nothing is scheduled or queued. Reopen a fresh review and confirm Send when ready.');
       }
       if (body.confirmed !== true) return response(400, 'Explicit Send confirmation is required.');
-      if (!await permitted(review.notice, actorId)) return response(503, 'Email sending is disabled for this review. Nothing was sent or queued.');
+      if (!await permitted(review.notice, actorId)) return response(503, policy.blockedTestReason?.(review.notice) ?? 'Email sending is disabled for this review. Nothing was sent or queued.');
       if (review.expiresAt <= now()) return response(409, 'Review expired. Reopen and confirm the current recipients and message.');
       if (!await ports.decideReview(review.id, actorId, 'sending')) return response(409, 'This review is already decided or sending.');
-      {
-        const recipient = approvedTestInbox;
+      const destinations = policy.deliveryMode === 'approved-fixture-settings' ? review.notice.recipients : [approvedTestInbox];
+      for (const recipient of destinations) {
         // Revalidate at confirmed send and before EVERY recipient. Never infer
         // permission or agreement eligibility from the client or a saved draft.
         if (!await verified(token, actorId, review.notice)) {
@@ -163,10 +173,7 @@ export function createNoticeService(ports: Ports, policy: Policy = disabled, now
           return response(409, 'Agreement, access or recipients changed. Review again; earlier accepted messages cannot be recalled.', { accepted, alreadyAccepted });
         }
         const claim = await ports.claimDelivery(review.notice, recipient);
-        if (claim === 'accepted') {
-          await ports.finishReview(review.id, 'sent');
-          return response(200, 'This beta test email was previously accepted by the provider.', { accepted, alreadyAccepted: 1 });
-        }
+        if (claim === 'accepted') { alreadyAccepted++; continue; }
         if (claim === 'blocked') {
           await ports.finishReview(review.id, 'uncertain');
           return response(409, 'A previous recipient request is pending or uncertain. Reconcile it before another send.', { accepted, alreadyAccepted });

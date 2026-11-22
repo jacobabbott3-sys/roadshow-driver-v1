@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import type { Notice } from '../../server/contract-notices/noticeTypes';
+import { settingsDeliveryProtocol, type Notice } from '../../server/contract-notices/noticeTypes';
 
-type Preview = { reviewId: string; expiresAt: number; notice: Notice; mailEnabled: boolean };
+type Preview = { reviewId: string; expiresAt: number; notice: Notice; mailEnabled: boolean; mailBlockReason?: string };
 export function ContractNoticeReview({ contractId, checkPinnedOnly = false }: { contractId: string; checkPinnedOnly?: boolean }) {
   const { session, profile } = useAuth();
   if (import.meta.env.VITE_CONTRACT_NOTICE_ENABLED !== 'true' || !session || profile?.role !== 'admin' || !profile.is_active) return null;
@@ -14,7 +14,7 @@ function PinnedReview({ contractId }: { contractId: string }) {
   const [eligible, setEligible] = useState(false);
   useEffect(() => {
     let active = true;
-    void supabase.functions.invoke('contract-notices', { body: { action: 'test-eligible', contractId } })
+    void supabase.functions.invoke('contract-notices', { body: { action: 'test-eligible', contractId, deliveryProtocol: settingsDeliveryProtocol } })
       .then(({ data, error }) => { if (active && !error && data?.eligible === true) setEligible(true); }).catch(() => undefined);
     return () => { active = false; };
   }, [contractId]);
@@ -31,7 +31,7 @@ function Review({ contractId }: { contractId: string }) {
     if (pending.current || (action === 'send' && (draft !== null || editFailed))) return;
     pending.current = true; setBusy(true); setMessage('');
     try {
-      const body = action === 'prepare' ? { action, contractId } : { action, reviewId: preview?.reviewId, ...(action === 'send' ? { confirmed: true } : {}), ...(action === 'edit-body' ? { message: draft } : {}) };
+      const body = action === 'prepare' ? { action, contractId, deliveryProtocol: settingsDeliveryProtocol } : { action, reviewId: preview?.reviewId, ...(action === 'send' ? { confirmed: true, deliveryProtocol: settingsDeliveryProtocol } : {}), ...(action === 'edit-body' ? { message: draft, deliveryProtocol: settingsDeliveryProtocol } : {}) };
       const { data, error } = await supabase.functions.invoke('contract-notices', { body });
       if (error) throw error;
       setDraft(null); setEditFailed(false);
@@ -52,9 +52,13 @@ function Review({ contractId }: { contractId: string }) {
     <p>Available for your synthetic beta test agreement only. Signing, editing and cancellation never send email automatically.</p>
     {!preview && <button disabled={busy} onClick={() => void act('prepare')}>Review signed-contract email</button>}
     {preview && <div role="dialog" aria-label="Confirm signed-contract email">
-      <p>Intended recipients: {preview.notice.recipients.join(', ')}</p>
-      <p><strong>TEST ONLY — actual destination: {preview.notice.testRecipient}</strong></p>
-      <p>One test email goes only to the test inbox. To change the intended defaults, use Settings.</p>
+      {preview.notice.deliveryMode === 'approved-fixture-settings' ? <>
+        <p><strong>TEST ONLY — actual destinations: {preview.notice.recipients.join(', ')}</strong></p>
+        <p>One fictional test email per address. To change destinations, edit Settings and reopen this review.</p>
+      </> : <>
+        <p>Intended recipients: {preview.notice.recipients.join(', ')}</p>
+        {preview.mailEnabled && <p><strong>TEST ONLY — actual destination: {preview.notice.testRecipient}</strong></p>}
+      </>}
       <h4>{preview.notice.subject}</h4>
       {draft === null ? <>
         <pre aria-label="Email body preview" style={{ whiteSpace: 'pre-wrap' }}>{preview.notice.message}</pre>
@@ -70,7 +74,7 @@ function Review({ contractId }: { contractId: string }) {
       </>}
       {preview.notice.attachmentName && <p>Attachment: {preview.notice.attachmentName}</p>}
       <p>Send later saves your decision only. Reopen a fresh review and confirm Send; nothing is scheduled or queued.</p>
-      {!preview.mailEnabled && <p>Sending is disabled for this review. You can still review and edit the draft.</p>}
+      {!preview.mailEnabled && <p>{preview.mailBlockReason ?? 'Sending is disabled for this review. You can still review and edit the draft.'}</p>}
       <button disabled={busy || editFailed || draft !== null || !preview.mailEnabled || preview.expiresAt <= Date.now()} onClick={() => void act('send')}>Send test email</button>
       <button disabled={busy} onClick={() => void act('skip')}>Skip</button>
       <button disabled={busy} onClick={() => void act('later')}>Send later</button>

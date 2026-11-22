@@ -10,6 +10,7 @@
       "feat/beta-email-activation-20261116": false,
       "feat/beta-signed-notice-settings-20261122": false,
       "feat/beta-single-synthetic-notice-20261122": false,
+      "feat/beta-synthetic-allowlisted-recipients-20261122": false,
       "feat/user-account-safety": false,
       "feat/manual-contract-notices": false,
       "integration/beta-account-notices": false,

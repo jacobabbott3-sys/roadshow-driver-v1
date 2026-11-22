@@ -30,7 +30,7 @@ function Settings() {
   return <section aria-label="Signed-contract email settings" className="card">
     <h2>Settings</h2>
     <h3>Signed-contract email recipients</h3>
-    <p>These defaults appear in the Send review and cannot be changed there. In beta, test email goes only to shipping@havenlight.com.</p>
+    <p>These defaults appear in the Send review and cannot be changed there. These are actual destinations only in a specifically enabled fictional beta review. Check that list before pressing Send.</p>
     <button type="button" disabled={busy} onClick={() => void act('settings-get')}>{settings ? 'Reload recipients' : 'Edit default recipients'}</button>
     {settings && <form onSubmit={e => { e.preventDefault(); void act('settings-save'); }}>
       <label>Default recipients (one email per line)
