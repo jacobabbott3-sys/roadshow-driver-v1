@@ -10,7 +10,7 @@ afterEach(()=>{cleanup();vi.unstubAllEnvs();});
 it('default off and mounting never request delivery',()=>{vi.stubEnv('VITE_CONTRACT_NOTICE_ENABLED','false');render(<ContractNoticeReview contractId="c"/>);expect(screen.queryByRole('button')).toBeNull();expect(mocks.invoke).not.toHaveBeenCalled();});
 it('explicit review displays recipients, actual test destination and message before Send',async()=>{
  render(<ContractNoticeReview contractId="c"/>);expect(mocks.invoke).not.toHaveBeenCalled();fireEvent.click(screen.getByText('Review signed-contract email'));await screen.findByRole('dialog');expect(screen.getByText(/actual destination: test@example.net/)).toBeTruthy();expect(screen.getByText(/Intended recipients:/).textContent).toContain('accounting@havenlight.com');expect(screen.getByText(preview.notice.message)).toBeTruthy();expect(mocks.invoke).toHaveBeenCalledTimes(1);
- mocks.invoke.mockResolvedValue({data:{message:'Accepted'},error:null});fireEvent.click(screen.getByText('Send test email'));await screen.findByText('Accepted');expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'send',reviewId:'r',confirmed:true}});
+ mocks.invoke.mockResolvedValue({data:{message:'Accepted'},error:null});fireEvent.click(screen.getByText('Send test email'));await screen.findByText('Accepted');expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'send',reviewId:'r',confirmed:true,deliveryProtocol:'fictional-settings-delivery-v1'}});
 });
 for(const [label,action] of [['Skip','skip'],['Send later','later']])it(`${label} records only the decision`,async()=>{
  render(<ContractNoticeReview contractId="c"/>);fireEvent.click(screen.getByText('Review signed-contract email'));await screen.findByRole('dialog');mocks.invoke.mockResolvedValue({data:{message:'Nothing sent or queued'},error:null});fireEvent.click(screen.getByText(label));await screen.findByText('Nothing sent or queued');expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action,reviewId:'r'}});
@@ -31,14 +31,14 @@ it('requires a refreshed preview and sends only the rotated review ID',async()=>
  fireEvent.click(screen.getByText('Edit email body'));
  expect((screen.getByText('Send test email') as HTMLButtonElement).disabled).toBe(true);
  fireEvent.change(screen.getByRole('textbox'),{target:{value:body}});
- mocks.invoke.mockResolvedValue({data:{...preview,reviewId:'rotated',notice:{...preview.notice,message:body}},error:null});
+ mocks.invoke.mockResolvedValue({data:{...preview,reviewId:'rotated',notice:{...preview.notice,message:body,deliveryProtocol:'fictional-settings-delivery-v1'}},error:null});
  fireEvent.click(screen.getByText('Update preview'));
  await screen.findByText('Edit email body');
  expect(screen.getByLabelText('Email body preview').textContent).toBe(body);
- expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'edit-body',reviewId:'r',message:body}});
+ expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'edit-body',reviewId:'r',message:body,deliveryProtocol:'fictional-settings-delivery-v1'}});
  mocks.invoke.mockResolvedValue({data:{message:'Accepted'},error:null});
  fireEvent.click(screen.getByText('Send test email'));await screen.findByText('Accepted');
- expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'send',reviewId:'rotated',confirmed:true}});
+ expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'send',reviewId:'rotated',confirmed:true,deliveryProtocol:'fictional-settings-delivery-v1'}});
 });
 it('keeps the typed draft when Update preview fails, and does not allow stale Send',async()=>{
  render(<ContractNoticeReview contractId="c"/>);
@@ -56,11 +56,19 @@ it('keeps the typed draft when Update preview fails, and does not allow stale Se
 it('renders a special-title fixture review only after server eligibility and does not send',async()=>{
  mocks.invoke.mockResolvedValue({data:{eligible:false},error:null});
  const {unmount}=render(<ContractNoticeReview contractId="c" checkPinnedOnly/>);
- await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith('contract-notices',{body:{action:'test-eligible',contractId:'c'}}));
+ await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith('contract-notices',{body:{action:'test-eligible',contractId:'c',deliveryProtocol:'fictional-settings-delivery-v1'}}));
  expect(screen.queryByText('Review signed-contract email')).toBeNull();
  unmount();
  mocks.invoke.mockResolvedValue({data:{eligible:true},error:null});
  render(<ContractNoticeReview contractId="allowed" checkPinnedOnly/>);
  await screen.findByText('Review signed-contract email');
- expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'test-eligible',contractId:'allowed'}});
+ expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'test-eligible',contractId:'allowed',deliveryProtocol:'fictional-settings-delivery-v1'}});
+});
+it('shows the exact Settings destinations before a fictional Send',async()=>{
+ mocks.invoke.mockResolvedValue({data:{...preview,notice:{...preview.notice,recipients:['alpha@example.test','beta@example.test'],deliveryMode:'approved-fixture-settings'}},error:null});
+ render(<ContractNoticeReview contractId="c"/>);
+ fireEvent.click(screen.getByText('Review signed-contract email'));
+ await screen.findByText(/actual destinations: alpha@example.test, beta@example.test/);
+ expect(screen.queryByText(/actual destination: test@example.net/)).toBeNull();
+ expect(mocks.invoke).toHaveBeenCalledTimes(1);
 });

@@ -4,8 +4,15 @@ import type { SingleTestPin } from './singleTestPin.ts';
 import { approvedTestInbox, canonicalRecipients, digest, type Notice, type Policy, type Ports, type Review } from './service.ts';
 type Config = { projectId: string; approvedProjectId: string; apiKey: string; from: string };
 export function createNoticePorts(client: SupabaseClient, policy: Policy, config: Config, fetcher: typeof fetch = fetch, pin: SingleTestPin | null = null): Ports {
-  const scope = `test:${policy.testRecipient.trim().toLowerCase()}`;
-  const payload = (notice: Notice, attachment: string) => ({ from: config.from, to: [approvedTestInbox],
+  const legacyScope = `test:${policy.testRecipient.trim().toLowerCase()}`;
+  const scopedSettings = policy.deliveryMode === 'approved-fixture-settings';
+  const scope = scopedSettings ? 'test:approved-fixture-settings:v1' : legacyScope;
+  const batchScope = 'test:approved-fixture-settings-batch:v1';
+  const batchMarker = '__frozen_settings_batch__';
+  const permittedRecipient = (notice: Notice, recipient: string) => scopedSettings
+    ? notice.deliveryMode === 'approved-fixture-settings' && canonicalRecipients(notice.recipients).includes(recipient) && !(pin?.allowPriorShippingAccepted && notice.recipients.includes(approvedTestInbox))
+    : recipient === approvedTestInbox;
+  const payload = (notice: Notice, attachment: string, recipient: string) => ({ from: config.from, to: [recipient],
     subject: `[BETA TEST] ${notice.subject}`, text: notice.message,
     attachments: [{ filename: notice.attachmentName, content: attachment }] });
   const matchingDelivery = (notice: Notice, recipient: string) => client.from('contract_notice_deliveries')
@@ -96,12 +103,35 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
       if (error || data.length !== 1) throw new Error('Review result unavailable');
     },
     claimDelivery: async (notice, recipient) => {
-      // Do not resend a version with an existing legacy delivery to any intended recipient.
-      const legacy = await client.from('contract_notice_deliveries').select('recipient').eq('environment_scope', scope)
-        .eq('version_id', notice.versionId).neq('recipient', approvedTestInbox).limit(1);
+      if (!permittedRecipient(notice, recipient)) return 'blocked';
+      // Legacy delivery rows could label admins/accounting even though actual To was Shipping.
+      // Never reinterpret or replay them for a newly scoped multi-destination test.
+      let history = client.from('contract_notice_deliveries').select('recipient,state').eq('environment_scope', legacyScope)
+        .eq('version_id', notice.versionId);
+      if (!scopedSettings) history = history.neq('recipient', approvedTestInbox);
+      const legacy = await history.limit(2);
       if (legacy.error) throw new Error('Delivery history unavailable.');
-      if (legacy.data.length !== 0) return 'blocked';
-      const hash = await digest([config.from, notice.subject, notice.message, notice.attachmentName, notice.attachmentDigest]);
+      if (pin?.allowPriorShippingAccepted && scopedSettings) {
+        if (legacy.data.length !== 1 || legacy.data[0].recipient !== approvedTestInbox || legacy.data[0].state !== 'accepted')
+          return 'blocked';
+      } else if (legacy.data.length !== 0) return 'blocked';
+      if (scopedSettings) {
+        // Freeze the first explicitly confirmed batch per version across all
+        // requests. A settings edit cannot grow the lifetime 7-address limit.
+        const payloadHash = await digest(notice.recipients);
+        const lock = await client.from('contract_notice_deliveries').insert({
+          environment_scope: batchScope, version_id: notice.versionId, recipient: batchMarker,
+          payload_hash: payloadHash, state: 'accepted',
+        });
+        if (lock.error?.code === '23505') {
+          const prior = await client.from('contract_notice_deliveries').select('payload_hash,state')
+            .eq('environment_scope', batchScope).eq('version_id', notice.versionId).eq('recipient', batchMarker).maybeSingle();
+          if (prior.error || prior.data?.payload_hash !== payloadHash || prior.data.state !== 'accepted') return 'blocked';
+        } else if (lock.error) throw new Error('Could not freeze destinations.');
+      }
+      const hash = await digest(scopedSettings
+        ? [config.from, recipient, notice.subject, notice.message, notice.attachmentName, notice.attachmentDigest]
+        : [config.from, notice.subject, notice.message, notice.attachmentName, notice.attachmentDigest]);
       const { error } = await client.from('contract_notice_deliveries').insert({ environment_scope: scope, version_id: notice.versionId, recipient, payload_hash: hash, state: 'pending' });
       if (!error) return 'acquired'; if (error.code !== '23505') throw new Error('Delivery ledger unavailable');
       const prior = await matchingDelivery(notice, recipient);
@@ -119,19 +149,18 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
       if (error || data.length !== 1) throw new Error('Delivery outcome unavailable');
     },
     send: async (notice, recipient, attachment, actorId) => {
-      // This increment has NO live-recipient mode. Every send targets the approved
-      // shipping test inbox shown during confirmation; actual admin/accounting addresses
-      // appear only as intended recipients in the review.
+      // Only the explicitly armed fictional beta fixture may use the
+      // reviewed Settings destinations, one envelope at a time.
       if (!policy.enabled || !policy.mailEnabled || !config.apiKey || !config.from
         || config.projectId !== config.approvedProjectId || config.projectId === 'myraoovepjwhkafzdppq'
         || notice.testRecipient !== approvedTestInbox
         || policy.testRecipient.trim().toLowerCase() !== approvedTestInbox
-        || recipient !== approvedTestInbox || !attachment || await digest(attachment) !== notice.attachmentDigest
+        || !permittedRecipient(notice, recipient) || (scopedSettings && (!pin || !policy.permitsTest)) || !attachment || await digest(attachment) !== notice.attachmentDigest
         || (policy.permitsTest && (!actorId || !await policy.permitsTest(notice, actorId, Date.now())))) throw new Error('Mail disabled');
       const key = await digest([scope, notice.versionId, recipient]);
       const sent = await fetcher('https://api.resend.com/emails', { method: 'POST',
         headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `contract-notice-${key}` },
-        body: JSON.stringify(payload(notice, attachment)), signal: AbortSignal.timeout(15000) });
+        body: JSON.stringify(payload(notice, attachment, recipient)), signal: AbortSignal.timeout(15000) });
       if (sent.ok) return 'accepted';
       if (sent.status >= 500 || [408, 409].includes(sent.status)) throw new Error('Provider outcome unknown');
       return 'rejected';
