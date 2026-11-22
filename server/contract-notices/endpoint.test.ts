@@ -50,5 +50,38 @@ test('deployed endpoint refuses provider delivery even when the existing mail fl
  const endpoint=createContractNoticeEndpoint(n=>env[n],()=>fake as unknown as ReturnType<typeof createClient>,async()=>{throw Error('must not call provider');});
  const response=await endpoint(new Request('https://example.com',{method:'POST',headers:{origin:'https://beta.roadshowdriver.com',authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({action:'send',reviewId:'review',confirmed:true})}));
  assert.equal(response.status,503);
- assert.equal((await response.json()).message,'Email sending is disabled. Nothing was sent or queued.');
+ assert.equal((await response.json()).message,'Email sending is disabled for this review. Nothing was sent or queued.');
+});
+test('ordinary fixture snapshot is rejected unless it is exactly pinned and still unpublished and isolated',async()=>{
+ const actor='00000000-0000-4000-8000-000000000001', contract='00000000-0000-4000-8000-000000000002', version='00000000-0000-4000-8000-000000000003', show='00000000-0000-4000-8000-000000000004';
+ const title='[BETA TEST] Nonbinding signed email delivery check';
+ const pin={actorId:actor,contractId:contract,versionId:version,expiresAt:Date.now()+60_000,bodyDigest:'a'.repeat(64),attachmentDigest:'b'.repeat(64),fingerprint:'c'.repeat(64)};
+ const base={
+  contracts:{id:contract,show_id:show,driver_id:actor,current_agreement_id:version,cancelled_at:null},
+  agreement_versions:{id:version,version_number:1,content:{work:{id:show,name:title},contract:{document_path:null},linked_work:[],linked_show_ids:[]}},
+  agreement_signatures:[{id:'d',signer_role:'driver',signer_id:actor,assignment_period_id:'open',version_id:version},{id:'a',signer_role:'admin',signer_id:actor,version_id:version}],
+  agreement_assignment_periods:{id:'open'},contract_drivers:{driver_id:actor},shows:{name:title,is_test:false,test_owner:null,created_by:null,cancelled_at:null},
+ };
+ function fixture(changed:Record<string,unknown>={},binding:typeof pin|null=pin) {
+  const values:Record<string,unknown>={...base,...changed};
+  const client={
+   from:(table:string)=>{
+    const result=()=>({data:values[table]??[],error:null});
+    const query={select(){return query;},eq(){return query;},neq(){return query;},is(){return query;},limit:async()=>({data:values[table+'_rows']??[],error:null}),
+      single:async()=>result(),maybeSingle:async()=>result(),then:(resolve:(value:ReturnType<typeof result>)=>unknown)=>Promise.resolve(resolve(result()))};
+    return query;
+   },
+  };
+  return createNoticePorts(client as unknown as ReturnType<typeof createClient>,
+   {enabled:true,mailEnabled:false,testRecipient:'shipping@havenlight.com'},
+   {projectId:'exsquwjtqnirojntoxqv',approvedProjectId:'exsquwjtqnirojntoxqv',apiKey:'',from:''},async()=>{throw Error('must not call provider');},binding);
+ }
+ assert.equal((await fixture().snapshot(contract)).testOwner,actor);
+ await assert.rejects(fixture({},null).snapshot(contract),/pinned fictional fixture/);
+ await assert.rejects(fixture({}, {...pin,versionId:show}).snapshot(contract),/pinned fictional fixture/);
+ for(const table of ['availability_release_item_shows','contract_drivers','contract_external_assignees'])
+  await assert.rejects(fixture({[table+'_rows']:[{id:'other'}]}).snapshot(contract),/outside the test/);
+ for(const changed of [{shows:{...base.shows,created_by:show}},{shows:{...base.shows,name:'ordinary'}},
+   {agreement_signatures:[...base.agreement_signatures.slice(0,1),{...base.agreement_signatures[1],signer_id:show}]}])
+  await assert.rejects(fixture(changed).snapshot(contract),/pinned fictional fixture/);
 });

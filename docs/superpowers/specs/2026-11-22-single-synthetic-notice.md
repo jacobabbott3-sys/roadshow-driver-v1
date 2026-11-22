@@ -1,0 +1,11 @@
+# One explicitly approved beta test send
+
+Reuse the current signed-contract review and Send button. Beta is disabled by default; a short-lived server-only pin may authorize only a confirmed fictional, actor-owned contract, version, both acceptance rows bound to the deterministic receipt, and the exact reviewed email body. The only provider destination is the existing shipping test inbox. An uploaded-document reference cannot be sent. No recipient data, provider secret, ordinary contract, or production setting is authorized.
+
+Resolution requires a fresh review and existing idempotent ledger claim. Recheck authorization and expiry before and after the claim. Accepted and uncertain requests may not replay; an exact same-body definite rejection may be retried only after a fresh explicit review within the same window.
+
+Implementation: test pin validation and strict runtime endpoint rejection first; add defensive service and adapter pin checks, run full suite and validate no config/deployment/send in development.
+
+Because the owned reset fixture is cancelled, the alternative must be a newly created, unpublished, unlinked beta-only show named “[BETA TEST] Nonbinding signed email delivery check” with no other/internal/external assignee. The same active QA admin is driver and both accepting accounts; a recorded creator must also match (normal beta creation leaves it null), using distinct fictional typed names. The ordinary-show exception is inaccessible without the exact live pin; no existing contract becomes eligible.
+
+Use the reviewed fictional snapshot and exact acceptance rows (row IDs, version, roles, typed names, timestamptz strings in PostgREST form) to construct the existing server Snapshot, and use the current beta recipient settings revision. The offline command `node --experimental-strip-types scripts/derive-single-notice-pin.mjs < fictional-fixture.json` returns only the pin. Insert its JSON string into `singleTestActivation.ts` in the upload bundle only. Keep Git’s module empty. The pin expires within 15 minutes (default 10), and no provider setting is changed. Re-upload the empty module after the test. Activate only after reviewing exact fictional content and ensuring no prior version delivery has been accepted or is unresolved.

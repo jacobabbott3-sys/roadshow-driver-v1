@@ -12,6 +12,7 @@ import {
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { getContractAcceptanceGate } from "../lib/agreementData";
+import { singleTestShowName } from "../../server/contract-notices/noticeTypes";
 import { ContractNoticeReview } from "../components/ContractNoticeReview";
 import { AgreementSigning } from "../components/AgreementSigning";
 import { PageState } from "../components/PageState";
@@ -360,6 +361,7 @@ function ContractDetailContent({adminReview}:{adminReview:boolean}) {
             )}
             {tab === "sign" && <AgreementSigning contractId={id} acceptanceRole={adminReview ? "admin" : "driver"} onSigned={async()=>{await Promise.all([contract.refresh(),acceptance.refresh()]);}} />}
             {tab === "sign" && adminReview && contract.data?.show?.is_test === true && contract.data.show.test_owner === user?.id && <ContractNoticeReview contractId={id} />}
+            {tab === "sign" && adminReview && contract.data?.show?.is_test === false && contract.data.show.name === singleTestShowName && <ContractNoticeReview contractId={id} checkPinnedOnly />}
           </>
         )}
       </PageState>

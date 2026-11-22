@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { singleTestShowName } from './noticeTypes.ts';
+import type { SingleTestPin } from './singleTestPin.ts';
 import { approvedTestInbox, canonicalRecipients, digest, type Notice, type Policy, type Ports, type Review } from './service.ts';
 type Config = { projectId: string; approvedProjectId: string; apiKey: string; from: string };
-export function createNoticePorts(client: SupabaseClient, policy: Policy, config: Config, fetcher: typeof fetch = fetch): Ports {
+export function createNoticePorts(client: SupabaseClient, policy: Policy, config: Config, fetcher: typeof fetch = fetch, pin: SingleTestPin | null = null): Ports {
   const scope = `test:${policy.testRecipient.trim().toLowerCase()}`;
   const payload = (notice: Notice, attachment: string) => ({ from: config.from, to: [approvedTestInbox],
     subject: `[BETA TEST] ${notice.subject}`, text: notice.message,
@@ -36,16 +38,32 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
         if (period.error || roster.error) throw new Error('Assignment evidence unavailable');
         driverEligible = !!period.data && (contract.data.driver_id === driver.signer_id || !!roster.data);
       }
-      const show = await client.from('shows').select('is_test,test_owner').eq('id', contract.data.show_id).single();
+      const show = await client.from('shows').select('is_test,test_owner,created_by,name,cancelled_at').eq('id', contract.data.show_id).single();
       const contents = version.data.content;
-      if (show.error || show.data.is_test !== true || !show.data.test_owner || contents?.work?.id !== contract.data.show_id
+      if (show.error || show.data.cancelled_at || contents?.work?.id !== contract.data.show_id
         || !Array.isArray(contents.linked_work) || contents.linked_work.length !== 0
         || !Array.isArray(contents.linked_show_ids) || contents.linked_show_ids.length !== 0)
         throw new Error('Only an unlinked synthetic beta fixture is eligible.');
-      const current = await client.from('contracts').select('current_agreement_id,cancelled_at').eq('id', contractId).single();
-      if (current.error) throw new Error('Current agreement unavailable');
+      let testOwner = show.data.is_test === true ? show.data.test_owner : null;
+      if (!testOwner) {
+        if (!pin || pin.expiresAt <= Date.now() || pin.contractId !== contractId || pin.versionId !== version.data.id
+          || show.data.is_test !== false || show.data.test_owner || (show.data.created_by !== null && show.data.created_by !== pin.actorId)
+          || contract.data.driver_id !== pin.actorId || show.data.name !== singleTestShowName || contents.work.name !== singleTestShowName
+          || signatures.data.length !== 2 || signatures.data.some(s => s.signer_id !== pin.actorId))
+          throw new Error('Only the exact explicitly pinned fictional fixture is eligible.');
+        const [released, otherDrivers, external] = await Promise.all([
+          client.from('availability_release_item_shows').select('show_id').eq('show_id', contract.data.show_id).limit(1),
+          client.from('contract_drivers').select('driver_id').eq('contract_id', contractId).neq('driver_id', pin.actorId).limit(1),
+          client.from('contract_external_assignees').select('contract_id').eq('contract_id', contractId).limit(1),
+        ]);
+        if ([released, otherDrivers, external].some(check => check.error || !check.data || check.data.length > 0))
+          throw new Error('The pinned fixture was published or assigned outside the test.');
+        testOwner = pin.actorId;
+      }
+      const current = await client.from('contracts').select('current_agreement_id,cancelled_at,driver_id').eq('id', contractId).single();
+      if (current.error || (!show.data.is_test && current.data.driver_id !== testOwner)) throw new Error('Current agreement unavailable');
       return { contractId, currentVersionId: current.data.current_agreement_id, versionId: version.data.id, versionNumber: version.data.version_number,
-        contents, testOwner: show.data.test_owner, cancelled: !!current.data.cancelled_at,
+        contents, testOwner, cancelled: !!current.data.cancelled_at,
         driverEligible, signatures: signatures.data.map(s => ({ id: s.id, versionId: s.version_id, role: s.signer_role, name: s.signer_name, signedAt: s.signed_at })) };
     },
     settings: async () => {
@@ -100,7 +118,7 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
         .eq('environment_scope', scope).eq('version_id', notice.versionId).eq('recipient', recipient).eq('state', 'pending').select('recipient');
       if (error || data.length !== 1) throw new Error('Delivery outcome unavailable');
     },
-    send: async (notice, recipient, attachment) => {
+    send: async (notice, recipient, attachment, actorId) => {
       // This increment has NO live-recipient mode. Every send targets the approved
       // shipping test inbox shown during confirmation; actual admin/accounting addresses
       // appear only as intended recipients in the review.
@@ -108,7 +126,8 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
         || config.projectId !== config.approvedProjectId || config.projectId === 'myraoovepjwhkafzdppq'
         || notice.testRecipient !== approvedTestInbox
         || policy.testRecipient.trim().toLowerCase() !== approvedTestInbox
-        || recipient !== approvedTestInbox || !attachment || await digest(attachment) !== notice.attachmentDigest) throw new Error('Mail disabled');
+        || recipient !== approvedTestInbox || !attachment || await digest(attachment) !== notice.attachmentDigest
+        || (policy.permitsTest && (!actorId || !await policy.permitsTest(notice, actorId, Date.now())))) throw new Error('Mail disabled');
       const key = await digest([scope, notice.versionId, recipient]);
       const sent = await fetcher('https://api.resend.com/emails', { method: 'POST',
         headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `contract-notice-${key}` },
