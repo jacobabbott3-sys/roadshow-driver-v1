@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { singleTestShowName } from './noticeTypes.ts';
-import type { SingleTestPin } from './singleTestPin.ts';
+import { isSingleTestPinActive, type SingleTestPin } from './singleTestPin.ts';
 import { approvedTestInbox, canonicalRecipients, digest, type Notice, type Policy, type Ports, type Review } from './service.ts';
 type Config = { projectId: string; approvedProjectId: string; apiKey: string; from: string };
 export function createNoticePorts(client: SupabaseClient, policy: Policy, config: Config, fetcher: typeof fetch = fetch, pin: SingleTestPin | null = null): Ports {
@@ -53,7 +53,7 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
         throw new Error('Only an unlinked synthetic beta fixture is eligible.');
       let testOwner = show.data.is_test === true ? show.data.test_owner : null;
       if (!testOwner) {
-        if (!pin || pin.expiresAt <= Date.now() || pin.contractId !== contractId || pin.versionId !== version.data.id
+        if (!pin || !isSingleTestPinActive(pin, Date.now()) || pin.contractId !== contractId || pin.versionId !== version.data.id
           || show.data.is_test !== false || show.data.test_owner || (show.data.created_by !== null && show.data.created_by !== pin.actorId)
           || contract.data.driver_id !== pin.actorId || show.data.name !== singleTestShowName || contents.work.name !== singleTestShowName
           || signatures.data.length !== 2 || signatures.data.some(s => s.signer_id !== pin.actorId))
