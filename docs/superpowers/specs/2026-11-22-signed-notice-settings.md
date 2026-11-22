@@ -1,0 +1,6 @@
+# Signed-notice beta settings
+Active admins manage the default intended recipients centrally in Settings. Effective default is accounting@havenlight.com; Send review shows the default list with no editable override. Addresses are normalized and deduplicated on the server; settings changes invalidate review. Sending requires the same manual review and confirmation and two current same-version signatures. Skip never sends; defer never queues.
+
+Only the approved beta environment and shipping@havenlight.com can receive provider test messages. Settings never change provider routing. Body has exactly driver name, work name, signed base pay and per diem. Attach a private receipt generated from immutable signed version contents and signature rows; never fetch mutable document bytes. Unsupported or invalid data fails closed. No production changes, auto sends, or gate changes.
+
+The canonical body is the starting draft. An admin may edit the plain text for this one review, then save and inspect the exact revised preview. This rotates the review ID without extending expiry and invalidates the old one. Subject, defaults, signed amounts and PDF remain source-bound; editing a message never sends it.

@@ -1,10 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { approvedTestInbox, digest, type Notice, type Policy, type Ports, type Review } from './service.ts';
+import { approvedTestInbox, canonicalRecipients, digest, type Notice, type Policy, type Ports, type Review } from './service.ts';
 type Config = { projectId: string; approvedProjectId: string; apiKey: string; from: string };
 export function createNoticePorts(client: SupabaseClient, policy: Policy, config: Config, fetcher: typeof fetch = fetch): Ports {
   const scope = `test:${policy.testRecipient.trim().toLowerCase()}`;
-  const payload = (notice: Notice, recipient: string) => ({ from: config.from, to: [approvedTestInbox],
-    subject: `[BETA TEST] ${notice.subject}`, text: `TEST ONLY — intended recipient: ${recipient}\n\n${notice.message}` });
+  const payload = (notice: Notice, attachment: string) => ({ from: config.from, to: [approvedTestInbox],
+    subject: `[BETA TEST] ${notice.subject}`, text: notice.message,
+    attachments: [{ filename: notice.attachmentName, content: attachment }] });
   const matchingDelivery = (notice: Notice, recipient: string) => client.from('contract_notice_deliveries')
     .select('state,payload_hash').eq('environment_scope', scope).eq('version_id', notice.versionId).eq('recipient', recipient).maybeSingle();
   return {
@@ -22,7 +23,7 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
     snapshot: async contractId => {
       // SELECT-only inventory of existing evidence. Do not call agreement review
       // RPCs here: some historical read paths can issue an initial agreement.
-      const contract = await client.from('contracts').select('id,driver_id,current_agreement_id,cancelled_at').eq('id', contractId).single();
+      const contract = await client.from('contracts').select('id,driver_id,current_agreement_id,cancelled_at,show_id').eq('id', contractId).single();
       if (contract.error || !contract.data.current_agreement_id) throw new Error('Current agreement unavailable');
       const version = await client.from('agreement_versions').select('id,contract_id,version_number,content').eq('id', contract.data.current_agreement_id).eq('contract_id', contractId).single();
       const signatures = await client.from('agreement_signatures').select('id,version_id,signer_id,signer_role,assignment_period_id,signer_name,signed_at').eq('version_id', contract.data.current_agreement_id);
@@ -35,20 +36,29 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
         if (period.error || roster.error) throw new Error('Assignment evidence unavailable');
         driverEligible = !!period.data && (contract.data.driver_id === driver.signer_id || !!roster.data);
       }
+      const show = await client.from('shows').select('is_test,test_owner').eq('id', contract.data.show_id).single();
+      const contents = version.data.content;
+      if (show.error || show.data.is_test !== true || !show.data.test_owner || contents?.work?.id !== contract.data.show_id
+        || !Array.isArray(contents.linked_work) || contents.linked_work.length !== 0
+        || !Array.isArray(contents.linked_show_ids) || contents.linked_show_ids.length !== 0)
+        throw new Error('Only an unlinked synthetic beta fixture is eligible.');
       const current = await client.from('contracts').select('current_agreement_id,cancelled_at').eq('id', contractId).single();
       if (current.error) throw new Error('Current agreement unavailable');
       return { contractId, currentVersionId: current.data.current_agreement_id, versionId: version.data.id, versionNumber: version.data.version_number,
-        workLabel: String(version.data.content?.work?.name ?? `Contract ${contractId}`), cancelled: !!current.data.cancelled_at,
+        contents, testOwner: show.data.test_owner, cancelled: !!current.data.cancelled_at,
         driverEligible, signatures: signatures.data.map(s => ({ id: s.id, versionId: s.version_id, role: s.signer_role, name: s.signer_name, signedAt: s.signed_at })) };
     },
-    admins: async () => {
-      const { data, error } = await client.from('profiles').select('id').eq('role', 'admin').eq('is_active', true).limit(101);
-      if (error || data.length > 100) throw new Error('Admin recipient list unavailable');
-      return Promise.all(data.map(async profile => {
-        const account = await client.auth.admin.getUserById(profile.id);
-        if (account.error || !account.data.user.email) throw new Error('Admin email unavailable');
-        return { email: account.data.user.email, active: true };
-      }));
+    settings: async () => {
+      const { data, error } = await client.from('contract_notice_settings').select('recipients,revision').eq('singleton', true).single();
+      if (error || !Number.isInteger(data.revision)) throw new Error('Recipient settings unavailable.');
+      return { recipients: canonicalRecipients(data.recipients), revision: data.revision };
+    },
+    saveSettings: async (settings, actorId) => {
+      const { data, error } = await client.rpc('save_contract_notice_settings', {
+        expected_revision: settings.revision, new_recipients: canonicalRecipients(settings.recipients), actor: actorId,
+      });
+      if (error || (data !== null && !Number.isInteger(data))) throw new Error('Recipient settings unavailable.');
+      return data;
     },
     saveReview: async review => {
       const { error } = await client.from('contract_notice_reviews').insert({ id: review.id, actor_id: review.actorId, expires_at: review.expiresAt, notice: review.notice, state: 'reviewed' });
@@ -68,7 +78,12 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
       if (error || data.length !== 1) throw new Error('Review result unavailable');
     },
     claimDelivery: async (notice, recipient) => {
-      const hash = await digest(payload(notice, recipient));
+      // Do not resend a version with an existing legacy delivery to any intended recipient.
+      const legacy = await client.from('contract_notice_deliveries').select('recipient').eq('environment_scope', scope)
+        .eq('version_id', notice.versionId).neq('recipient', approvedTestInbox).limit(1);
+      if (legacy.error) throw new Error('Delivery history unavailable.');
+      if (legacy.data.length !== 0) return 'blocked';
+      const hash = await digest([config.from, notice.subject, notice.message, notice.attachmentName, notice.attachmentDigest]);
       const { error } = await client.from('contract_notice_deliveries').insert({ environment_scope: scope, version_id: notice.versionId, recipient, payload_hash: hash, state: 'pending' });
       if (!error) return 'acquired'; if (error.code !== '23505') throw new Error('Delivery ledger unavailable');
       const prior = await matchingDelivery(notice, recipient);
@@ -85,19 +100,19 @@ export function createNoticePorts(client: SupabaseClient, policy: Policy, config
         .eq('environment_scope', scope).eq('version_id', notice.versionId).eq('recipient', recipient).eq('state', 'pending').select('recipient');
       if (error || data.length !== 1) throw new Error('Delivery outcome unavailable');
     },
-    send: async (notice, recipient) => {
+    send: async (notice, recipient, attachment) => {
       // This increment has NO live-recipient mode. Every send targets the approved
       // shipping test inbox shown during confirmation; actual admin/accounting addresses
-      // appear only as intended recipients in the review and test message.
+      // appear only as intended recipients in the review.
       if (!policy.enabled || !policy.mailEnabled || !config.apiKey || !config.from
         || config.projectId !== config.approvedProjectId || config.projectId === 'myraoovepjwhkafzdppq'
         || notice.testRecipient !== approvedTestInbox
         || policy.testRecipient.trim().toLowerCase() !== approvedTestInbox
-        || !notice.recipients.includes(recipient)) throw new Error('Mail disabled');
+        || recipient !== approvedTestInbox || !attachment || await digest(attachment) !== notice.attachmentDigest) throw new Error('Mail disabled');
       const key = await digest([scope, notice.versionId, recipient]);
       const sent = await fetcher('https://api.resend.com/emails', { method: 'POST',
         headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `contract-notice-${key}` },
-        body: JSON.stringify(payload(notice, recipient)), signal: AbortSignal.timeout(15000) });
+        body: JSON.stringify(payload(notice, attachment)), signal: AbortSignal.timeout(15000) });
       if (sent.ok) return 'accepted';
       if (sent.status >= 500 || [408, 409].includes(sent.status)) throw new Error('Provider outcome unknown');
       return 'rejected';

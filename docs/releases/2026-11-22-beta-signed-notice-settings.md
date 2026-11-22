@@ -1,0 +1,16 @@
+# Signed-contract email settings: proposed beta release
+
+Settings provides active admins with a single default list (initially accounting@havenlight.com), validated and normalized on the server. A settings revision is checked when confirming an email, including after the sending claim. Review is read-only for recipients. Signing, skipping, and deferring never send; defer is not scheduled. The settings audit stores actor, revision, timestamp and count, not email addresses.
+
+For this beta candidate the notice is shown only on the signed-agreement tab for the active admin's own Test Show. The server separately checks the beta project, test-show flag, owner, snapshot work ID, no linked work, matching signatures, and the driver's open assignment. The provider route is **unconditionally disabled in this candidate**, regardless of the existing mail environment flag: the editable test-show metadata does not prove fixture contents are fictional. The unit-tested mock transport allows at most one request per version, only to shipping@havenlight.com. An old ledger entry for another recipient blocks retry until reconciled. No production recipient or ordinary contract can send in this candidate.
+
+The default body starts with exactly four labeled fields: driver, contract, signed base pay, signed per diem. The admin can edit the plain-text draft for this review only, then inspect the updated preview before sending. The attached PDF renders immutable agreement content and matching signature rows. Document-backed agreements are rejected at review because the signed snapshot only records a mutable reference, not immutable document bytes or digest. Latin-1 and Windows-1252 punctuation are supported by the PDF font; unsupported glyphs or oversized receipts fail closed. See [Resend's attachment format](https://resend.com/docs/dashboard/emails/attachments#send-attachments-from-a-local-file).
+
+The proposed settings SQL is **unapplied**. Do not enable any feature flags or replay historical SQL as part of source review. Independently verify exact beta project, new and existing tables, JWT, and deployment configuration before a separately approved rollout. Any future test mail requires a reviewed source change, trusted fixture provenance, separate approval, and fully fictional contents and signer-entered names. The current backend/UI gates and actual inbox receipt are not established by source verification. No real-recipient mode is included.
+
+## Bring-up sequence (not executed)
+
+1. Review the feature branch and rerun contract, unit, UI, build and lint checks. Keep the public project unchanged.
+2. In the existing beta project, verify schema/table and runtime roles. Apply only the separately reviewed missing settings proposal; preserve any already present state. Keep mail switched off; the candidate also holds it off in source.
+3. Deploy the reviewed function only to the stable beta project, keeping JWT verification on. Enable the server review/settings gate only after separately approved non-mail acceptance. Set the existing Vercel UI build flag for the beta branch only and rebuild beta; never apply it to public.
+4. Using an authorized beta admin's synthetic Test Show, verify Settings, rotated body preview, receipt preflight and disabled Send. Do not send an email. Roll back by switching off beta server and UI gates independently.
