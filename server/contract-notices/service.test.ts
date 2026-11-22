@@ -120,3 +120,45 @@ test('body edits reject invalid text and overrides, foreign, stale and expired r
  h.snapshot.versionNumber--;h.expire();assert.equal((await h.run('token',{action:'edit-body',reviewId,message:'valid'})).status,409);
  assert.equal(h.sends,0);
 });
+test('exactly pinned review enables existing Send; edit, wrong actor and expiry fail closed without provider', async()=>{
+ const h=harness();
+ const canonical=await buildNotice(h.snapshot,{recipients:['accounting@havenlight.com'],revision:0},'shipping@havenlight.com');
+ let time=0;
+ const run=createNoticeService(h.ports,{
+  enabled:true,mailEnabled:true,testRecipient:'shipping@havenlight.com',
+  isPinnedTarget:(contract,actor)=>contract==='c'&&actor==='actor',
+  permitsTest:async(n,actor,at)=>n.message===canonical.message&&n.fingerprint===canonical.fingerprint&&actor==='actor'&&at<100,
+ },()=>time);
+ assert.equal((await run('token',{action:'test-eligible',contractId:'different'})).body.eligible,false);
+ assert.equal((await run('token',{action:'test-eligible',contractId:'c'})).body.eligible,true);
+ const first=await run('token',{action:'prepare',contractId:'c'});
+ assert.equal(first.body.mailEnabled,true);
+ const edit=await run('token',{action:'edit-body',reviewId:first.body.reviewId,message:'Not the approved body'});
+ assert.equal(edit.body.mailEnabled,false);
+ assert.equal((await run('token',{action:'send',reviewId:edit.body.reviewId,confirmed:true})).status,503);
+ const second=await run('token',{action:'prepare',contractId:'c'});
+ const claim=h.ports.claimDelivery;
+ h.ports.claimDelivery=async(n,r)=>{const result=await claim(n,r);time=100;return result;};
+ assert.equal((await run('token',{action:'send',reviewId:second.body.reviewId,confirmed:true})).status,409);
+ assert.equal(h.sends,0);
+});
+test('pinned retry is exact and explicit; accepted and uncertain payloads do not replay',async()=>{
+ for (const mode of ['accepted','rejected','uncertain'] as const) {
+  const h=harness(); const expected=await buildNotice(h.snapshot,{recipients:['accounting@havenlight.com'],revision:0},'shipping@havenlight.com');
+  let calls=0;
+  h.ports.send=async n=>{
+   assert.equal(n.message,expected.message);calls++;
+   if (mode==='uncertain') throw Error('connection lost after attempt');
+   return mode==='rejected'&&calls===1?'rejected':'accepted';
+  };
+  const run=createNoticeService(h.ports,{enabled:true,mailEnabled:true,testRecipient:'shipping@havenlight.com',
+   permitsTest:async(n,actor)=>actor==='actor'&&expected.message===n.message&&expected.fingerprint===n.fingerprint},()=>0);
+  const request=async() => {
+   const r=await run('token',{action:'prepare',contractId:'c'});
+   return run('token',{action:'send',reviewId:r.body.reviewId,confirmed:true});
+  };
+  assert.equal((await request()).status,mode==='accepted'?200:mode==='rejected'?503:409);
+  assert.equal((await request()).status,mode==='uncertain'?409:200);
+  assert.equal(calls,mode==='rejected'?2:1);
+ }
+});

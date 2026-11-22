@@ -1,13 +1,24 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Notice } from '../../server/contract-notices/noticeTypes';
 
 type Preview = { reviewId: string; expiresAt: number; notice: Notice; mailEnabled: boolean };
-export function ContractNoticeReview({ contractId }: { contractId: string }) {
+export function ContractNoticeReview({ contractId, checkPinnedOnly = false }: { contractId: string; checkPinnedOnly?: boolean }) {
   const { session, profile } = useAuth();
   if (import.meta.env.VITE_CONTRACT_NOTICE_ENABLED !== 'true' || !session || profile?.role !== 'admin' || !profile.is_active) return null;
-  return <Review key={`${contractId}:${session.access_token}`} contractId={contractId} />;
+  const key = `${contractId}:${session.access_token}`;
+  return checkPinnedOnly ? <PinnedReview key={key} contractId={contractId} /> : <Review key={key} contractId={contractId} />;
+}
+function PinnedReview({ contractId }: { contractId: string }) {
+  const [eligible, setEligible] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void supabase.functions.invoke('contract-notices', { body: { action: 'test-eligible', contractId } })
+      .then(({ data, error }) => { if (active && !error && data?.eligible === true) setEligible(true); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [contractId]);
+  return eligible ? <Review contractId={contractId} /> : null;
 }
 function Review({ contractId }: { contractId: string }) {
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -59,7 +70,7 @@ function Review({ contractId }: { contractId: string }) {
       </>}
       {preview.notice.attachmentName && <p>Attachment: {preview.notice.attachmentName}</p>}
       <p>Send later saves your decision only. Reopen a fresh review and confirm Send; nothing is scheduled or queued.</p>
-      {!preview.mailEnabled && <p>Sending is disabled in this beta. You can still review and edit the draft.</p>}
+      {!preview.mailEnabled && <p>Sending is disabled for this review. You can still review and edit the draft.</p>}
       <button disabled={busy || editFailed || draft !== null || !preview.mailEnabled || preview.expiresAt <= Date.now()} onClick={() => void act('send')}>Send test email</button>
       <button disabled={busy} onClick={() => void act('skip')}>Skip</button>
       <button disabled={busy} onClick={() => void act('later')}>Send later</button>

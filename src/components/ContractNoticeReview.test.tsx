@@ -53,3 +53,14 @@ it('keeps the typed draft when Update preview fails, and does not allow stale Se
  expect((screen.getByText('Send test email') as HTMLButtonElement).disabled).toBe(true);
  expect(screen.getByText('Open fresh review')).toBeTruthy();
 });
+it('renders a special-title fixture review only after server eligibility and does not send',async()=>{
+ mocks.invoke.mockResolvedValue({data:{eligible:false},error:null});
+ const {unmount}=render(<ContractNoticeReview contractId="c" checkPinnedOnly/>);
+ await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith('contract-notices',{body:{action:'test-eligible',contractId:'c'}}));
+ expect(screen.queryByText('Review signed-contract email')).toBeNull();
+ unmount();
+ mocks.invoke.mockResolvedValue({data:{eligible:true},error:null});
+ render(<ContractNoticeReview contractId="allowed" checkPinnedOnly/>);
+ await screen.findByText('Review signed-contract email');
+ expect(mocks.invoke).toHaveBeenLastCalledWith('contract-notices',{body:{action:'test-eligible',contractId:'allowed'}});
+});
